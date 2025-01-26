@@ -1,0 +1,57 @@
+{
+  "name": "typdeck",
+  "version": "0.1.0-rc.0",
+  "description": "Static site generator for slides with Typst",
+  "keywords": [
+    "typst",
+    "cli",
+    "slide",
+    "deck",
+    "presentation"
+  ],
+  "type": "module",
+  "repository": "https://github.com/3w36zj6/typdeck",
+  "funding": {
+    "type": "github",
+    "url": "https://github.com/sponsors/3w36zj6"
+  },
+  "license": "MIT",
+  "author": "3w36zj6",
+  "bin": {
+    "typdeck": "bin/index.js"
+  },
+  "files": [
+    "bin",
+    "public"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build:client": "tsc -b && vite build",
+    "build:server": "tsc -b && esbuild index.ts --bundle --platform=node --outfile=bin/index.js --packages=external --format=esm --minify",
+    "preview": "vite preview",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint src/",
+    "lint:fix": "eslint --fix src/"
+  },
+  "dependencies": {
+    "yargs": "^17.7.2",
+    "vite": "^6.0.11"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.19.0",
+    "@types/bun": "latest",
+    "@types/yargs": "^17.0.33",
+    "esbuild": "^0.25.0",
+    "eslint": "^9.19.0",
+    "eslint-plugin-solid": "^0.14.5",
+    "globals": "^15.14.0",
+    "prettier": "^3.4.2",
+    "solid-js": "^1.9.3",
+    "typescript-eslint": "^8.21.0",
+    "vite-plugin-solid": "^2.11.0"
+  },
+  "peerDependencies": {
+    "typescript": "^5.6.2"
+  }
+}
