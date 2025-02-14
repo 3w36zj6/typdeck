@@ -1,4 +1,4 @@
-import { createSignal, onCleanup, onMount } from "solid-js";
+import { createEffect, createSignal, onCleanup, onMount } from "solid-js";
 import "./App.css";
 import { Metadata } from "./types/metadata";
 import { Icon } from "@iconify-icon/solid";
@@ -29,7 +29,19 @@ const MenuIcon = (props: MenuIconProps) => {
 
 const App = () => {
   const [metadata, setMetadata] = createSignal<Metadata | null>(null);
-  const [currentPage, setCurrentPage] = createSignal(1);
+
+  const getPageFromHash = () => {
+    const hash = window.location.hash;
+    if (hash.startsWith("#")) {
+      const page = parseInt(hash.slice(1));
+      if (!isNaN(page) && page > 0) {
+        return page;
+      }
+    }
+    return 1;
+  };
+
+  const [currentPage, setCurrentPage] = createSignal(getPageFromHash());
   // @ts-expect-error - Unused variable
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [isFullScreen, setIsFullScreen] = createSignal(false);
@@ -79,12 +91,25 @@ const App = () => {
     }
   };
 
+  createEffect(() => {
+    if (metadata()) {
+      const page = getPageFromHash();
+      setCurrentPage(Math.min(page, metadata()!.pageCount));
+    }
+  });
+
+  createEffect(() => {
+    const page = currentPage();
+    if (page !== getPageFromHash()) {
+      window.location.hash = `#${page}`;
+    }
+  });
+
   onMount(() => {
     fetch("./metadata.json")
       .then((response) => response.json() as Promise<Metadata>)
       .then((metadata) => {
         setMetadata(metadata);
-        setCurrentPage(1);
       })
       .catch((error) => console.error(error));
 
