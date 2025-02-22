@@ -4,18 +4,23 @@ import fs from "fs";
 import path from "path";
 import { execSync } from "child_process";
 import { writeMetadataJSON } from "../writeMatadataJSON";
+import { getTypstPath } from "../getTypstPath";
+
+let cachedTypstPath: string | null = null;
 
 export const compileTypst = (
   typstFile: string,
   publicDir: string,
   server?: ViteDevServer,
 ) => {
-  try {
-    const typstPath = execSync("which typst").toString().trim();
-    console.info(`typst is found at: ${typstPath}`);
-  } catch {
-    console.error("typst command not found in PATH.");
-    return;
+  if (cachedTypstPath === null) {
+    cachedTypstPath = getTypstPath();
+    if (cachedTypstPath) {
+      console.info(`typst is found at: ${cachedTypstPath}`);
+    } else {
+      console.error("typst command not found in PATH.");
+      return;
+    }
   }
 
   const pagesOutDirPath = path.resolve(publicDir, "pages");
