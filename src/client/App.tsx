@@ -1,4 +1,4 @@
-import { createEffect, createSignal, onCleanup, onMount } from "solid-js";
+import { createEffect, createSignal, For, onCleanup, onMount } from "solid-js";
 import { Metadata } from "./types/metadata";
 import { Icon } from "@iconify-icon/solid";
 
@@ -137,20 +137,34 @@ const App = () => {
         }}
       >
         {metadata() && (
-          <div class="slide" style={{ width: "100%", height: "100%" }}>
-            <img
-              src={`./pages/${currentPage()}.svg`}
-              alt=""
-              style={{
-                width: "100%",
-                height: "100%",
-                "object-fit": "contain",
-                display: "block",
-                "pointer-events": "none",
-                "user-select": "none",
-                "-webkit-user-drag": "none",
-              }}
-            />
+          <div
+            class="slide"
+            style={{ width: "100%", height: "100%", position: "relative" }}
+          >
+            <For
+              each={Array.from(
+                { length: metadata()!.pageCount },
+                (_, i) => i + 1,
+              )}
+            >
+              {(pageNumber) => (
+                <img
+                  src={`./pages/${pageNumber}.svg`}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    "object-fit": "contain",
+                    position: "absolute",
+                    top: "0",
+                    left: "0",
+                    display: currentPage() === pageNumber ? "block" : "none",
+                    "pointer-events": "none",
+                    "user-select": "none",
+                    "-webkit-user-drag": "none",
+                  }}
+                />
+              )}
+            </For>
           </div>
         )}
       </div>
