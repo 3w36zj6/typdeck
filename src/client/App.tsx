@@ -1,5 +1,4 @@
 import { createEffect, createSignal, onCleanup, onMount } from "solid-js";
-import "./App.css";
 import { Metadata } from "./types/metadata";
 import { Icon } from "@iconify-icon/solid";
 
@@ -134,6 +133,7 @@ const App = () => {
           height: "100vh",
           overflow: "hidden",
           position: "relative",
+          background: "black",
         }}
       >
         {metadata() && (
