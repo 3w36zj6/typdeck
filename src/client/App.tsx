@@ -1,4 +1,11 @@
-import { createEffect, createSignal, For, onCleanup, onMount } from "solid-js";
+import {
+  createEffect,
+  createResource,
+  createSignal,
+  For,
+  onCleanup,
+  onMount,
+} from "solid-js";
 import { Metadata } from "./types/metadata";
 import { Icon } from "@iconify-icon/solid";
 
@@ -27,7 +34,10 @@ const MenuIcon = (props: MenuIconProps) => {
 };
 
 const App = () => {
-  const [metadata, setMetadata] = createSignal<Metadata | null>(null);
+  const [metadata] = createResource<Metadata>(async () => {
+    const response = await fetch("./metadata.json");
+    return response.json();
+  });
 
   const getPageFromHash = () => {
     const hash = window.location.hash;
@@ -105,13 +115,6 @@ const App = () => {
   });
 
   onMount(() => {
-    fetch("./metadata.json")
-      .then((response) => response.json() as Promise<Metadata>)
-      .then((metadata) => {
-        setMetadata(metadata);
-      })
-      .catch((error) => console.error(error));
-
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("mousemove", showMenu);
     window.addEventListener("touchstart", showMenu);
