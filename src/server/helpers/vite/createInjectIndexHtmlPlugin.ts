@@ -2,13 +2,16 @@ import path from "path";
 import fs from "fs";
 import { type PluginOption } from "vite";
 import { getPackageRootPath } from "../getPackageRootPath";
-
+import { parse as parseUrl } from "url";
 export const injectIndexHtmlPlugin = (): PluginOption => {
   return {
     name: "inject-index-html-plugin",
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
-        if (req.url === "/") {
+        const parsedUrl = parseUrl(req.url || "", true);
+        const pathname = parsedUrl.pathname || "";
+
+        if (pathname === "/" || pathname === "/index.html") {
           const staticIndexPath = path.resolve(
             getPackageRootPath(),
             "public/index.html",
