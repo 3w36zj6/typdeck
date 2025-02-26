@@ -1,7 +1,7 @@
 import { build, createServer, preview } from "vite";
 import yargs from "yargs/yargs";
 import { hideBin } from "yargs/helpers";
-import { createConfig } from "./helpers/vite/createConfig";
+import { createViteConfig } from "./helpers/vite/createViteConfig";
 
 type DevArgs = {
   outDir: string;
@@ -23,8 +23,8 @@ export const main = async () => {
       command: "dev <typstFile>",
       describe: "start dev server",
       handler: async (argv) => {
-        const config = createConfig(argv.outDir, argv.typstFile, "dev");
-        const server = await createServer(config);
+        const viteConfig = createViteConfig(argv.outDir, argv.typstFile, "dev");
+        const server = await createServer(viteConfig);
         await server.listen();
         server.printUrls();
       },
@@ -33,16 +33,20 @@ export const main = async () => {
       command: "build <typstFile>",
       describe: "build for production",
       handler: async (argv) => {
-        const config = createConfig(argv.outDir, argv.typstFile, "build");
-        await build(config);
+        const viteConfig = createViteConfig(
+          argv.outDir,
+          argv.typstFile,
+          "build",
+        );
+        await build(viteConfig);
       },
     })
     .command<PreviewArgs>({
       command: "preview",
       describe: "locally preview production build",
       handler: async (argv) => {
-        const config = createConfig(argv.outDir, undefined, "preview");
-        const previewServer = await preview(config);
+        const viteConfig = createViteConfig(argv.outDir, undefined, "preview");
+        const previewServer = await preview(viteConfig);
         previewServer.printUrls();
       },
     })

@@ -5,8 +5,12 @@ import path from "path";
 import { execSync } from "child_process";
 import { writeMetadataJSON } from "../writeMatadataJSON";
 import { getTypstPath } from "../getTypstPath";
+import type { ConfigFile } from "../../types/ConfigFile";
+import { readConfigFile } from "../readConfigFile";
+import { Metadata } from "../../../client/types/metadata";
 
 let cachedTypstPath: string | null = null;
+let cachedConfig: ConfigFile | null = null;
 
 export const compileTypst = (
   typstFile: string,
@@ -21,6 +25,9 @@ export const compileTypst = (
       console.error("typst command not found in PATH.");
       return;
     }
+  }
+  if (cachedConfig === null) {
+    cachedConfig = readConfigFile(process.cwd());
   }
 
   const pagesOutDirPath = path.resolve(publicDir, "pages");
@@ -50,7 +57,28 @@ export const compileTypst = (
     })
     .reduce((a, b) => Math.max(a, b), 0);
 
-  writeMetadataJSON({ pageCount }, path.resolve(publicDir, "metadata.json"));
+  const metadata: Metadata = {
+    pageCount,
+  };
+
+  if (cachedConfig?.slides && Object.keys(cachedConfig.slides).length > 0) {
+    const slidesSettings: NonNullable<Metadata["slides"]> = {};
+    Object.entries(cachedConfig.slides).forEach(([key, settings]) => {
+      if (!/^[1-9]\d*$/.test(key)) {
+        return;
+      }
+      const slideNumber = Number(key);
+      if (slideNumber <= 0 || slideNumber > pageCount) {
+        return;
+      }
+      slidesSettings[key as keyof ConfigFile["slides"]] = {
+        speakerNotes: settings.speakerNotes,
+      };
+    });
+    metadata.slides = slidesSettings;
+  }
+
+  writeMetadataJSON(metadata, path.resolve(publicDir, "metadata.json"));
 
   server?.ws.send({
     type: "full-reload",

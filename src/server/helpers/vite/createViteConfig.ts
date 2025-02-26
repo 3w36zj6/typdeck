@@ -39,7 +39,7 @@ const setupDotDirectory = (typstFile?: string) => {
 
 type CommandType = "dev" | "build" | "preview";
 
-export const createConfig = (
+export const createViteConfig = (
   outDir: string,
   typstFile?: string,
   command?: CommandType,
