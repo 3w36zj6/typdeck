@@ -418,12 +418,25 @@ const App = () => {
               padding: "10px",
               "border-top": "1px solid #333",
               "background-color": "#111",
+              height: "200px",
+              "overflow-y": "auto",
             }}
           >
-            <p>
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla
-              faucibus.
-            </p>
+            {metadata()?.slides?.[`${currentPage()}`]?.speakerNotes ? (
+              <p
+                style={{
+                  margin: "0",
+                  "white-space": "pre-wrap",
+                  "word-break": "break-word",
+                }}
+              >
+                {metadata()!.slides?.[`${currentPage()}`]?.speakerNotes}
+              </p>
+            ) : (
+              <p style={{ margin: "0", color: "#666", "font-style": "italic" }}>
+                No speaker notes for this slide.
+              </p>
+            )}
           </div>
           <div
             class="presenter-footer"
