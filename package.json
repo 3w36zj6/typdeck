@@ -35,8 +35,9 @@
     "lint:fix": "eslint --fix src/"
   },
   "dependencies": {
-    "yargs": "^17.7.2",
-    "vite": "^6.0.11"
+    "confbox": "^0.1.8",
+    "vite": "^6.0.11",
+    "yargs": "^17.7.2"
   },
   "devDependencies": {
     "@eslint/js": "^9.19.0",
