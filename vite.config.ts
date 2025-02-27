@@ -16,6 +16,16 @@ export default defineConfig(({ command }) => {
           devServer = server;
         },
         buildStart: () => {
+          const distDir = path.resolve(process.cwd(), "dist");
+          if (fs.existsSync(distDir)) {
+            fs.rmSync(distDir, { recursive: true, force: true });
+          }
+          const publicDir = path.resolve(process.cwd(), "public");
+          const publicAssetsDir = path.join(publicDir, "assets");
+          if (fs.existsSync(publicAssetsDir)) {
+            fs.rmSync(publicAssetsDir, { recursive: true, force: true });
+          }
+
           compileTypst(
             "main.typ",
             "public",
