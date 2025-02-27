@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        check: [format, lint, tsc, build-client, build-server]
+        include:
+          - check: format
+            name: Prettier
+            command: format:check
+            step_name: Check using Prettier
+          - check: lint
+            name: ESLint
+            command: lint
+            step_name: Check using ESLint
+          - check: tsc
+            name: TypeScript
+            command: tsc
+            step_name: Check using TypeScript
+          - check: build-client
+            name: Build client
+            command: build:client
+            step_name: Build client
+          - check: build-server
+            name: Build server
+            command: build:server
+            step_name: Build server
+    steps:
+      - name: Checkout your repository using git
+        uses: actions/checkout@v4
+      - name: Setup toolchain
+        uses: jdx/mise-action@v2
+        with:
+          cache: false
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+      - name: ${{ matrix.step_name }}
+        run: bun run ${{ matrix.command }}
