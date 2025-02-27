@@ -27,13 +27,14 @@
   ],
   "scripts": {
     "dev": "vite",
-    "build:client": "tsc -b && vite build",
-    "build:server": "tsc -b && esbuild index.ts --bundle --platform=node --outfile=bin/index.js --packages=external --format=esm --minify",
+    "build:client": "vite build",
+    "build:server": "esbuild index.ts --bundle --platform=node --outfile=bin/index.js --packages=external --format=esm --minify",
     "preview": "vite preview",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint src/",
-    "lint:fix": "eslint --fix src/"
+    "lint:fix": "eslint --fix src/",
+    "tsc": "tsc -b"
   },
   "dependencies": {
     "chalk": "^5.4.1",
