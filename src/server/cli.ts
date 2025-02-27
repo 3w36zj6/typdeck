@@ -67,7 +67,11 @@ export const main = async () => {
         printUrl(previewServer);
       },
     })
-    .option("outDir", { type: "string", default: "dist" })
+    .option("outDir", {
+      type: "string",
+      default: "dist",
+      describe: "output directory",
+    })
     .demandCommand(1)
     .parse();
 };
