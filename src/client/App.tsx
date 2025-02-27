@@ -343,19 +343,32 @@ const App = () => {
             background: "black",
             color: "#fff",
             overflow: "hidden",
+            margin: "0",
+            padding: "0",
           }}
         >
           <div
             class="slides"
             style={{
-              flex: "1",
+              flex: "1 1 auto",
+              "min-height": "0",
               display: "flex",
               "justify-content": "space-between",
+              overflow: "hidden",
             }}
           >
             {metadata() && (
               <>
-                <div class="current-slide" style={{ width: "49%" }}>
+                <div
+                  class="current-slide"
+                  style={{
+                    width: "49%",
+                    display: "flex",
+                    "align-items": "center",
+                    "justify-content": "center",
+                    overflow: "hidden",
+                  }}
+                >
                   <For
                     each={Array.from(
                       { length: metadata()!.pageCount },
@@ -368,6 +381,7 @@ const App = () => {
                         style={{
                           width: "100%",
                           height: "100%",
+                          "max-height": "100%",
                           "object-fit": "contain",
                           display:
                             pageNumber === currentPage() ? "block" : "none",
@@ -379,7 +393,16 @@ const App = () => {
                     )}
                   </For>
                 </div>
-                <div class="next-slide" style={{ width: "49%" }}>
+                <div
+                  class="next-slide"
+                  style={{
+                    width: "49%",
+                    display: "flex",
+                    "align-items": "center",
+                    "justify-content": "center",
+                    overflow: "hidden",
+                  }}
+                >
                   <For
                     each={Array.from(
                       { length: metadata()!.pageCount },
@@ -392,6 +415,7 @@ const App = () => {
                         style={{
                           width: "100%",
                           height: "100%",
+                          "max-height": "100%",
                           "object-fit": "contain",
                           display:
                             pageNumber ===
@@ -420,6 +444,7 @@ const App = () => {
               "background-color": "#111",
               height: "200px",
               "overflow-y": "auto",
+              "flex-shrink": "0",
             }}
           >
             {metadata()?.slides?.[`${currentPage()}`]?.speakerNotes ? (
@@ -446,6 +471,8 @@ const App = () => {
               "align-items": "center",
               padding: "10px",
               "background-color": "#222",
+              height: "32px",
+              "flex-shrink": "0",
             }}
           >
             <div
