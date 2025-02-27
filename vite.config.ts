@@ -8,6 +8,7 @@ export default defineConfig(({ command }) => {
   let devServer: ViteDevServer;
 
   return {
+    base: "./",
     plugins: [
       solid(),
       {

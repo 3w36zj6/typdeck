@@ -47,6 +47,7 @@ export const createViteConfig = (
   setupDotDirectory(typstFile);
   return {
     configFile: false,
+    base: "./",
     root:
       command !== "build"
         ? process.cwd()
