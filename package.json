@@ -22,7 +22,8 @@
   },
   "files": [
     "bin",
-    "public"
+    "public",
+    "schema"
   ],
   "scripts": {
     "dev": "vite",
