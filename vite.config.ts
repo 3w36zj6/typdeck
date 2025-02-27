@@ -27,7 +27,7 @@ export default defineConfig(({ command }) => {
           }
 
           compileTypst(
-            "main.typ",
+            "demo.typ",
             "public",
             command === "serve" ? devServer : undefined,
           );

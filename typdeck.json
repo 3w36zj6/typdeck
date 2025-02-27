@@ -1,0 +1,11 @@
+{
+  "$schema": "./schema/0.1.0/schema.json",
+  "slides": {
+    "2": {
+      "speakerNotes": "This is an example of speaker notes. You can add important talking points here that only you will see during the presentation."
+    },
+    "5": {
+      "speakerNotes": "When using dynamic slides, we configure speaker notes and other settings using the page numbers from the generated output."
+    }
+  }
+}
