@@ -1,7 +1,24 @@
-import { build, createServer, preview } from "vite";
+import {
+  build,
+  createServer,
+  preview,
+  PreviewServer,
+  ViteDevServer,
+} from "vite";
 import yargs from "yargs/yargs";
 import { hideBin } from "yargs/helpers";
 import { createViteConfig } from "./helpers/vite/createViteConfig";
+import chalk from "chalk";
+
+const printUrl = (server: ViteDevServer | PreviewServer) => {
+  const localUrl = server.resolvedUrls?.local?.[0];
+  if (localUrl) {
+    const url = new URL(localUrl);
+    console.info(
+      `${chalk.green("  ➜")}  ${chalk.bold("Local:")}   ${chalk.cyan(`http://${url.hostname}:${chalk.bold(url.port)}/`)}`,
+    );
+  }
+};
 
 type DevArgs = {
   outDir: string;
@@ -26,7 +43,7 @@ export const main = async () => {
         const viteConfig = createViteConfig(argv.outDir, argv.typstFile, "dev");
         const server = await createServer(viteConfig);
         await server.listen();
-        server.printUrls();
+        printUrl(server);
       },
     })
     .command<BuildArgs>({
@@ -47,7 +64,7 @@ export const main = async () => {
       handler: async (argv) => {
         const viteConfig = createViteConfig(argv.outDir, undefined, "preview");
         const previewServer = await preview(viteConfig);
-        previewServer.printUrls();
+        printUrl(previewServer);
       },
     })
     .option("outDir", { type: "string", default: "dist" })

@@ -60,5 +60,6 @@ export const createViteConfig = (
       outDir: path.resolve(process.cwd(), outDir),
       emptyOutDir: true,
     },
+    logLevel: command === "build" ? "info" : "silent",
   };
 };

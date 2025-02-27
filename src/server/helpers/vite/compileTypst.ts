@@ -8,6 +8,20 @@ import { getTypstPath } from "../getTypstPath";
 import type { ConfigFile } from "../../types/ConfigFile";
 import { readConfigFile } from "../readConfigFile";
 import { Metadata } from "../../../client/types/metadata";
+import chalk from "chalk";
+
+const getTimeStamp = (): string => {
+  const now = new Date();
+  const hours = now.getHours().toString().padStart(2, "0");
+  const minutes = now.getMinutes().toString().padStart(2, "0");
+  const seconds = now.getSeconds().toString().padStart(2, "0");
+  return `${hours}:${minutes}:${seconds}`;
+};
+
+const logWithTimestamp = (message: string, logFn = console.info): void => {
+  const timestamp = getTimeStamp();
+  logFn(`${chalk.gray(`[${timestamp}]`)} ${message}`);
+};
 
 let cachedTypstPath: string | null = null;
 let cachedConfig: ConfigFile | null = null;
@@ -20,9 +34,11 @@ export const compileTypst = (
   if (cachedTypstPath === null) {
     cachedTypstPath = getTypstPath();
     if (cachedTypstPath) {
-      console.info(`typst is found at: ${cachedTypstPath}`);
+      console.info(
+        chalk.green(`✓ Typst compiler is found at: ${cachedTypstPath}`),
+      );
     } else {
-      console.error("typst command not found in PATH.");
+      console.error(chalk.red(`✗ Typst compiler not found in PATH.`));
       return;
     }
   }
@@ -40,10 +56,13 @@ export const compileTypst = (
   });
 
   try {
-    const stdout = execSync(
-      `typst compile ${typstFile} ${path.resolve(pagesOutDirPath, "{p}.svg")} -f svg`,
-    );
-    console.info(stdout.toString());
+    const command = `typst compile ${typstFile} ${path.resolve(
+      pagesOutDirPath,
+      "{p}.svg",
+    )} -f svg`;
+    logWithTimestamp(chalk.dim(`${chalk.magenta("$")} ${command}`));
+    const stdout = execSync(command);
+    console.info(chalk.dim(stdout.toString().trim()));
   } catch (err) {
     console.error(err);
     return;

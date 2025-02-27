@@ -10,9 +10,6 @@ export const typstPlugin = (typstFile: string): PluginOption => {
     configResolved(resolvedConfig) {
       config = resolvedConfig;
     },
-    buildStart() {
-      compileTypst(typstFile, config.publicDir);
-    },
     handleHotUpdate({ file, server }) {
       if (file.endsWith(".typ")) {
         compileTypst(typstFile, config.publicDir, server);
