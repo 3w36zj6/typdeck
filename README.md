@@ -90,6 +90,7 @@ Here's an example configuration in JSON format:
 
 ```json
 {
+  "$schema": "https://3w36zj6.github.io/typdeck/schema/0.1.0/schema.json",
   "slides": {
     "1": {
       "speakerNotes": "Introduction slide. Start with a greeting."
