@@ -21,6 +21,8 @@ jobs:
         uses: actions/checkout@v4
       - name: Setup toolchain
         uses: jdx/mise-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Install dependencies
         run: bun install --frozen-lockfile
       - name: Build client

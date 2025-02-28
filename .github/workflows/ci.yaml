@@ -43,6 +43,8 @@ jobs:
         uses: jdx/mise-action@v2
         with:
           cache: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Install dependencies
         run: bun install --frozen-lockfile
       - name: ${{ matrix.step_name }}
