@@ -1,5 +1,10 @@
 # typdeck
 
+[![NPM Version](https://img.shields.io/npm/v/typdeck)](https://www.npmjs.com/package/typdeck?activeTab=versions)
+[![NPM Downloads](https://img.shields.io/npm/d18m/typdeck)](https://www.npmjs.com/package/typdeck)
+[![NPM License](https://img.shields.io/npm/l/typdeck)](https://github.com/3w36zj6/typdeck/blob/HEAD/LICENSE)
+[![CI](https://github.com/3w36zj6/typdeck/actions/workflows/ci.yaml/badge.svg?branch=main&event=push)](https://github.com/3w36zj6/typdeck/actions/workflows/ci.yaml)
+
 Static site generator for slides with Typst
 
 ## Features
