@@ -73,34 +73,10 @@ typdeck preview
 
 This runs a local server to preview the production build before deployment.
 
-### Configuration
+### Speaker notes
 
-Typdeck uses a configuration file to customize the build process. The following file formats are supported:
+Attach a note to the current slide with `<pdfpc>` metadata:
 
-- `typdeck.json`
-- `typdeck.json5`
-- `typdeck.jsonc`
-- `typdeck.toml`
-- `typdeck.yaml`
-- `typdeck.yml`
-
-Place the configuration file in the root directory of your Typst project (recommended), and typdeck will automatically detect and use it. Typdeck searches for configuration files in the current working directory where you run the command.
-
-Here's an example configuration in JSON format:
-
-```json
-{
-  "$schema": "https://3w36zj6.github.io/typdeck/schema/0.1.0/schema.json",
-  "slides": {
-    "1": {
-      "speakerNotes": "Introduction slide. Start with a greeting."
-    },
-    "3": {
-      "speakerNotes": "This slide explains the key concepts."
-    },
-    "5": {
-      "speakerNotes": "Remember to demo the application here."
-    }
-  }
-}
+```typst
+#metadata((t: "Note", v: "Explain this result.")) <pdfpc>
 ```

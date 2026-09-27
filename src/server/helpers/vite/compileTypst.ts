@@ -5,8 +5,7 @@ import path from "path";
 import { execSync } from "child_process";
 import { writeMetadataJSON } from "../writeMatadataJSON";
 import { getTypstPath } from "../getTypstPath";
-import type { ConfigFile } from "../../types/ConfigFile";
-import { readConfigFile } from "../readConfigFile";
+import { queryPdfpcNotes } from "../queryPdfpcNotes";
 import { Metadata } from "../../../client/types/metadata";
 import chalk from "chalk";
 
@@ -24,7 +23,6 @@ const logWithTimestamp = (message: string, logFn = console.info): void => {
 };
 
 let cachedTypstPath: string | null = null;
-let cachedConfig: ConfigFile | null = null;
 
 export const compileTypst = (
   typstFile: string,
@@ -41,9 +39,6 @@ export const compileTypst = (
       console.error(chalk.red(`✗ Typst compiler not found in PATH.`));
       return;
     }
-  }
-  if (cachedConfig === null) {
-    cachedConfig = readConfigFile(process.cwd());
   }
 
   const pagesOutDirPath = path.resolve(publicDir, "pages");
@@ -80,20 +75,16 @@ export const compileTypst = (
     pageCount,
   };
 
-  if (cachedConfig?.slides && Object.keys(cachedConfig.slides).length > 0) {
-    const slidesSettings: NonNullable<Metadata["slides"]> = {};
-    Object.entries(cachedConfig.slides).forEach(([key, settings]) => {
-      if (!/^[1-9]\d*$/.test(key)) {
-        return;
-      }
-      const slideNumber = Number(key);
-      if (slideNumber <= 0 || slideNumber > pageCount) {
-        return;
-      }
-      slidesSettings[key as keyof ConfigFile["slides"]] = {
-        speakerNotes: settings.speakerNotes,
-      };
-    });
+  const slidesSettings: NonNullable<Metadata["slides"]> = {};
+  for (const note of queryPdfpcNotes(
+    cachedTypstPath,
+    typstFile,
+    process.cwd(),
+  )) {
+    if (note.page > pageCount) continue;
+    slidesSettings[`${note.page}`] = { speakerNotes: note.speakerNotes };
+  }
+  if (Object.keys(slidesSettings).length > 0) {
     metadata.slides = slidesSettings;
   }
 

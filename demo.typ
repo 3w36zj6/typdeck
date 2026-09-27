@@ -26,9 +26,13 @@
 
 == What is typdeck?
 
+#speaker-note[Introduce typdeck.]
+
 - typdeck is a static site generator for slides with Typst
 
 == Features
+
+#speaker-note[Explain the key features.]
 
 - 📝 *Typst based*
   - create beautiful slides using Typst, with full access to its powerful typesetting capabilities and growing ecosystem of packages #pause
@@ -42,6 +46,8 @@
 = Getting started
 
 == Installation
+
+#speaker-note[Remind the audience that Typst is required.]
 
 First, make sure you have Typst installed on your system. Then install typdeck using your preferred package manager:
 
@@ -94,42 +100,3 @@ typdeck preview
 ```
 
 This runs a local server to preview the production build before deployment.
-
-== Configuration
-
-#text(
-  [
-    Typdeck uses a configuration file to customize the build process. The following file formats are supported:
-
-    - `typdeck.json`
-    - `typdeck.json5`
-    - `typdeck.jsonc`
-    - `typdeck.toml`
-    - `typdeck.yaml`
-    - `typdeck.yml`
-
-    Place the configuration file in the root directory of your Typst project (recommended), and typdeck will automatically detect and use it. Typdeck searches for configuration files in the current working directory where you run the command.
-  ],
-  size: 0.9em,
-)
-
-#pagebreak()
-
-Here's an example configuration in JSON format:
-
-```json
-{
-  "$schema": "https://3w36zj6.github.io/typdeck/schema/0.1.0/schema.json",
-  "slides": {
-    "1": {
-      "speakerNotes": "Introduction slide. Start with a greeting."
-    },
-    "3": {
-      "speakerNotes": "This slide explains the key concepts."
-    },
-    "5": {
-      "speakerNotes": "Remember to demo the application here."
-    }
-  }
-}
-```
