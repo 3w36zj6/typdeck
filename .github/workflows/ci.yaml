@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-24.04
     strategy:
       matrix:
-        check: [format, lint, tsc, build-client, build-server]
+        check: [format, lint, tsc, test, build-client, build-server]
         include:
           - check: format
             name: Prettier
@@ -28,6 +28,10 @@ jobs:
             name: TypeScript
             command: tsc
             step_name: Check using TypeScript
+          - check: test
+            name: Unit tests
+            command: test
+            step_name: Run unit tests
           - check: build-client
             name: Build client
             command: build:client
