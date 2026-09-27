@@ -2,4 +2,4 @@
 
 import { main } from "./src/server/cli";
 
-main();
+await main();
