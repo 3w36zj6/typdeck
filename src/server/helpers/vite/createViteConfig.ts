@@ -1,29 +1,31 @@
+import { type InlineConfig } from "vite";
 import fs from "node:fs";
 import { findPackageJSON } from "node:module";
 import path from "node:path";
-import { type InlineConfig } from "vite";
-import { compileTypst } from "./compileTypst";
 import { typstPlugin } from "./createTypstPlugin";
+import { compileTypst } from "./compileTypst";
 
-const setupDotDirectory = (typstFile?: string) => {
+const setupDotDirectory = async (typstFile?: string) => {
   const dotDirectory = path.resolve(process.cwd(), ".typdeck");
   const publicDirectory = path.join(dotDirectory, "public");
 
   fs.mkdirSync(dotDirectory, { recursive: true });
   fs.writeFileSync(path.join(dotDirectory, ".gitignore"), "*\n", "utf8");
-  if (typstFile) compileTypst(typstFile, publicDirectory);
+  if (typstFile) {
+    await compileTypst(typstFile, publicDirectory);
+  }
 };
 
 type CommandType = "dev" | "build" | "preview";
 
-export const createViteConfig = (
+export const createViteConfig = async (
   outDir: string,
   typstFile?: string,
   command?: CommandType,
-): InlineConfig => {
+): Promise<InlineConfig> => {
   const packageJson = findPackageJSON(import.meta.url);
   if (!packageJson) throw new Error("Could not find typdeck package.json");
-  setupDotDirectory(typstFile);
+  await setupDotDirectory(typstFile);
 
   return {
     configFile: false,

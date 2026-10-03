@@ -40,7 +40,11 @@ export const main = async () => {
       command: "dev <typstFile>",
       describe: "start dev server",
       handler: async (argv) => {
-        const viteConfig = createViteConfig(argv.outDir, argv.typstFile, "dev");
+        const viteConfig = await createViteConfig(
+          argv.outDir,
+          argv.typstFile,
+          "dev",
+        );
         const server = await createServer(viteConfig);
         await server.listen();
         printUrl(server);
@@ -50,7 +54,7 @@ export const main = async () => {
       command: "build <typstFile>",
       describe: "build for production",
       handler: async (argv) => {
-        const viteConfig = createViteConfig(
+        const viteConfig = await createViteConfig(
           argv.outDir,
           argv.typstFile,
           "build",
@@ -62,7 +66,11 @@ export const main = async () => {
       command: "preview",
       describe: "locally preview production build",
       handler: async (argv) => {
-        const viteConfig = createViteConfig(argv.outDir, undefined, "preview");
+        const viteConfig = await createViteConfig(
+          argv.outDir,
+          undefined,
+          "preview",
+        );
         const previewServer = await preview(viteConfig);
         printUrl(previewServer);
       },

@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { runProcess } from "./runProcess";
 
 export type PdfpcNote = {
   page: number;
@@ -16,14 +16,15 @@ const expression = `query(<pdfpc>)
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 
-export const queryPdfpcNotes = (
+export const queryPdfpcNotes = async (
   typstFile: string,
   root: string,
-): PdfpcNote[] => {
-  const stdout = execFileSync(
+  signal?: AbortSignal,
+): Promise<PdfpcNote[]> => {
+  const { stdout } = await runProcess(
     "typst",
     ["eval", "--root", root, expression, "--in", typstFile, "--format", "json"],
-    { encoding: "utf8" },
+    signal,
   );
   const values: unknown = JSON.parse(stdout);
   if (!Array.isArray(values)) throw new Error("expected an array");

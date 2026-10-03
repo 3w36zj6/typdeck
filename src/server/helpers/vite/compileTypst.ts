@@ -1,12 +1,11 @@
-import { ViteDevServer } from "vite";
-
-import fs from "fs";
-import path from "path";
-import { execFileSync } from "node:child_process";
-import { writeMetadataJSON } from "../writeMatadataJSON";
-import { queryPdfpcNotes } from "../queryPdfpcNotes";
-import { Metadata } from "../../../client/types/metadata";
+import fs from "node:fs";
+import path from "node:path";
+import { type ViteDevServer } from "vite";
 import chalk from "chalk";
+import { type Metadata } from "../../../client/types/metadata";
+import { queryPdfpcNotes } from "../queryPdfpcNotes";
+import { runProcess } from "../runProcess";
+import { writeMetadataJSON } from "../writeMatadataJSON";
 
 const getTimeStamp = (): string => {
   const now = new Date();
@@ -21,11 +20,12 @@ const logWithTimestamp = (message: string, logFn = console.info): void => {
   logFn(`${chalk.gray(`[${timestamp}]`)} ${message}`);
 };
 
-export const compileTypst = (
+export const compileTypst = async (
   typstFile: string,
   publicDir: string,
   server?: ViteDevServer,
-) => {
+  signal?: AbortSignal,
+): Promise<void> => {
   const resolvedPublicDir = path.resolve(publicDir);
   fs.mkdirSync(resolvedPublicDir, { recursive: true });
   const stagingDir = fs.mkdtempSync(path.join(resolvedPublicDir, ".compile-"));
@@ -46,10 +46,7 @@ export const compileTypst = (
         `${chalk.magenta("$")} typst ${args.map((arg) => JSON.stringify(arg)).join(" ")}`,
       ),
     );
-    const stdout = execFileSync("typst", args, {
-      encoding: "utf8",
-      stdio: "pipe",
-    });
+    const { stdout } = await runProcess("typst", args, signal);
     console.info(chalk.dim(stdout.trim()));
 
     const pageCount = fs
@@ -62,7 +59,11 @@ export const compileTypst = (
 
     const metadata: Metadata = { pageCount };
     const slidesSettings: NonNullable<Metadata["slides"]> = {};
-    for (const note of queryPdfpcNotes(typstFile, process.cwd())) {
+    for (const note of await queryPdfpcNotes(
+      typstFile,
+      process.cwd(),
+      signal,
+    )) {
       if (note.page > pageCount) continue;
       slidesSettings[`${note.page}`] = { speakerNotes: note.speakerNotes };
     }
@@ -96,9 +97,6 @@ export const compileTypst = (
     }
 
     server?.ws.send({ type: "full-reload", path: "*" });
-  } catch (error) {
-    console.error(error);
-    throw error;
   } finally {
     fs.rmSync(stagingDir, { recursive: true, force: true });
   }

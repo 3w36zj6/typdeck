@@ -1,24 +1,23 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { compileTypst } from "./compileTypst";
 
 const directories: string[] = [];
 
 afterEach(() => {
-  vi.restoreAllMocks();
   for (const directory of directories.splice(0)) {
     fs.rmSync(directory, { recursive: true, force: true });
   }
 });
 
 describe("compileTypst", () => {
-  it("supports output paths containing spaces", () => {
+  it("supports output paths containing spaces", async () => {
     const output = fs.mkdtempSync(path.join(os.tmpdir(), "typdeck output "));
     directories.push(output);
 
-    compileTypst(
+    await compileTypst(
       path.join(process.cwd(), "tests/fixtures/pdfpc-note.typ"),
       output,
     );
@@ -29,26 +28,25 @@ describe("compileTypst", () => {
     ).toMatchObject({ pageCount: 1 });
   });
 
-  it("keeps the last good output when compilation fails", () => {
+  it("keeps the last good output when compilation fails", async () => {
     const root = process.cwd();
     const output = fs.mkdtempSync(path.join(os.tmpdir(), "typdeck-output-"));
-    const consoleError = vi
-      .spyOn(console, "error")
-      .mockImplementation(() => {});
     directories.push(output);
 
-    compileTypst(path.join(root, "tests/fixtures/pdfpc-note.typ"), output);
+    await compileTypst(
+      path.join(root, "tests/fixtures/pdfpc-note.typ"),
+      output,
+    );
     const page = fs.readFileSync(path.join(output, "pages", "1.svg"));
     const metadata = fs.readFileSync(
       path.join(output, "metadata.json"),
       "utf8",
     );
 
-    expect(() =>
+    await expect(
       compileTypst(path.join(root, "tests/fixtures/invalid.typ"), output),
-    ).toThrow();
+    ).rejects.toThrow();
 
-    expect(consoleError).toHaveBeenCalledOnce();
     expect(fs.readFileSync(path.join(output, "pages", "1.svg"))).toEqual(page);
     expect(fs.readFileSync(path.join(output, "metadata.json"), "utf8")).toBe(
       metadata,
