@@ -1,40 +1,17 @@
-import { InlineConfig } from "vite";
-import path from "path";
-import fs from "fs";
-import { typstPlugin } from "./createTypstPlugin";
-import { injectIndexHtmlPlugin } from "./createInjectIndexHtmlPlugin";
-import { getPackageRootPath } from "../getPackageRootPath";
+import fs from "node:fs";
+import { findPackageJSON } from "node:module";
+import path from "node:path";
+import { type InlineConfig } from "vite";
 import { compileTypst } from "./compileTypst";
+import { typstPlugin } from "./createTypstPlugin";
 
 const setupDotDirectory = (typstFile?: string) => {
-  const packageRoot = getPackageRootPath();
-  const sourcePublicDir = path.join(packageRoot, "public");
-  const destPublicDir = path.resolve(process.cwd(), ".typdeck/public");
-  const destDotFolderDir = path.resolve(process.cwd(), ".typdeck");
+  const dotDirectory = path.resolve(process.cwd(), ".typdeck");
+  const publicDirectory = path.join(dotDirectory, "public");
 
-  try {
-    if (fs.existsSync(sourcePublicDir)) {
-      fs.cpSync(sourcePublicDir, destPublicDir, {
-        recursive: true,
-        force: true,
-      });
-    } else {
-      console.warn(
-        `Source public directory ${sourcePublicDir} does not exist.`,
-      );
-    }
-    const gitignoreContent = `*
-`;
-
-    const destGitignorePath = path.join(destDotFolderDir, ".gitignore");
-    fs.writeFileSync(destGitignorePath, gitignoreContent, "utf-8");
-
-    if (typstFile) {
-      compileTypst(typstFile, ".typdeck/public");
-    }
-  } catch (err) {
-    console.error("Failed to copy public files:", err);
-  }
+  fs.mkdirSync(dotDirectory, { recursive: true });
+  fs.writeFileSync(path.join(dotDirectory, ".gitignore"), "*\n", "utf8");
+  if (typstFile) compileTypst(typstFile, publicDirectory);
 };
 
 type CommandType = "dev" | "build" | "preview";
@@ -44,19 +21,22 @@ export const createViteConfig = (
   typstFile?: string,
   command?: CommandType,
 ): InlineConfig => {
+  const packageJson = findPackageJSON(import.meta.url);
+  if (!packageJson) throw new Error("Could not find typdeck package.json");
   setupDotDirectory(typstFile);
+
   return {
     configFile: false,
     base: "./",
     root:
-      command !== "build"
+      command === "preview"
         ? process.cwd()
-        : path.join(process.cwd(), ".typdeck/public"),
-    publicDir: path.join(process.cwd(), ".typdeck/public"),
-    plugins: [
-      injectIndexHtmlPlugin(),
-      ...(typstFile ? [typstPlugin(typstFile)] : []),
-    ],
+        : path.join(path.dirname(packageJson), "public"),
+    publicDir:
+      command === "preview"
+        ? false
+        : path.resolve(process.cwd(), ".typdeck/public"),
+    plugins: typstFile ? [typstPlugin(typstFile)] : [],
     build: {
       outDir: path.resolve(process.cwd(), outDir),
       emptyOutDir: true,
