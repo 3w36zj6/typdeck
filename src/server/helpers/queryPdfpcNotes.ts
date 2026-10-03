@@ -13,13 +13,15 @@ const expression = `query(<pdfpc>)
     speaker-notes: item.value.at("v", default: none),
   ))`;
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
 export const queryPdfpcNotes = (
-  typstPath: string,
   typstFile: string,
   root: string,
 ): PdfpcNote[] => {
   const stdout = execFileSync(
-    typstPath,
+    "typst",
     ["eval", "--root", root, expression, "--in", typstFile, "--format", "json"],
     { encoding: "utf8" },
   );
@@ -27,19 +29,17 @@ export const queryPdfpcNotes = (
   if (!Array.isArray(values)) throw new Error("expected an array");
 
   return values.map((value, index) => {
-    if (!value || typeof value !== "object")
-      throw new Error(`invalid pdfpc note at index ${index}`);
-    const note = value as Record<string, unknown>;
     if (
-      !Number.isInteger(note.page) ||
-      Number(note.page) < 1 ||
-      typeof note["speaker-notes"] !== "string"
+      !isRecord(value) ||
+      !Number.isInteger(value.page) ||
+      Number(value.page) < 1 ||
+      typeof value["speaker-notes"] !== "string"
     ) {
       throw new Error(`invalid pdfpc note at index ${index}`);
     }
     return {
-      page: Number(note.page),
-      speakerNotes: note["speaker-notes"],
+      page: Number(value.page),
+      speakerNotes: value["speaker-notes"],
     };
   });
 };

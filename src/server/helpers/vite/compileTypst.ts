@@ -2,9 +2,8 @@ import { ViteDevServer } from "vite";
 
 import fs from "fs";
 import path from "path";
-import { execSync } from "child_process";
+import { execFileSync } from "node:child_process";
 import { writeMetadataJSON } from "../writeMatadataJSON";
-import { getTypstPath } from "../getTypstPath";
 import { queryPdfpcNotes } from "../queryPdfpcNotes";
 import { Metadata } from "../../../client/types/metadata";
 import chalk from "chalk";
@@ -22,25 +21,11 @@ const logWithTimestamp = (message: string, logFn = console.info): void => {
   logFn(`${chalk.gray(`[${timestamp}]`)} ${message}`);
 };
 
-let cachedTypstPath: string | null = null;
-
 export const compileTypst = (
   typstFile: string,
   publicDir: string,
   server?: ViteDevServer,
 ) => {
-  if (cachedTypstPath === null) {
-    cachedTypstPath = getTypstPath();
-    if (cachedTypstPath) {
-      console.info(
-        chalk.green(`✓ Typst compiler is found at: ${cachedTypstPath}`),
-      );
-    } else {
-      console.error(chalk.red(`✗ Typst compiler not found in PATH.`));
-      return;
-    }
-  }
-
   const pagesOutDirPath = path.resolve(publicDir, "pages");
   if (!fs.existsSync(pagesOutDirPath)) {
     fs.mkdirSync(pagesOutDirPath, { recursive: true });
@@ -51,13 +36,20 @@ export const compileTypst = (
   });
 
   try {
-    const command = `typst compile ${typstFile} ${path.resolve(
-      pagesOutDirPath,
-      "{p}.svg",
-    )} -f svg`;
-    logWithTimestamp(chalk.dim(`${chalk.magenta("$")} ${command}`));
-    const stdout = execSync(command);
-    console.info(chalk.dim(stdout.toString().trim()));
+    const args = [
+      "compile",
+      typstFile,
+      path.resolve(pagesOutDirPath, "{p}.svg"),
+      "-f",
+      "svg",
+    ];
+    logWithTimestamp(
+      chalk.dim(
+        `${chalk.magenta("$")} typst ${args.map((arg) => JSON.stringify(arg)).join(" ")}`,
+      ),
+    );
+    const stdout = execFileSync("typst", args, { encoding: "utf8" });
+    console.info(chalk.dim(stdout.trim()));
   } catch (err) {
     console.error(err);
     return;
@@ -76,11 +68,7 @@ export const compileTypst = (
   };
 
   const slidesSettings: NonNullable<Metadata["slides"]> = {};
-  for (const note of queryPdfpcNotes(
-    cachedTypstPath,
-    typstFile,
-    process.cwd(),
-  )) {
+  for (const note of queryPdfpcNotes(typstFile, process.cwd())) {
     if (note.page > pageCount) continue;
     slidesSettings[`${note.page}`] = { speakerNotes: note.speakerNotes };
   }
