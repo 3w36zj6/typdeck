@@ -28,7 +28,7 @@
 
 #speaker-note[Introduce typdeck.]
 
-- typdeck is a static site generator for slides with Typst
+- typdeck compiles Typst slides into a web stage and presenter view
 
 == Features
 

@@ -1,7 +1,7 @@
 {
   "name": "typdeck",
   "version": "0.1.1",
-  "description": "Static site generator for slides with Typst",
+  "description": "Compile Typst slides into a web stage and presenter view",
   "keywords": [
     "typst",
     "cli",
