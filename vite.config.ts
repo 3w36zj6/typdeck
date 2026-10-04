@@ -1,7 +1,7 @@
 import { defineConfig } from "vite";
 import solid from "vite-plugin-solid";
 import path from "node:path";
-import { compileTypst } from "./src/server/helpers/vite/compileTypst";
+import { compileTypst } from "./src/server/helpers/compileTypst";
 import { typstPlugin } from "./src/server/helpers/vite/createTypstPlugin";
 
 export default defineConfig(async ({ command, isPreview }) => {

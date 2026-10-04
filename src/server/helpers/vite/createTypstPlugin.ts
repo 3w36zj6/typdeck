@@ -1,6 +1,6 @@
 import { type PluginOption } from "vite";
 
-import { compileTypst } from "./compileTypst";
+import { compileTypst } from "../compileTypst";
 
 export const typstPlugin = (typstFile: string): PluginOption => {
   let activeCompile: AbortController | undefined;
@@ -19,9 +19,9 @@ export const typstPlugin = (typstFile: string): PluginOption => {
           await compileTypst(
             typstFile,
             server.config.publicDir,
-            server,
             controller.signal,
           );
+          server.ws.send({ type: "full-reload", path: "*" });
         } catch (error) {
           if (!controller.signal.aborted) {
             console.error(error);

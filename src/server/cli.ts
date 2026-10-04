@@ -1,27 +1,22 @@
-import {
-  build,
-  createServer,
-  preview,
-  PreviewServer,
-  ViteDevServer,
-} from "vite";
+import fs from "node:fs";
+import { type Server } from "node:http";
+import { findPackageJSON } from "node:module";
+import path from "node:path";
 import yargs from "yargs/yargs";
 import { hideBin } from "yargs/helpers";
-import { createViteConfig } from "./helpers/vite/createViteConfig";
 import chalk from "chalk";
+import { compileTypst, replaceDirectory } from "./helpers/compileTypst";
+import { servePresentation } from "./helpers/servePresentation";
 
-const printUrl = (server: ViteDevServer | PreviewServer) => {
-  const localUrl = server.resolvedUrls?.local?.[0];
-  if (localUrl) {
-    const url = new URL(localUrl);
-    console.info(
-      `${chalk.green("  ➜")}  ${chalk.bold("Local:")}   ${chalk.cyan(`http://${url.hostname}:${chalk.bold(url.port)}/`)}`,
-    );
-  }
+const printUrl = (server: Server) => {
+  const address = server.address();
+  if (!address || typeof address === "string") return;
+  console.info(
+    `${chalk.green("  ➜")}  ${chalk.bold("Local:")}   ${chalk.cyan(`http://127.0.0.1:${chalk.bold(address.port)}/`)}`,
+  );
 };
 
 type DevArgs = {
-  outDir: string;
   typstFile: string;
 };
 
@@ -30,8 +25,44 @@ type BuildArgs = {
   typstFile: string;
 };
 
-type PreviewArgs = {
-  outDir: string;
+const getClientDirectory = () => {
+  const packageJson = findPackageJSON(import.meta.url);
+  if (!packageJson) throw new Error("Could not find typdeck package.json");
+  return path.join(path.dirname(packageJson), "public");
+};
+
+const containsPath = (directory: string, target: string) => {
+  const relative = path.relative(directory, target);
+  return (
+    relative === "" ||
+    (relative !== ".." &&
+      !relative.startsWith(`..${path.sep}`) &&
+      !path.isAbsolute(relative))
+  );
+};
+
+const compileDeck = async (typstFile: string) => {
+  const dotDirectory = path.resolve(".typdeck");
+  const deckDirectory = path.join(dotDirectory, "deck");
+  fs.mkdirSync(dotDirectory, { recursive: true });
+  fs.writeFileSync(path.join(dotDirectory, ".gitignore"), "*\n", "utf8");
+  await compileTypst(typstFile, deckDirectory);
+  return deckDirectory;
+};
+
+const buildPresentation = async (typstFile: string, outDir: string) => {
+  const deckDirectory = await compileDeck(typstFile);
+  const output = path.resolve(outDir);
+  if (containsPath(output, process.cwd())) {
+    throw new Error("outDir must not contain the project directory");
+  }
+  fs.mkdirSync(path.dirname(output), { recursive: true });
+  using staging = fs.mkdtempDisposableSync(
+    path.join(path.dirname(output), `.${path.basename(output)}-build-`),
+  );
+  fs.cpSync(getClientDirectory(), staging.path, { recursive: true });
+  fs.cpSync(deckDirectory, staging.path, { recursive: true });
+  replaceDirectory(staging.path, output);
 };
 
 export const main = async () => {
@@ -40,13 +71,11 @@ export const main = async () => {
       command: "dev <typstFile>",
       describe: "start dev server",
       handler: async (argv) => {
-        const viteConfig = await createViteConfig(
-          argv.outDir,
+        const server = await servePresentation(
           argv.typstFile,
-          "dev",
+          getClientDirectory(),
+          await compileDeck(argv.typstFile),
         );
-        const server = await createServer(viteConfig);
-        await server.listen();
         printUrl(server);
       },
     })
@@ -54,25 +83,7 @@ export const main = async () => {
       command: "build <typstFile>",
       describe: "build for production",
       handler: async (argv) => {
-        const viteConfig = await createViteConfig(
-          argv.outDir,
-          argv.typstFile,
-          "build",
-        );
-        await build(viteConfig);
-      },
-    })
-    .command<PreviewArgs>({
-      command: "preview",
-      describe: "locally preview production build",
-      handler: async (argv) => {
-        const viteConfig = await createViteConfig(
-          argv.outDir,
-          undefined,
-          "preview",
-        );
-        const previewServer = await preview(viteConfig);
-        printUrl(previewServer);
+        await buildPresentation(argv.typstFile, argv.outDir);
       },
     })
     .option("outDir", {
