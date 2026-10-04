@@ -7,7 +7,7 @@
 
 Static site generator for slides with Typst
 
-## Features
+## Highlights
 
 [Typst]: https://typst.app/
 [Polylux]: https://typst.app/universe/package/polylux/
@@ -70,6 +70,8 @@ Serve the build output without recompiling or watching source files:
 ```sh
 typdeck preview
 ```
+
+## Features
 
 ### Speaker notes
 
