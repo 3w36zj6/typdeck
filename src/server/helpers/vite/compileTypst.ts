@@ -5,6 +5,7 @@ import chalk from "chalk";
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 import { type Metadata } from "../../../client/types/metadata";
 import { queryPdfpcNotes } from "../queryPdfpcNotes";
+import { queryTypstHeadings } from "../queryTypstHeadings";
 import { runProcess } from "../runProcess";
 import { writeMetadataJSON } from "../writeMatadataJSON";
 
@@ -80,7 +81,10 @@ export const compileTypst = async (
       await pdfTask.destroy();
     }
 
-    const metadata: Metadata = { pageCount };
+    const metadata: Metadata = {
+      pageCount,
+      outline: await queryTypstHeadings(typstFile, process.cwd(), signal),
+    };
     const slidesSettings: NonNullable<Metadata["slides"]> = {};
     for (const note of await queryPdfpcNotes(
       typstFile,

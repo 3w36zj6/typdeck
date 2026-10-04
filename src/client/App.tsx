@@ -8,6 +8,7 @@ import {
 } from "solid-js";
 import { parseMetadata } from "./types/metadata";
 import { Icon } from "@iconify-icon/solid";
+import { hashForPage, pageFromHash } from "./navigation";
 import {
   getDocument,
   GlobalWorkerOptions,
@@ -76,18 +77,11 @@ const App = () => {
     },
   );
 
-  const getPageFromHash = () => {
-    const hash = window.location.hash;
-    if (hash.startsWith("#")) {
-      const page = parseInt(hash.slice(1));
-      if (!isNaN(page) && page > 0) {
-        return page;
-      }
-    }
-    return 1;
-  };
+  const getPageFromHash = () => pageFromHash(window.location.hash, metadata());
 
-  const [currentPage, setCurrentPage] = createSignal(getPageFromHash());
+  const [currentPage, setCurrentPage] = createSignal(
+    pageFromHash(window.location.hash),
+  );
   const formatTime = (seconds: number) => {
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
@@ -185,7 +179,7 @@ const App = () => {
   createEffect(() => {
     const page = currentPage();
     if (page !== getPageFromHash()) {
-      window.location.hash = `#${page}`;
+      window.location.hash = hashForPage(page, metadata());
     }
   });
 

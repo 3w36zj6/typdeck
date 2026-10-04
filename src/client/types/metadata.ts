@@ -7,6 +7,13 @@ const PageKeySchema = v.custom<`${number}`>(
 const MetadataSchema = v.pipe(
   v.object({
     pageCount: v.pipe(v.number(), v.integer(), v.minValue(1)),
+    outline: v.array(
+      v.object({
+        text: v.string(),
+        label: v.optional(v.string()),
+        page: v.pipe(v.number(), v.integer(), v.minValue(1)),
+      }),
+    ),
     slides: v.optional(
       v.record(
         PageKeySchema,
@@ -15,9 +22,11 @@ const MetadataSchema = v.pipe(
     ),
   }),
   v.check(
-    ({ pageCount, slides }) =>
-      !slides || Object.keys(slides).every((page) => Number(page) <= pageCount),
-    "Slide metadata refers to a page outside the deck",
+    ({ pageCount, outline, slides }) =>
+      outline.every(({ page }) => page <= pageCount) &&
+      (!slides ||
+        Object.keys(slides).every((page) => Number(page) <= pageCount)),
+    "Metadata refers to a page outside the deck",
   ),
 );
 
