@@ -2,9 +2,17 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { compileTypst } from "./compileTypst";
+import { assertSupportedTypstVersion, compileTypst } from "./compileTypst";
 
 describe("compileTypst", () => {
+  it("requires Typst 0.15.0 or newer", () => {
+    expect(() => assertSupportedTypstVersion("typst 0.14.2")).toThrow(
+      "typdeck requires Typst 0.15.0 or newer",
+    );
+    expect(() => assertSupportedTypstVersion("typst 0.15.0")).not.toThrow();
+    expect(() => assertSupportedTypstVersion("typst 1.0.0")).not.toThrow();
+  });
+
   it("supports output paths containing spaces", async () => {
     using output = fs.mkdtempDisposableSync(
       path.join(os.tmpdir(), "typdeck output "),

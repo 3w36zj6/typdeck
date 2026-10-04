@@ -19,6 +19,20 @@ const logWithTimestamp = (message: string, logFn = console.info): void => {
   logFn(`${chalk.gray(`[${timestampFormat.format()}]`)} ${message}`);
 };
 
+export const assertSupportedTypstVersion = (output: string): void => {
+  const match = /^typst (\d+)\.(\d+)\.(\d+)(?:\s|$)/.exec(output.trim());
+  if (!match || (Number(match[1]) === 0 && Number(match[2]) < 15)) {
+    throw new Error("typdeck requires Typst 0.15.0 or newer");
+  }
+};
+
+let typstVersionCheck: Promise<void> | undefined;
+
+const ensureSupportedTypstVersion = (): Promise<void> =>
+  (typstVersionCheck ??= runProcess("typst", ["--version"]).then(({ stdout }) =>
+    assertSupportedTypstVersion(stdout),
+  ));
+
 export const replaceDirectory = (source: string, destination: string) => {
   const backup = `${source}-previous`;
   const hasPrevious = fs.existsSync(destination);
@@ -38,6 +52,7 @@ export const compileTypst = async (
   publicDir: string,
   signal?: AbortSignal,
 ): Promise<void> => {
+  await ensureSupportedTypstVersion();
   const resolvedPublicDir = path.resolve(publicDir);
   fs.mkdirSync(path.dirname(resolvedPublicDir), { recursive: true });
   using staging = fs.mkdtempDisposableSync(
