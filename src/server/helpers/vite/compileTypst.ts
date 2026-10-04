@@ -44,64 +44,60 @@ export const compileTypst = async (
 ): Promise<void> => {
   const resolvedPublicDir = path.resolve(publicDir);
   fs.mkdirSync(path.dirname(resolvedPublicDir), { recursive: true });
-  const stagingDir = fs.mkdtempSync(
+  using staging = fs.mkdtempDisposableSync(
     path.join(
       path.dirname(resolvedPublicDir),
       `.${path.basename(resolvedPublicDir)}-compile-`,
     ),
   );
+  const stagingDir = staging.path;
 
+  const pdfPath = path.join(stagingDir, "deck.pdf");
+  const args = [
+    "compile",
+    "--root",
+    process.cwd(),
+    typstFile,
+    pdfPath,
+    "--format",
+    "pdf",
+  ];
+  logWithTimestamp(
+    chalk.dim(
+      `${chalk.magenta("$")} typst ${args.map((arg) => JSON.stringify(arg)).join(" ")}`,
+    ),
+  );
+  const { stdout, stderr } = await runProcess("typst", args, signal);
+  if (stderr.trim()) console.warn(stderr.trim());
+  console.info(chalk.dim(stdout.trim()));
+
+  const pdfTask = getDocument({
+    data: new Uint8Array(fs.readFileSync(pdfPath)),
+  });
+  let pageCount: number;
   try {
-    const pdfPath = path.join(stagingDir, "deck.pdf");
-    const args = [
-      "compile",
-      "--root",
-      process.cwd(),
-      typstFile,
-      pdfPath,
-      "--format",
-      "pdf",
-    ];
-    logWithTimestamp(
-      chalk.dim(
-        `${chalk.magenta("$")} typst ${args.map((arg) => JSON.stringify(arg)).join(" ")}`,
-      ),
-    );
-    const { stdout, stderr } = await runProcess("typst", args, signal);
-    if (stderr.trim()) console.warn(stderr.trim());
-    console.info(chalk.dim(stdout.trim()));
-
-    const pdfTask = getDocument({
-      data: new Uint8Array(fs.readFileSync(pdfPath)),
-    });
-    let pageCount: number;
-    try {
-      pageCount = (await pdfTask.promise).numPages;
-    } finally {
-      await pdfTask.destroy();
-    }
-
-    const metadata: Metadata = {
-      pageCount,
-      outline: await queryTypstHeadings(typstFile, process.cwd(), signal),
-    };
-    const slidesSettings: NonNullable<Metadata["slides"]> = {};
-    for (const note of await queryPdfpcNotes(
-      typstFile,
-      process.cwd(),
-      signal,
-    )) {
-      if (note.page > pageCount) continue;
-      slidesSettings[`${note.page}`] = { speakerNotes: note.speakerNotes };
-    }
-    if (Object.keys(slidesSettings).length > 0) {
-      metadata.slides = slidesSettings;
-    }
-    writeMetadataJSON(metadata, path.join(stagingDir, "metadata.json"));
-    replaceGeneratedOutput(stagingDir, resolvedPublicDir);
-
-    server?.ws.send({ type: "full-reload", path: "*" });
+    pageCount = (await pdfTask.promise).numPages;
   } finally {
-    fs.rmSync(stagingDir, { recursive: true, force: true });
+    await pdfTask.destroy();
   }
+
+  const metadata: Metadata = {
+    pageCount,
+    outline: await queryTypstHeadings(typstFile, process.cwd(), signal),
+  };
+  const slidesSettings: NonNullable<Metadata["slides"]> = {};
+
+  for (const note of await queryPdfpcNotes(typstFile, process.cwd(), signal)) {
+    if (note.page > pageCount) continue;
+    slidesSettings[`${note.page}`] = { speakerNotes: note.speakerNotes };
+  }
+
+  if (Object.keys(slidesSettings).length > 0) {
+    metadata.slides = slidesSettings;
+  }
+
+  writeMetadataJSON(metadata, path.join(stagingDir, "metadata.json"));
+  replaceGeneratedOutput(stagingDir, resolvedPublicDir);
+
+  server?.ws.send({ type: "full-reload", path: "*" });
 };
