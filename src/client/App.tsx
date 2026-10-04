@@ -171,12 +171,14 @@ const App = () => {
     window.setTimeout(() => setIsTransitioning(false), TRANSITION_DURATION_MS);
   };
 
+  const nextPage = () =>
+    Math.min(currentPage() + 1, metadata()?.pageCount ?? currentPage());
+
   const goNextPage = () => {
     if (isTransitioning()) return;
     if (!metadata()) return;
     setIsTransitioning(true);
-    const max = metadata()!.pageCount;
-    setCurrentPage((prev) => Math.min(prev + 1, max));
+    setCurrentPage(nextPage());
     window.setTimeout(() => setIsTransitioning(false), TRANSITION_DURATION_MS);
   };
 
@@ -301,7 +303,7 @@ const App = () => {
                     <PdfSlide
                       document={document()}
                       page={currentPage()}
-                      label={`Slide ${currentPage()}`}
+                      label={pageLabel(metadata()!, currentPage())}
                       onNavigate={setCurrentPage}
                     />
                   </div>
@@ -477,7 +479,10 @@ const App = () => {
                     <PdfSlide
                       document={document()}
                       page={currentPage()}
-                      label={`Current slide ${currentPage()}`}
+                      label={`Current slide: ${pageLabel(
+                        metadata()!,
+                        currentPage(),
+                      )}`}
                       onNavigate={setCurrentPage}
                     />
                   </div>
@@ -493,12 +498,11 @@ const App = () => {
                   >
                     <PdfSlide
                       document={document()}
-                      page={
-                        currentPage() < document().numPages
-                          ? currentPage() + 1
-                          : currentPage()
-                      }
-                      label="Next slide"
+                      page={nextPage()}
+                      label={`Next slide: ${pageLabel(
+                        metadata()!,
+                        nextPage(),
+                      )}`}
                       opacity={0.5}
                       onNavigate={setCurrentPage}
                     />

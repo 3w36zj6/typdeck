@@ -82,19 +82,25 @@ export const PdfSlide = (props: PdfSlideProps) => {
             });
             pageView = nextView;
             nextView.setPdfPage(pdfPage);
-            nextView.div.setAttribute("aria-label", label);
-            void nextView.draw().catch((cause: unknown) => {
-              if (
-                !disposed &&
-                pageView === nextView &&
-                !(
-                  cause instanceof Error &&
-                  cause.name === "RenderingCancelledException"
-                )
-              ) {
-                setError("Could not render this slide.");
-              }
-            });
+            void nextView.draw().then(
+              () => {
+                if (!disposed && pageView === nextView) {
+                  nextView.div.setAttribute("aria-label", label);
+                }
+              },
+              (cause: unknown) => {
+                if (
+                  !disposed &&
+                  pageView === nextView &&
+                  !(
+                    cause instanceof Error &&
+                    cause.name === "RenderingCancelledException"
+                  )
+                ) {
+                  setError("Could not render this slide.");
+                }
+              },
+            );
           });
         };
 
