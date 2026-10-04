@@ -6,7 +6,7 @@ import {
   onMount,
   Show,
 } from "solid-js";
-import { Metadata } from "./types/metadata";
+import { parseMetadata } from "./types/metadata";
 import { Icon } from "@iconify-icon/solid";
 import {
   getDocument,
@@ -53,14 +53,20 @@ const IconSeparator = () => (
 );
 
 const App = () => {
-  const [metadata] = createResource<Metadata>(async () => {
+  const [metadata] = createResource(async () => {
     const response = await fetch("./metadata.json");
-    return response.json();
+    if (!response.ok) {
+      throw new Error(`failed to load metadata: ${response.status}`);
+    }
+    if (!response.headers.get("content-type")?.includes("application/json")) {
+      throw new Error("metadata endpoint did not return JSON");
+    }
+    return parseMetadata(await response.json());
   });
   let pdfLoadingTask: PDFDocumentLoadingTask | undefined;
   const [pdfDocument] = createResource(
-    () => metadata()?.pageCount,
-    async (pageCount) => {
+    () => metadata.state === "ready" && metadata(),
+    async ({ pageCount }) => {
       pdfLoadingTask = getDocument({ url: "./deck.pdf" });
       const document = await pdfLoadingTask.promise;
       if (document.numPages !== pageCount) {
@@ -219,10 +225,12 @@ const App = () => {
   };
 
   return (
-    <>
-      <Show when={pdfDocument.error}>
+    <Show
+      when={!metadata.error && !pdfDocument.error}
+      fallback={
         <main role="alert">Could not load this typdeck presentation.</main>
-      </Show>
+      }
+    >
       <Show
         when={isPresenterMode}
         fallback={
@@ -512,7 +520,7 @@ const App = () => {
           </div>
         </div>
       </Show>
-    </>
+    </Show>
   );
 };
 
