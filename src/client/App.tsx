@@ -22,25 +22,17 @@ import { PdfSlide } from "./PdfSlide";
 GlobalWorkerOptions.workerSrc = pdfWorker;
 
 type MenuIconProps = {
-  disabled?: boolean;
   icon: string;
 };
 
 const MenuIcon = (props: MenuIconProps) => {
-  const [hovered, setHovered] = createSignal(false);
   return (
     <Icon
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      class="menu-icon"
+      aria-hidden="true"
       icon={props.icon}
       width="32"
       height="32"
-      style={{
-        color: props.disabled ? "#555" : hovered() ? "#fff" : "#aaa",
-        transition: "color 0.3s",
-        opacity: props.disabled ? 0.5 : 1,
-        cursor: props.disabled ? "not-allowed" : "pointer",
-      }}
     />
   );
 };
@@ -292,13 +284,13 @@ const App = () => {
                 }}
               >
                 <button
+                  class="icon-button"
                   onClick={goPreviousPage}
+                  aria-label="Previous slide"
+                  disabled={currentPage() === 1}
                   style={{ position: "absolute", left: "0", height: "100%" }}
                 >
-                  <MenuIcon
-                    icon="lucide:chevron-left"
-                    disabled={currentPage() === 1}
-                  />
+                  <MenuIcon icon="lucide:chevron-left" />
                 </button>
                 <span
                   style={{
@@ -311,13 +303,13 @@ const App = () => {
                   {metadata() ? `of ${metadata()!.pageCount}` : ""}
                 </span>
                 <button
+                  class="icon-button"
                   onClick={goNextPage}
+                  aria-label="Next slide"
+                  disabled={currentPage() === metadata()?.pageCount}
                   style={{ position: "absolute", right: "0", height: "100%" }}
                 >
-                  <MenuIcon
-                    icon="lucide:chevron-right"
-                    disabled={currentPage() === metadata()?.pageCount}
-                  />
+                  <MenuIcon icon="lucide:chevron-right" />
                 </button>
               </div>
               <div
@@ -332,13 +324,20 @@ const App = () => {
                   gap: "10px",
                 }}
               >
-                <button onClick={toggleFullScreen} style={{ height: "100%" }}>
+                <button
+                  class="icon-button"
+                  onClick={toggleFullScreen}
+                  aria-label="Toggle fullscreen"
+                  style={{ height: "100%" }}
+                >
                   <MenuIcon icon="lucide:fullscreen" />
                 </button>
                 <button
+                  class="icon-button"
                   onClick={() => {
                     openPresenterWindow();
                   }}
+                  aria-label="Open presenter view"
                   style={{ height: "100%" }}
                 >
                   <MenuIcon icon="lucide:presentation" />
@@ -482,7 +481,12 @@ const App = () => {
                 {formatTime(elapsedSeconds())}
               </div>
               <IconSeparator />
-              <button onClick={resetElapsedSeconds} style={{ height: "32px" }}>
+              <button
+                class="icon-button"
+                onClick={resetElapsedSeconds}
+                aria-label="Reset timer"
+                style={{ height: "32px" }}
+              >
                 <MenuIcon icon="lucide:timer-reset" />
               </button>
             </div>
@@ -521,11 +525,14 @@ const App = () => {
             <div
               style={{ display: "flex", gap: "10px", "align-items": "center" }}
             >
-              <button onClick={goPreviousPage} style={{ height: "32px" }}>
-                <MenuIcon
-                  icon="lucide:chevron-left"
-                  disabled={currentPage() === 1}
-                />
+              <button
+                class="icon-button"
+                onClick={goPreviousPage}
+                aria-label="Previous slide"
+                disabled={currentPage() === 1}
+                style={{ height: "32px" }}
+              >
+                <MenuIcon icon="lucide:chevron-left" />
               </button>
               <span
                 style={{
@@ -537,13 +544,16 @@ const App = () => {
               >
                 Page {currentPage()} of {metadata() ? metadata()!.pageCount : 0}
               </span>
-              <button onClick={goNextPage} style={{ height: "32px" }}>
-                <MenuIcon
-                  icon="lucide:chevron-right"
-                  disabled={
-                    currentPage() === metadata()?.pageCount || !metadata()
-                  }
-                />
+              <button
+                class="icon-button"
+                onClick={goNextPage}
+                aria-label="Next slide"
+                disabled={
+                  currentPage() === metadata()?.pageCount || !metadata()
+                }
+                style={{ height: "32px" }}
+              >
+                <MenuIcon icon="lucide:chevron-right" />
               </button>
             </div>
           </div>

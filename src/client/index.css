@@ -44,3 +44,53 @@ button {
   cursor: pointer;
   transition: border-color 0.25s;
 }
+
+.icon-button {
+  position: relative;
+}
+
+.menu-icon {
+  color: #aaa;
+  transition: color 0.3s;
+  cursor: pointer;
+}
+
+.icon-button:disabled .menu-icon {
+  color: #555;
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.icon-button:not(:disabled):hover .menu-icon,
+.icon-button:not(:disabled):focus-visible .menu-icon {
+  color: #fff;
+}
+
+.icon-button::after {
+  content: attr(aria-label);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  z-index: 10;
+  padding: 4px 8px;
+  transform: translateX(-50%);
+  border: 1px solid #666;
+  border-radius: 4px;
+  color: #fff;
+  background: #111;
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.icon-button:hover::after,
+.icon-button:focus-visible::after {
+  opacity: 1;
+}
+
+.icon-button:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
