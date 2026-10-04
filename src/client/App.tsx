@@ -11,6 +11,7 @@ import { parseMetadata } from "./types/metadata";
 import { Icon } from "@iconify-icon/solid";
 import { hashForPage, pageFromHash } from "./navigation";
 import { pageLabel } from "./presentation";
+import { createPresentationSync } from "./presentationSync";
 import {
   getDocument,
   GlobalWorkerOptions,
@@ -72,10 +73,14 @@ const App = () => {
   );
 
   const getPageFromHash = () => pageFromHash(window.location.hash, metadata());
-
-  const [currentPage, setCurrentPage] = createSignal(
-    pageFromHash(window.location.hash),
-  );
+  const urlParams = new URLSearchParams(window.location.search);
+  const isPresenterMode = urlParams.get("mode") === "presenter";
+  const { currentPage, setCurrentPage, isBlackout, setIsBlackout } =
+    createPresentationSync(
+      pageFromHash(window.location.hash),
+      urlParams.has("blackout"),
+      () => metadata()?.pageCount,
+    );
   const formatTime = (seconds: number) => {
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
@@ -92,19 +97,7 @@ const App = () => {
   const [isMenuVisible, setIsMenuVisible] = createSignal(true);
   let hideMenuTimeout: number;
 
-  const urlParams = new URLSearchParams(window.location.search);
-  const isPresenterMode = urlParams.get("mode") === "presenter";
-
-  const slideChannel = new BroadcastChannel("slide-sync");
-  slideChannel.onmessage = (e) => {
-    if (e.data.currentPage && e.data.currentPage !== currentPage()) {
-      setCurrentPage(e.data.currentPage);
-    }
-  };
-
-  createEffect(() => {
-    slideChannel.postMessage({ currentPage: currentPage() });
-  });
+  const toggleBlackout = () => setIsBlackout((value) => !value);
 
   const showMenu = () => {
     setIsMenuVisible(true);
@@ -161,6 +154,9 @@ const App = () => {
       case "ArrowDown":
         goNextPage();
         break;
+      case "KeyB":
+        toggleBlackout();
+        break;
     }
   };
 
@@ -197,7 +193,6 @@ const App = () => {
       window.removeEventListener("mousemove", showMenu);
       window.removeEventListener("touchstart", showMenu);
       window.clearTimeout(hideMenuTimeout);
-      slideChannel.close();
     });
   });
 
@@ -206,8 +201,13 @@ const App = () => {
   });
 
   const openPresenterWindow = () => {
+    const url = new URL(window.location.href);
+    url.search = "";
+    url.searchParams.set("mode", "presenter");
+    if (isBlackout()) url.searchParams.set("blackout", "1");
+    url.hash = hashForPage(currentPage(), metadata());
     window.open(
-      `./?mode=presenter`,
+      url.href,
       "presenter",
       "width=1024,height=768,noopener,noreferrer",
     );
@@ -254,6 +254,17 @@ const App = () => {
                 )}
               </Show>
             </div>
+            <Show when={isBlackout()}>
+              <div
+                aria-hidden="true"
+                style={{
+                  position: "fixed",
+                  inset: "0",
+                  background: "#000",
+                  "z-index": "1",
+                }}
+              />
+            </Show>
             <div
               class="menu"
               style={{
@@ -270,6 +281,7 @@ const App = () => {
                 opacity: isMenuVisible() ? "1" : "0",
                 transition: "opacity 0.3s",
                 "pointer-events": isMenuVisible() ? "auto" : "none",
+                "z-index": "2",
               }}
             >
               <div
@@ -341,6 +353,20 @@ const App = () => {
                   style={{ height: "100%" }}
                 >
                   <MenuIcon icon="lucide:presentation" />
+                </button>
+                <button
+                  class="icon-button"
+                  onClick={toggleBlackout}
+                  aria-label="Blackout"
+                  aria-pressed={isBlackout()}
+                  data-tooltip={
+                    isBlackout() ? "Turn blackout off" : "Turn blackout on"
+                  }
+                  style={{ height: "100%" }}
+                >
+                  <MenuIcon
+                    icon={isBlackout() ? "lucide:monitor" : "lucide:monitor-x"}
+                  />
                 </button>
               </div>
             </div>
@@ -488,6 +514,20 @@ const App = () => {
                 style={{ height: "32px" }}
               >
                 <MenuIcon icon="lucide:timer-reset" />
+              </button>
+              <button
+                class="icon-button"
+                onClick={toggleBlackout}
+                aria-label="Blackout"
+                aria-pressed={isBlackout()}
+                data-tooltip={
+                  isBlackout() ? "Turn blackout off" : "Turn blackout on"
+                }
+                style={{ height: "32px" }}
+              >
+                <MenuIcon
+                  icon={isBlackout() ? "lucide:monitor" : "lucide:monitor-x"}
+                />
               </button>
             </div>
             <Show when={metadata()}>

@@ -55,14 +55,19 @@ button {
   cursor: pointer;
 }
 
+.icon-button[aria-pressed="true"] .menu-icon {
+  color: #ffd43b;
+}
+
 .icon-button:disabled .menu-icon {
   color: #555;
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.icon-button:not(:disabled):hover .menu-icon,
-.icon-button:not(:disabled):focus-visible .menu-icon {
+.icon-button:not(:disabled):not([aria-pressed="true"]):hover .menu-icon,
+.icon-button:not(:disabled):not([aria-pressed="true"]):focus-visible
+  .menu-icon {
   color: #fff;
 }
 
@@ -83,6 +88,10 @@ button {
   white-space: nowrap;
   opacity: 0;
   pointer-events: none;
+}
+
+.icon-button[data-tooltip]::after {
+  content: attr(data-tooltip);
 }
 
 .icon-button:hover::after,
