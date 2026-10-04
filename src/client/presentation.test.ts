@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Metadata } from "./types/metadata";
-import { pageLabel } from "./presentation";
+import { actionForKey, formatElapsedTime, pageLabel } from "./presentation";
 
 const metadata: Metadata = {
   pageCount: 3,
@@ -21,5 +21,46 @@ describe("pageLabel", () => {
     expect(pageLabel(metadata, 1)).toBe("1. Opening");
     expect(pageLabel(metadata, 2)).toBe("2. Details");
     expect(pageLabel(metadata, 3)).toBe("Page 3");
+  });
+});
+
+describe("presentation controls", () => {
+  it("formats elapsed time", () => {
+    expect(formatElapsedTime(0)).toBe("00:00:00");
+    expect(formatElapsedTime(3661)).toBe("01:01:01");
+  });
+
+  it.each([
+    ["ArrowLeft", false, "previous"],
+    ["ArrowUp", false, "previous"],
+    ["ArrowRight", false, "next"],
+    ["ArrowDown", false, "next"],
+    ["KeyB", false, "blackout"],
+    ["Slash", true, "shortcuts"],
+    ["Slash", false, undefined],
+    ["KeyA", false, undefined],
+  ] as const)("maps %s (shift: %s)", (code, shiftKey, expected) => {
+    expect(
+      actionForKey({ code, shiftKey, repeat: false, isComposing: false }),
+    ).toBe(expected);
+  });
+
+  it("ignores repeated and composing keys", () => {
+    expect(
+      actionForKey({
+        code: "ArrowRight",
+        shiftKey: false,
+        repeat: true,
+        isComposing: false,
+      }),
+    ).toBeUndefined();
+    expect(
+      actionForKey({
+        code: "ArrowRight",
+        shiftKey: false,
+        repeat: false,
+        isComposing: true,
+      }),
+    ).toBeUndefined();
   });
 });

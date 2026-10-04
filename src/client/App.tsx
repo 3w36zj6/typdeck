@@ -10,7 +10,7 @@ import {
 import { parseMetadata } from "./types/metadata";
 import { Icon } from "@iconify-icon/solid";
 import { hashForPage, pageFromHash } from "./navigation";
-import { pageLabel } from "./presentation";
+import { actionForKey, formatElapsedTime, pageLabel } from "./presentation";
 import { createPresentationSync } from "./presentationSync";
 import {
   getDocument,
@@ -123,15 +123,6 @@ const App = () => {
       urlParams.has("blackout"),
       () => metadata()?.pageCount,
     );
-  const formatTime = (seconds: number) => {
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = seconds % 60;
-    return `${h.toString().padStart(2, "0")}:${m
-      .toString()
-      .padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
-  };
-
   const [elapsedSeconds, setElapsedSeconds] = createSignal(0);
   let shortcutDialog!: HTMLDialogElement;
   const setShortcutDialog = (dialog: HTMLDialogElement) => {
@@ -189,29 +180,20 @@ const App = () => {
     ) {
       return;
     }
-    if (
-      shortcutDialog.open ||
-      event.repeat ||
-      event.isComposing ||
-      !metadata()
-    ) {
-      return;
-    }
+    if (shortcutDialog.open || !metadata()) return;
 
-    switch (event.code) {
-      case "ArrowLeft":
-      case "ArrowUp":
+    switch (actionForKey(event)) {
+      case "previous":
         goPreviousPage();
         break;
-      case "ArrowRight":
-      case "ArrowDown":
+      case "next":
         goNextPage();
         break;
-      case "KeyB":
+      case "blackout":
         toggleBlackout();
         break;
-      case "Slash":
-        if (event.shiftKey) shortcutDialog.showModal();
+      case "shortcuts":
+        shortcutDialog.showModal();
         break;
     }
   };
@@ -572,7 +554,7 @@ const App = () => {
                   "font-size": "32px",
                 }}
               >
-                {formatTime(elapsedSeconds())}
+                {formatElapsedTime(elapsedSeconds())}
               </div>
               <IconSeparator />
               <button
