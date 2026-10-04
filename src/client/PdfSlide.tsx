@@ -21,6 +21,7 @@ const PDF_TO_CSS_UNITS = 96 / 72;
 export const PdfSlide = (props: PdfSlideProps) => {
   let host!: HTMLDivElement;
   let viewer!: HTMLDivElement;
+  let displayedView: PDFPageView | undefined;
   const [error, setError] = createSignal<string>();
 
   createEffect(() => {
@@ -31,7 +32,7 @@ export const PdfSlide = (props: PdfSlideProps) => {
     let disposed = false;
     let frame = 0;
     let renderedScale = 0;
-    let pageView: PDFPageView | undefined;
+    let pendingView: PDFPageView | undefined;
     let observer: ResizeObserver | undefined;
     setError(undefined);
 
@@ -70,8 +71,8 @@ export const PdfSlide = (props: PdfSlideProps) => {
             if (Math.abs(scale - renderedScale) < 0.001) return;
             renderedScale = scale;
 
-            pageView?.destroy();
-            viewer.replaceChildren();
+            pendingView?.destroy();
+            pendingView?.div.remove();
             const nextView = new PDFPageView({
               container: viewer,
               id: pageNumber,
@@ -80,23 +81,35 @@ export const PdfSlide = (props: PdfSlideProps) => {
               eventBus,
               layerProperties: { linkService },
             });
-            pageView = nextView;
+            pendingView = nextView;
+            nextView.div.style.position = "absolute";
+            nextView.div.style.visibility = "hidden";
             nextView.setPdfPage(pdfPage);
             void nextView.draw().then(
               () => {
-                if (!disposed && pageView === nextView) {
+                if (!disposed && pendingView === nextView) {
                   nextView.div.setAttribute("aria-label", label);
+                  nextView.div.style.removeProperty("position");
+                  nextView.div.style.removeProperty("visibility");
+                  const previousView = displayedView;
+                  displayedView = nextView;
+                  pendingView = undefined;
+                  viewer.replaceChildren(nextView.div);
+                  previousView?.destroy();
                 }
               },
               (cause: unknown) => {
                 if (
                   !disposed &&
-                  pageView === nextView &&
+                  pendingView === nextView &&
                   !(
                     cause instanceof Error &&
                     cause.name === "RenderingCancelledException"
                   )
                 ) {
+                  pendingView = undefined;
+                  nextView.destroy();
+                  nextView.div.remove();
                   setError("Could not render this slide.");
                 }
               },
@@ -116,9 +129,13 @@ export const PdfSlide = (props: PdfSlideProps) => {
       disposed = true;
       observer?.disconnect();
       window.cancelAnimationFrame(frame);
-      pageView?.destroy();
-      viewer.replaceChildren();
+      pendingView?.destroy();
+      pendingView?.div.remove();
     });
+  });
+
+  onCleanup(() => {
+    displayedView?.destroy();
   });
 
   return (
