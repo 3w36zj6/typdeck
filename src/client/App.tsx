@@ -2,6 +2,7 @@ import {
   createEffect,
   createResource,
   createSignal,
+  For,
   onCleanup,
   onMount,
   Show,
@@ -9,6 +10,7 @@ import {
 import { parseMetadata } from "./types/metadata";
 import { Icon } from "@iconify-icon/solid";
 import { hashForPage, pageFromHash } from "./navigation";
+import { pageLabel } from "./presentation";
 import {
   getDocument,
   GlobalWorkerOptions,
@@ -151,6 +153,7 @@ const App = () => {
   const KEY_THROTTLE_DELAY_MS = 150;
 
   const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.target instanceof HTMLSelectElement) return;
     const now = Date.now();
     if (now - lastKeyTriggerUnixTimeMs < KEY_THROTTLE_DELAY_MS) {
       return;
@@ -483,6 +486,38 @@ const App = () => {
                 <MenuIcon icon="lucide:timer-reset" />
               </button>
             </div>
+            <Show when={metadata()}>
+              {(deck) => (
+                <select
+                  aria-label="Slide list"
+                  value={currentPage()}
+                  onChange={(event) =>
+                    setCurrentPage(Number(event.currentTarget.value))
+                  }
+                  style={{
+                    color: "#fff",
+                    background: "#222",
+                    border: "1px solid #555",
+                    "border-radius": "4px",
+                    padding: "5px 8px",
+                    "max-width": "32vw",
+                  }}
+                >
+                  <For
+                    each={Array.from(
+                      { length: deck().pageCount },
+                      (_, i) => i + 1,
+                    )}
+                  >
+                    {(pageNumber) => (
+                      <option value={pageNumber}>
+                        {pageLabel(deck(), pageNumber)}
+                      </option>
+                    )}
+                  </For>
+                </select>
+              )}
+            </Show>
             <div
               style={{ display: "flex", gap: "10px", "align-items": "center" }}
             >
