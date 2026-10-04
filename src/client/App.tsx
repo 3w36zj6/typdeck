@@ -2,13 +2,21 @@ import {
   createEffect,
   createResource,
   createSignal,
-  For,
   onCleanup,
   onMount,
   Show,
 } from "solid-js";
 import { Metadata } from "./types/metadata";
 import { Icon } from "@iconify-icon/solid";
+import {
+  getDocument,
+  GlobalWorkerOptions,
+  type PDFDocumentLoadingTask,
+} from "pdfjs-dist";
+import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+import { PdfSlide } from "./PdfSlide";
+
+GlobalWorkerOptions.workerSrc = pdfWorker;
 
 type MenuIconProps = {
   disabled?: boolean;
@@ -49,6 +57,18 @@ const App = () => {
     const response = await fetch("./metadata.json");
     return response.json();
   });
+  let pdfLoadingTask: PDFDocumentLoadingTask | undefined;
+  const [pdfDocument] = createResource(
+    () => metadata()?.pageCount,
+    async (pageCount) => {
+      pdfLoadingTask = getDocument({ url: "./deck.pdf" });
+      const document = await pdfLoadingTask.promise;
+      if (document.numPages !== pageCount) {
+        throw new Error("PDF page count does not match typdeck metadata");
+      }
+      return document;
+    },
+  );
 
   const getPageFromHash = () => {
     const hash = window.location.hash;
@@ -186,6 +206,10 @@ const App = () => {
     });
   });
 
+  onCleanup(() => {
+    void pdfLoadingTask?.destroy();
+  });
+
   const openPresenterWindow = () => {
     window.open(
       `./?mode=presenter`,
@@ -196,6 +220,9 @@ const App = () => {
 
   return (
     <>
+      <Show when={pdfDocument.error}>
+        <main role="alert">Could not load this typdeck presentation.</main>
+      </Show>
       <Show
         when={isPresenterMode}
         fallback={
@@ -210,42 +237,25 @@ const App = () => {
                 background: "black",
               }}
             >
-              {metadata() && (
-                <div
-                  class="slide"
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    position: "relative",
-                  }}
-                >
-                  <For
-                    each={Array.from(
-                      { length: metadata()!.pageCount },
-                      (_, i) => i + 1,
-                    )}
+              <Show when={!pdfDocument.error && pdfDocument()}>
+                {(document) => (
+                  <div
+                    class="slide"
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      position: "relative",
+                    }}
                   >
-                    {(pageNumber) => (
-                      <img
-                        src={`./pages/${pageNumber}.svg`}
-                        style={{
-                          width: "100%",
-                          height: "100%",
-                          "object-fit": "contain",
-                          position: "absolute",
-                          top: "0",
-                          left: "0",
-                          display:
-                            currentPage() === pageNumber ? "block" : "none",
-                          "pointer-events": "none",
-                          "user-select": "none",
-                          "-webkit-user-drag": "none",
-                        }}
-                      />
-                    )}
-                  </For>
-                </div>
-              )}
+                    <PdfSlide
+                      document={document()}
+                      page={currentPage()}
+                      label={`Slide ${currentPage()}`}
+                      onNavigate={setCurrentPage}
+                    />
+                  </div>
+                )}
+              </Show>
             </div>
             <div
               class="menu"
@@ -357,84 +367,51 @@ const App = () => {
               overflow: "hidden",
             }}
           >
-            {metadata() && (
-              <>
-                <div
-                  class="current-slide"
-                  style={{
-                    width: "49%",
-                    display: "flex",
-                    "align-items": "center",
-                    "justify-content": "center",
-                    overflow: "hidden",
-                  }}
-                >
-                  <For
-                    each={Array.from(
-                      { length: metadata()!.pageCount },
-                      (_, i) => i + 1,
-                    )}
+            <Show when={!pdfDocument.error && pdfDocument()}>
+              {(document) => (
+                <>
+                  <div
+                    class="current-slide"
+                    style={{
+                      width: "49%",
+                      display: "flex",
+                      "align-items": "center",
+                      "justify-content": "center",
+                      overflow: "hidden",
+                    }}
                   >
-                    {(pageNumber) => (
-                      <img
-                        src={`./pages/${pageNumber}.svg`}
-                        style={{
-                          width: "100%",
-                          height: "100%",
-                          "max-height": "100%",
-                          "object-fit": "contain",
-                          display:
-                            pageNumber === currentPage() ? "block" : "none",
-                          "pointer-events": "none",
-                          "user-select": "none",
-                          "-webkit-user-drag": "none",
-                        }}
-                      />
-                    )}
-                  </For>
-                </div>
-                <div
-                  class="next-slide"
-                  style={{
-                    width: "49%",
-                    display: "flex",
-                    "align-items": "center",
-                    "justify-content": "center",
-                    overflow: "hidden",
-                  }}
-                >
-                  <For
-                    each={Array.from(
-                      { length: metadata()!.pageCount },
-                      (_, i) => i + 1,
-                    )}
+                    <PdfSlide
+                      document={document()}
+                      page={currentPage()}
+                      label={`Current slide ${currentPage()}`}
+                      onNavigate={setCurrentPage}
+                    />
+                  </div>
+                  <div
+                    class="next-slide"
+                    style={{
+                      width: "49%",
+                      display: "flex",
+                      "align-items": "center",
+                      "justify-content": "center",
+                      overflow: "hidden",
+                    }}
                   >
-                    {(pageNumber) => (
-                      <img
-                        src={`./pages/${pageNumber}.svg`}
-                        style={{
-                          width: "100%",
-                          height: "100%",
-                          "max-height": "100%",
-                          "object-fit": "contain",
-                          display:
-                            pageNumber ===
-                            (currentPage() < metadata()!.pageCount
-                              ? currentPage() + 1
-                              : currentPage())
-                              ? "block"
-                              : "none",
-                          opacity: "0.5",
-                          "pointer-events": "none",
-                          "user-select": "none",
-                          "-webkit-user-drag": "none",
-                        }}
-                      />
-                    )}
-                  </For>
-                </div>
-              </>
-            )}
+                    <PdfSlide
+                      document={document()}
+                      page={
+                        currentPage() < document().numPages
+                          ? currentPage() + 1
+                          : currentPage()
+                      }
+                      label="Next slide"
+                      opacity={0.5}
+                      onNavigate={setCurrentPage}
+                    />
+                  </div>
+                </>
+              )}
+            </Show>
           </div>
           <div
             class="speaker-notes"

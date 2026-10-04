@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { type ViteDevServer } from "vite";
 import chalk from "chalk";
+import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 import { type Metadata } from "../../../client/types/metadata";
 import { queryPdfpcNotes } from "../queryPdfpcNotes";
 import { runProcess } from "../runProcess";
@@ -20,6 +21,20 @@ const logWithTimestamp = (message: string, logFn = console.info): void => {
   logFn(`${chalk.gray(`[${timestamp}]`)} ${message}`);
 };
 
+const replaceGeneratedOutput = (stagingDir: string, publicDir: string) => {
+  const backupDir = `${stagingDir}-previous`;
+  const hasPreviousOutput = fs.existsSync(publicDir);
+
+  if (hasPreviousOutput) fs.renameSync(publicDir, backupDir);
+  try {
+    fs.renameSync(stagingDir, publicDir);
+  } catch (error) {
+    if (hasPreviousOutput) fs.renameSync(backupDir, publicDir);
+    throw error;
+  }
+  fs.rmSync(backupDir, { recursive: true, force: true });
+};
+
 export const compileTypst = async (
   typstFile: string,
   publicDir: string,
@@ -27,35 +42,43 @@ export const compileTypst = async (
   signal?: AbortSignal,
 ): Promise<void> => {
   const resolvedPublicDir = path.resolve(publicDir);
-  fs.mkdirSync(resolvedPublicDir, { recursive: true });
-  const stagingDir = fs.mkdtempSync(path.join(resolvedPublicDir, ".compile-"));
+  fs.mkdirSync(path.dirname(resolvedPublicDir), { recursive: true });
+  const stagingDir = fs.mkdtempSync(
+    path.join(
+      path.dirname(resolvedPublicDir),
+      `.${path.basename(resolvedPublicDir)}-compile-`,
+    ),
+  );
 
   try {
-    const pagesOutDirPath = path.join(stagingDir, "pages");
-    fs.mkdirSync(pagesOutDirPath);
-
+    const pdfPath = path.join(stagingDir, "deck.pdf");
     const args = [
       "compile",
+      "--root",
+      process.cwd(),
       typstFile,
-      path.join(pagesOutDirPath, "{p}.svg"),
-      "-f",
-      "svg",
+      pdfPath,
+      "--format",
+      "pdf",
     ];
     logWithTimestamp(
       chalk.dim(
         `${chalk.magenta("$")} typst ${args.map((arg) => JSON.stringify(arg)).join(" ")}`,
       ),
     );
-    const { stdout } = await runProcess("typst", args, signal);
+    const { stdout, stderr } = await runProcess("typst", args, signal);
+    if (stderr.trim()) console.warn(stderr.trim());
     console.info(chalk.dim(stdout.trim()));
 
-    const pageCount = fs
-      .readdirSync(pagesOutDirPath)
-      .map((file) => {
-        const match = file.match(/(\d+)\.svg$/);
-        return match ? parseInt(match[1]) : 0;
-      })
-      .reduce((a, b) => Math.max(a, b), 0);
+    const pdfTask = getDocument({
+      data: new Uint8Array(fs.readFileSync(pdfPath)),
+    });
+    let pageCount: number;
+    try {
+      pageCount = (await pdfTask.promise).numPages;
+    } finally {
+      await pdfTask.destroy();
+    }
 
     const metadata: Metadata = { pageCount };
     const slidesSettings: NonNullable<Metadata["slides"]> = {};
@@ -71,30 +94,7 @@ export const compileTypst = async (
       metadata.slides = slidesSettings;
     }
     writeMetadataJSON(metadata, path.join(stagingDir, "metadata.json"));
-
-    const installed: string[] = [];
-    const backups: { backup: string; target: string }[] = [];
-    try {
-      for (const name of ["pages", "metadata.json"]) {
-        const source = path.join(stagingDir, name);
-        const target = path.join(resolvedPublicDir, name);
-        const backup = path.join(stagingDir, `.previous-${name}`);
-        if (fs.existsSync(target)) {
-          fs.renameSync(target, backup);
-          backups.push({ backup, target });
-        }
-        fs.renameSync(source, target);
-        installed.push(target);
-      }
-    } catch (error) {
-      for (const target of installed.reverse()) {
-        fs.rmSync(target, { recursive: true, force: true });
-      }
-      for (const { backup, target } of backups.reverse()) {
-        fs.renameSync(backup, target);
-      }
-      throw error;
-    }
+    replaceGeneratedOutput(stagingDir, resolvedPublicDir);
 
     server?.ws.send({ type: "full-reload", path: "*" });
   } finally {

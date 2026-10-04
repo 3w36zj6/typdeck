@@ -22,7 +22,7 @@ describe("compileTypst", () => {
       output,
     );
 
-    expect(fs.existsSync(path.join(output, "pages", "1.svg"))).toBe(true);
+    expect(fs.existsSync(path.join(output, "deck.pdf"))).toBe(true);
     expect(
       JSON.parse(fs.readFileSync(path.join(output, "metadata.json"), "utf8")),
     ).toMatchObject({ pageCount: 1 });
@@ -37,7 +37,7 @@ describe("compileTypst", () => {
       path.join(root, "tests/fixtures/pdfpc-note.typ"),
       output,
     );
-    const page = fs.readFileSync(path.join(output, "pages", "1.svg"));
+    const pdf = fs.readFileSync(path.join(output, "deck.pdf"));
     const metadata = fs.readFileSync(
       path.join(output, "metadata.json"),
       "utf8",
@@ -47,7 +47,7 @@ describe("compileTypst", () => {
       compileTypst(path.join(root, "tests/fixtures/invalid.typ"), output),
     ).rejects.toThrow();
 
-    expect(fs.readFileSync(path.join(output, "pages", "1.svg"))).toEqual(page);
+    expect(fs.readFileSync(path.join(output, "deck.pdf"))).toEqual(pdf);
     expect(fs.readFileSync(path.join(output, "metadata.json"), "utf8")).toBe(
       metadata,
     );

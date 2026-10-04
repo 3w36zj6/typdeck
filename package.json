@@ -38,6 +38,7 @@
   },
   "dependencies": {
     "chalk": "^5.4.1",
+    "pdfjs-dist": "6.3.289",
     "vite": "^6.0.11",
     "yargs": "^17.7.2"
   },
