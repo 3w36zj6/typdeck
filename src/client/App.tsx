@@ -48,6 +48,48 @@ const IconSeparator = () => (
   />
 );
 
+const ShortcutDialog = (props: {
+  setDialog: (dialog: HTMLDialogElement) => void;
+}) => (
+  <dialog
+    ref={props.setDialog}
+    aria-label="Keyboard shortcuts"
+    class="shortcut-dialog"
+    onClick={(event) => {
+      if (event.target === event.currentTarget) event.currentTarget.close();
+    }}
+  >
+    <div>
+      <h2>Keyboard shortcuts</h2>
+      <dl>
+        <dt>
+          <kbd>← / ↑</kbd>
+        </dt>
+        <dd>Previous slide</dd>
+        <dt>
+          <kbd>→ / ↓</kbd>
+        </dt>
+        <dd>Next slide</dd>
+        <dt>
+          <kbd>B</kbd>
+        </dt>
+        <dd>Toggle blackout</dd>
+        <dt>
+          <kbd>?</kbd>
+        </dt>
+        <dd>Open this list</dd>
+        <dt>
+          <kbd>Esc</kbd>
+        </dt>
+        <dd>Close this list</dd>
+      </dl>
+      <form method="dialog">
+        <button>Close</button>
+      </form>
+    </div>
+  </dialog>
+);
+
 const App = () => {
   const [metadata] = createResource(async () => {
     const response = await fetch("./metadata.json");
@@ -91,6 +133,10 @@ const App = () => {
   };
 
   const [elapsedSeconds, setElapsedSeconds] = createSignal(0);
+  let shortcutDialog!: HTMLDialogElement;
+  const setShortcutDialog = (dialog: HTMLDialogElement) => {
+    shortcutDialog = dialog;
+  };
   const resetElapsedSeconds = () => {
     setElapsedSeconds(0);
   };
@@ -134,18 +180,23 @@ const App = () => {
     window.setTimeout(() => setIsTransitioning(false), TRANSITION_DURATION_MS);
   };
 
-  let lastKeyTriggerUnixTimeMs = 0;
-  const KEY_THROTTLE_DELAY_MS = 150;
-
-  const handleKeyDown = (e: KeyboardEvent) => {
-    if (e.target instanceof HTMLSelectElement) return;
-    const now = Date.now();
-    if (now - lastKeyTriggerUnixTimeMs < KEY_THROTTLE_DELAY_MS) {
+  const handleKeyDown = (event: KeyboardEvent) => {
+    if (
+      event.target instanceof HTMLElement &&
+      event.target.closest("input, select, textarea, [contenteditable]")
+    ) {
       return;
     }
-    lastKeyTriggerUnixTimeMs = now;
-    if (!metadata()) return;
-    switch (e.code) {
+    if (
+      shortcutDialog.open ||
+      event.repeat ||
+      event.isComposing ||
+      !metadata()
+    ) {
+      return;
+    }
+
+    switch (event.code) {
       case "ArrowLeft":
       case "ArrowUp":
         goPreviousPage();
@@ -156,6 +207,9 @@ const App = () => {
         break;
       case "KeyB":
         toggleBlackout();
+        break;
+      case "Slash":
+        if (event.shiftKey) shortcutDialog.showModal();
         break;
     }
   };
@@ -368,8 +422,18 @@ const App = () => {
                     icon={isBlackout() ? "lucide:monitor" : "lucide:monitor-x"}
                   />
                 </button>
+                <button
+                  class="icon-button"
+                  onClick={() => shortcutDialog.showModal()}
+                  aria-label="Show keyboard shortcuts"
+                  data-tooltip="Show keyboard shortcuts"
+                  style={{ height: "100%" }}
+                >
+                  <MenuIcon icon="lucide:circle-help" />
+                </button>
               </div>
             </div>
+            <ShortcutDialog setDialog={setShortcutDialog} />
           </>
         }
       >
@@ -529,6 +593,15 @@ const App = () => {
                   icon={isBlackout() ? "lucide:monitor" : "lucide:monitor-x"}
                 />
               </button>
+              <button
+                class="icon-button"
+                onClick={() => shortcutDialog.showModal()}
+                aria-label="Show keyboard shortcuts"
+                data-tooltip="Show keyboard shortcuts"
+                style={{ height: "32px" }}
+              >
+                <MenuIcon icon="lucide:circle-help" />
+              </button>
             </div>
             <Show when={metadata()}>
               {(deck) => (
@@ -597,6 +670,7 @@ const App = () => {
               </button>
             </div>
           </div>
+          <ShortcutDialog setDialog={setShortcutDialog} />
         </div>
       </Show>
     </Show>
