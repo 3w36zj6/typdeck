@@ -1,5 +1,9 @@
 import fs from "node:fs";
-import http, { type ServerResponse } from "node:http";
+import http, {
+  type IncomingMessage,
+  type Server,
+  type ServerResponse,
+} from "node:http";
 import path from "node:path";
 import { pipeline } from "node:stream";
 import send from "@fastify/send";
@@ -17,7 +21,7 @@ const sendStatus = (
 ) => response.writeHead(status, headers).end();
 
 const sendIndex = (
-  request: http.IncomingMessage,
+  request: IncomingMessage,
   response: ServerResponse,
   body: Buffer,
 ) => {
@@ -27,6 +31,73 @@ const sendIndex = (
     "Content-Type": "text/html; charset=utf-8",
   });
   response.end(request.method === "HEAD" ? undefined : body);
+};
+
+const sendFile = async (
+  request: IncomingMessage,
+  response: ServerResponse,
+  root: string,
+  file: string,
+) => {
+  const result = await send(request, file, { root, index: false });
+  result.headers["Cache-Control"] = "no-store";
+  response.writeHead(result.statusCode, result.headers);
+  if (request.method === "HEAD") {
+    result.stream.destroy();
+    response.end();
+    return;
+  }
+  pipeline(result.stream, response, (error) => {
+    if (error) response.destroy(error);
+  });
+};
+
+const startServer = async (
+  handleRequest: (
+    request: IncomingMessage,
+    response: ServerResponse,
+  ) => Promise<void>,
+): Promise<Server> => {
+  const server = http.createServer((request, response) => {
+    void handleRequest(request, response).catch((error: unknown) => {
+      console.error(error);
+      if (response.headersSent) response.destroy();
+      else sendStatus(response, 500);
+    });
+  });
+  await new Promise<void>((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", resolve);
+  });
+  return server;
+};
+
+export const serveDirectory = async (directory: string) => {
+  const root = path.resolve(directory);
+  if (!fs.statSync(root, { throwIfNoEntry: false })?.isDirectory()) {
+    throw new Error(`Invalid build output directory: ${root}`);
+  }
+
+  return startServer(async (request, response) => {
+    if (request.method !== "GET" && request.method !== "HEAD") {
+      sendStatus(response, 405, { Allow: "GET, HEAD" });
+      return;
+    }
+
+    let pathname: string;
+    try {
+      pathname = new URL(request.url ?? "/", "http://localhost").pathname;
+    } catch {
+      sendStatus(response, 400);
+      return;
+    }
+    await sendFile(
+      request,
+      response,
+      root,
+      pathname === "/" ? "/index.html" : pathname,
+    );
+  });
 };
 
 export const servePresentation = async (
@@ -79,34 +150,15 @@ export const servePresentation = async (
     }
 
     const deckAsset = deckAssets.get(pathname);
-    const result = await send(request, deckAsset ?? pathname, {
-      root: deckAsset ? deckDirectory : clientDirectory,
-      index: false,
-    });
-    result.headers["Cache-Control"] = "no-store";
-    response.writeHead(result.statusCode, result.headers);
-    if (request.method === "HEAD") {
-      result.stream.destroy();
-      response.end();
-      return;
-    }
-    pipeline(result.stream, response, (error) => {
-      if (error) response.destroy(error);
-    });
+    await sendFile(
+      request,
+      response,
+      deckAsset ? deckDirectory : clientDirectory,
+      deckAsset ?? pathname,
+    );
   };
 
-  const server = http.createServer((request, response) => {
-    void handleRequest(request, response).catch((error: unknown) => {
-      console.error(error);
-      if (response.headersSent) response.destroy();
-      else sendStatus(response, 500);
-    });
-  });
-
-  await new Promise<void>((resolve, reject) => {
-    server.once("error", reject);
-    server.listen(0, "127.0.0.1", resolve);
-  });
+  const server = await startServer(handleRequest);
 
   let activeCompile: AbortController | undefined;
   const recompile = async () => {

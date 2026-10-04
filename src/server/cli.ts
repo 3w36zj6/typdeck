@@ -6,7 +6,7 @@ import yargs from "yargs/yargs";
 import { hideBin } from "yargs/helpers";
 import chalk from "chalk";
 import { compileTypst, replaceDirectory } from "./helpers/compileTypst";
-import { servePresentation } from "./helpers/servePresentation";
+import { serveDirectory, servePresentation } from "./helpers/servePresentation";
 
 const printUrl = (server: Server) => {
   const address = server.address();
@@ -23,6 +23,10 @@ type DevArgs = {
 type BuildArgs = {
   outDir: string;
   typstFile: string;
+};
+
+type PreviewArgs = {
+  outDir: string;
 };
 
 const getClientDirectory = () => {
@@ -84,6 +88,13 @@ export const main = async () => {
       describe: "build for production",
       handler: async (argv) => {
         await buildPresentation(argv.typstFile, argv.outDir);
+      },
+    })
+    .command<PreviewArgs>({
+      command: "preview",
+      describe: "preview build output",
+      handler: async (argv) => {
+        printUrl(await serveDirectory(argv.outDir));
       },
     })
     .option("outDir", {
