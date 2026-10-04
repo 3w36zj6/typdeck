@@ -63,15 +63,13 @@ typdeck build main.typ
 
 This command compiles your Typst slides and generates static assets in the output directory.
 
-#### Preview Production Build
+#### Preview Build
 
-Preview the production build locally:
+Serve the build output without recompiling or watching source files:
 
 ```sh
 typdeck preview
 ```
-
-This runs a local server to preview the production build before deployment.
 
 ### Speaker notes
 
