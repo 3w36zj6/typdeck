@@ -16,6 +16,7 @@ describe("queryTypstHeadings", () => {
       { text: "An inserted page", label: undefined, page: 2 },
       { text: "Typst's Details", label: "details", page: 3 },
       { text: "Rich details", label: undefined, page: 3 },
+      { text: "Code x and a + b link", label: undefined, page: 3 },
       { text: "First second", label: undefined, page: 3 },
     ]);
   });

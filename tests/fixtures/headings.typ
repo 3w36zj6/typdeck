@@ -16,4 +16,6 @@
 
 == Rich #emph[details]
 
+== Code `x` and $a + b$ #link("https://typst.app")[link]
+
 == First#linebreak()second
