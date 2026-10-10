@@ -10,4 +10,6 @@
 
 = Typst's Details <details>
 
+== Rich #emph[details]
+
 == First#linebreak()second

@@ -29,7 +29,7 @@ const contentText = (value: unknown): string => {
   if (Array.isArray(value)) return value.map(contentText).join("");
   if (!isRecord(value)) return "";
 
-  if (value.func === "linebreak") return " ";
+  if (value.func === "space" || value.func === "linebreak") return " ";
   if (typeof value.text === "string") return value.text;
   if (value.func === "smartquote") return value.double === false ? "'" : '"';
   if ("body" in value) return contentText(value.body);
