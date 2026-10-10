@@ -9,3 +9,5 @@
 #pagebreak()
 
 = Typst's Details <details>
+
+== First#linebreak()second

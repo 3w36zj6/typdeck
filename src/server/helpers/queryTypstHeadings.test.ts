@@ -14,6 +14,7 @@ describe("queryTypstHeadings", () => {
       { text: "Introduction", label: "introduction", page: 1 },
       { text: "An inserted page", label: undefined, page: 2 },
       { text: "Typst's Details", label: "details", page: 3 },
+      { text: "First second", label: undefined, page: 3 },
     ]);
   });
 });
