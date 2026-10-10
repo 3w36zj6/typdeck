@@ -8,6 +8,7 @@ import path from "node:path";
 import { pipeline } from "node:stream";
 import send from "@fastify/send";
 import { watch } from "chokidar";
+import { clientAssets, type ClientAsset } from "../clientAssets";
 import { compileTypst } from "./compileTypst";
 
 const reloadPath = "/__typdeck_reload";
@@ -20,15 +21,15 @@ const sendStatus = (
   headers?: http.OutgoingHttpHeaders,
 ) => response.writeHead(status, headers).end();
 
-const sendIndex = (
+const sendAsset = (
   request: IncomingMessage,
   response: ServerResponse,
-  body: Buffer,
+  { body, contentType }: ClientAsset,
 ) => {
   response.writeHead(200, {
     "Cache-Control": "no-store",
     "Content-Length": body.byteLength,
-    "Content-Type": "text/html; charset=utf-8",
+    "Content-Type": contentType,
   });
   response.end(request.method === "HEAD" ? undefined : body);
 };
@@ -102,15 +103,19 @@ export const serveDirectory = async (directory: string) => {
 
 export const servePresentation = async (
   typstFile: string,
-  clientDirectory: string,
   deckDirectory: string,
 ) => {
   const reloadClients = new Set<ServerResponse>();
-  const index = Buffer.from(
-    fs
-      .readFileSync(path.join(clientDirectory, "index.html"), "utf8")
-      .replace("</head>", `${reloadScript}</head>`),
-  );
+  const embeddedIndex = clientAssets.get("/index.html");
+  if (!embeddedIndex) throw new Error("Missing embedded client index");
+  const index: ClientAsset = {
+    body: Buffer.from(
+      embeddedIndex.body
+        .toString("utf8")
+        .replace("</head>", `${reloadScript}</head>`),
+    ),
+    contentType: embeddedIndex.contentType,
+  };
   const deckAssets = new Map([
     ["/deck.pdf", "/deck.pdf"],
     ["/metadata.json", "/metadata.json"],
@@ -145,17 +150,19 @@ export const servePresentation = async (
     }
 
     if (pathname === "/" || pathname === "/index.html") {
-      sendIndex(request, response, index);
+      sendAsset(request, response, index);
       return;
     }
 
     const deckAsset = deckAssets.get(pathname);
-    await sendFile(
-      request,
-      response,
-      deckAsset ? deckDirectory : clientDirectory,
-      deckAsset ?? pathname,
-    );
+    if (deckAsset) {
+      await sendFile(request, response, deckDirectory, deckAsset);
+      return;
+    }
+
+    const clientAsset = clientAssets.get(pathname);
+    if (clientAsset) sendAsset(request, response, clientAsset);
+    else sendStatus(response, 404);
   };
 
   const server = await startServer(handleRequest);

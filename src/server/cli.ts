@@ -1,10 +1,11 @@
 import fs from "node:fs";
 import { type Server } from "node:http";
-import { findPackageJSON } from "node:module";
 import path from "node:path";
 import yargs from "yargs/yargs";
 import { hideBin } from "yargs/helpers";
 import chalk from "chalk";
+import { GlobalWorkerOptions } from "pdfjs-dist/legacy/build/pdf.mjs";
+import { clientAssets } from "./clientAssets";
 import { compileTypst, replaceDirectory } from "./helpers/compileTypst";
 import { serveDirectory, servePresentation } from "./helpers/servePresentation";
 
@@ -29,12 +30,6 @@ type PreviewArgs = {
   outDir: string;
 };
 
-const getClientDirectory = () => {
-  const packageJson = findPackageJSON(import.meta.url);
-  if (!packageJson) throw new Error("Could not find typdeck package.json");
-  return path.join(path.dirname(packageJson), "public");
-};
-
 const containsPath = (directory: string, target: string) => {
   const relative = path.relative(directory, target);
   return (
@@ -46,6 +41,13 @@ const containsPath = (directory: string, target: string) => {
 };
 
 const compileDeck = async (typstFile: string) => {
+  const pdfWorker = [...clientAssets].find(
+    ([pathname]) =>
+      pathname.startsWith("/assets/pdf.worker") && pathname.endsWith(".mjs"),
+  )?.[1];
+  if (!pdfWorker) throw new Error("Missing embedded PDF worker");
+  GlobalWorkerOptions.workerSrc = `data:text/javascript;base64,${pdfWorker.body.toString("base64")}`;
+
   const dotDirectory = path.resolve(".typdeck");
   const deckDirectory = path.join(dotDirectory, "deck");
   fs.mkdirSync(dotDirectory, { recursive: true });
@@ -64,7 +66,11 @@ const buildPresentation = async (typstFile: string, outDir: string) => {
   using staging = fs.mkdtempDisposableSync(
     path.join(path.dirname(output), `.${path.basename(output)}-build-`),
   );
-  fs.cpSync(getClientDirectory(), staging.path, { recursive: true });
+  for (const [pathname, { body }] of clientAssets) {
+    const destination = path.join(staging.path, pathname.slice(1));
+    fs.mkdirSync(path.dirname(destination), { recursive: true });
+    fs.writeFileSync(destination, body);
+  }
   fs.cpSync(deckDirectory, staging.path, { recursive: true });
   replaceDirectory(staging.path, output);
 };
@@ -77,7 +83,6 @@ export const main = async () => {
       handler: async (argv) => {
         const server = await servePresentation(
           argv.typstFile,
-          getClientDirectory(),
           await compileDeck(argv.typstFile),
         );
         printUrl(server);

@@ -22,20 +22,19 @@
     "typdeck": "bin/index.js"
   },
   "files": [
-    "bin",
-    "public"
+    "bin"
   ],
   "scripts": {
     "test": "vitest run",
     "dev": "vite",
     "build": "aube run build:client && aube run build:server",
     "build:client": "vite build",
-    "build:server": "esbuild index.ts --bundle --platform=node --outfile=bin/index.js --packages=external --format=esm --minify",
+    "build:server": "bun scripts/buildServer.ts",
     "prepack": "aube run build",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "lint": "eslint src/",
-    "lint:fix": "eslint --fix src/",
+    "lint": "eslint src/ scripts/",
+    "lint:fix": "eslint --fix src/ scripts/",
     "tsc": "tsc -b"
   },
   "dependencies": {
