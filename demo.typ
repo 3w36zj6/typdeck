@@ -1,4 +1,4 @@
-#import "@preview/touying:0.6.1": *
+#import "@preview/touying:0.8.0": *
 #import themes.university: *
 
 #import "@preview/numbly:0.1.0": numbly
