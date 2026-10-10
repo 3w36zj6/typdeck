@@ -19,7 +19,10 @@ export const pageFromHash = (hash: string, metadata?: Metadata): number => {
 
 export const hashForPage = (page: number, metadata?: Metadata): string => {
   const headingLabel = metadata?.outline.find(
-    (heading) => heading.page === page && heading.label,
+    (heading) =>
+      heading.page === page &&
+      heading.label &&
+      !/^[1-9]\d*$/.test(heading.label),
   )?.label;
   return `#${encodeURIComponent(headingLabel ?? String(page))}`;
 };
