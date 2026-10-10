@@ -4,12 +4,14 @@ import { runProcess } from "./runProcess";
 type TypstHeading = {
   text: string;
   label?: string;
+  level: number;
   page: number;
 };
 
 const expression = `query(heading).filter(h => h.outlined).map(h => (
     body: h.body,
     label: if h.has("label") { str(h.label) } else { none },
+    level: h.level,
     page: h.location().page(),
   ))`;
 
@@ -17,6 +19,7 @@ const HeadingsSchema = v.array(
   v.object({
     body: v.unknown(),
     label: v.nullable(v.string()),
+    level: v.pipe(v.number(), v.integer(), v.minValue(1)),
     page: v.pipe(v.number(), v.integer(), v.minValue(1)),
   }),
 );
@@ -52,6 +55,7 @@ export const queryTypstHeadings = (
       return {
         text,
         label: value.label ?? undefined,
+        level: value.level,
         page: value.page,
       };
     });

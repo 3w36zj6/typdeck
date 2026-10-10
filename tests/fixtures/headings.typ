@@ -2,6 +2,8 @@
 
 = Introduction <introduction>
 
+== Nested detail
+
 #heading(outlined: false)[Internal marker]
 
 #heading(bookmarked: false)[Outline-only heading]
