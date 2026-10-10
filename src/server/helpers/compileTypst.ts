@@ -2,11 +2,16 @@ import fs from "node:fs";
 import path from "node:path";
 import chalk from "chalk";
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
+import * as v from "valibot";
 import { type Metadata } from "../../client/types/metadata";
 import { queryPdfpcNotes } from "./queryPdfpcNotes";
 import { queryTypstHeadings } from "./queryTypstHeadings";
 import { runProcess } from "./runProcess";
 import { writeMetadataJSON } from "./writeMatadataJSON";
+
+const CompilationInputsSchema = v.object({
+  inputs: v.array(v.string()),
+});
 
 const timestampFormat = new Intl.DateTimeFormat("en-GB", {
   hour: "2-digit",
@@ -51,7 +56,7 @@ export const compileTypst = async (
   typstFile: string,
   publicDir: string,
   signal?: AbortSignal,
-): Promise<void> => {
+): Promise<string[]> => {
   await ensureSupportedTypstVersion();
   const resolvedPublicDir = path.resolve(publicDir);
   fs.mkdirSync(path.dirname(resolvedPublicDir), { recursive: true });
@@ -64,6 +69,10 @@ export const compileTypst = async (
   const stagingDir = staging.path;
 
   const pdfPath = path.join(stagingDir, "deck.pdf");
+  const compilationInputsPath = path.join(
+    stagingDir,
+    "compilation-inputs.json",
+  );
   const args = [
     "compile",
     "--root",
@@ -72,6 +81,10 @@ export const compileTypst = async (
     pdfPath,
     "--format",
     "pdf",
+    "--deps",
+    compilationInputsPath,
+    "--deps-format",
+    "json",
   ];
   logWithTimestamp(
     chalk.dim(
@@ -81,6 +94,13 @@ export const compileTypst = async (
   const { stdout, stderr } = await runProcess("typst", args, signal);
   if (stderr.trim()) console.warn(stderr.trim());
   console.info(chalk.dim(stdout.trim()));
+  const compilationInputs = v
+    .parse(
+      CompilationInputsSchema,
+      JSON.parse(fs.readFileSync(compilationInputsPath, "utf8")),
+    )
+    .inputs.map((input) => path.resolve(input));
+  fs.unlinkSync(compilationInputsPath);
 
   const pdfTask = getDocument({
     data: new Uint8Array(fs.readFileSync(pdfPath)),
@@ -107,4 +127,5 @@ export const compileTypst = async (
 
   writeMetadataJSON(metadata, path.join(stagingDir, "metadata.json"));
   replaceDirectory(stagingDir, resolvedPublicDir);
+  return compilationInputs;
 };

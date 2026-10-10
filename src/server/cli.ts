@@ -52,12 +52,12 @@ const compileDeck = async (typstFile: string) => {
   const deckDirectory = path.join(dotDirectory, "deck");
   fs.mkdirSync(dotDirectory, { recursive: true });
   fs.writeFileSync(path.join(dotDirectory, ".gitignore"), "*\n", "utf8");
-  await compileTypst(typstFile, deckDirectory);
-  return deckDirectory;
+  const compilationInputs = await compileTypst(typstFile, deckDirectory);
+  return { compilationInputs, deckDirectory };
 };
 
 const buildPresentation = async (typstFile: string, outDir: string) => {
-  const deckDirectory = await compileDeck(typstFile);
+  const { deckDirectory } = await compileDeck(typstFile);
   const output = path.resolve(outDir);
   if (containsPath(output, process.cwd())) {
     throw new Error("outDir must not contain the project directory");
@@ -81,9 +81,13 @@ export const main = async () => {
       command: "dev <typstFile>",
       describe: "start dev server",
       handler: async (argv) => {
+        const { compilationInputs, deckDirectory } = await compileDeck(
+          argv.typstFile,
+        );
         const server = await servePresentation(
           argv.typstFile,
-          await compileDeck(argv.typstFile),
+          deckDirectory,
+          compilationInputs,
         );
         printUrl(server);
       },

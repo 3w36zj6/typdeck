@@ -18,12 +18,14 @@ describe("compileTypst", () => {
       path.join(os.tmpdir(), "typdeck output "),
     );
 
-    await compileTypst(
-      path.join(process.cwd(), "tests/fixtures/pdfpc-note.typ"),
-      output.path,
-    );
+    const input = path.join(process.cwd(), "tests/fixtures/pdfpc-note.typ");
+    const compilationInputs = await compileTypst(input, output.path);
 
     expect(fs.existsSync(path.join(output.path, "deck.pdf"))).toBe(true);
+    expect(compilationInputs).toContain(input);
+    expect(
+      fs.existsSync(path.join(output.path, "compilation-inputs.json")),
+    ).toBe(false);
     expect(
       JSON.parse(
         fs.readFileSync(path.join(output.path, "metadata.json"), "utf8"),

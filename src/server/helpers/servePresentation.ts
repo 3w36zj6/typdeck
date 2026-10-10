@@ -13,8 +13,6 @@ import { compileTypst } from "./compileTypst";
 
 const reloadPath = "/__typdeck_reload";
 const reloadScript = `<script>new EventSource("${reloadPath}").onmessage=()=>location.reload()</script>`;
-const ignoredDirectories = new Set([".git", ".typdeck", "node_modules"]);
-
 const sendStatus = (
   response: ServerResponse,
   status: number,
@@ -104,6 +102,7 @@ export const serveDirectory = async (directory: string) => {
 export const servePresentation = async (
   typstFile: string,
   deckDirectory: string,
+  compilationInputs: string[],
 ) => {
   const reloadClients = new Set<ServerResponse>();
   const embeddedIndex = clientAssets.get("/index.html");
@@ -168,13 +167,29 @@ export const servePresentation = async (
   const server = await startServer(handleRequest);
 
   let activeCompile: AbortController | undefined;
+  const watchedInputs = new Set(compilationInputs);
+  const watcher = watch([...watchedInputs], { ignoreInitial: true });
+  const updateWatchedInputs = async (nextInputs: string[]) => {
+    const next = new Set(nextInputs);
+    await watcher.add([...next].filter((input) => !watchedInputs.has(input)));
+    await watcher.unwatch(
+      [...watchedInputs].filter((input) => !next.has(input)),
+    );
+    watchedInputs.clear();
+    for (const input of next) watchedInputs.add(input);
+  };
   const recompile = async () => {
     activeCompile?.abort();
     const controller = new AbortController();
     activeCompile = controller;
     try {
-      await compileTypst(typstFile, deckDirectory, controller.signal);
+      const nextInputs = await compileTypst(
+        typstFile,
+        deckDirectory,
+        controller.signal,
+      );
       if (activeCompile === controller) {
+        await updateWatchedInputs(nextInputs);
         for (const client of reloadClients) client.write("data: reload\n\n");
       }
     } catch (error) {
@@ -183,15 +198,6 @@ export const servePresentation = async (
       if (activeCompile === controller) activeCompile = undefined;
     }
   };
-  const watcher = watch(process.cwd(), {
-    ignoreInitial: true,
-    ignored: (file, stat) =>
-      stat
-        ? stat.isDirectory()
-          ? ignoredDirectories.has(path.basename(file))
-          : path.extname(file) !== ".typ"
-        : false,
-  });
   watcher.on("add", recompile).on("change", recompile).on("unlink", recompile);
   watcher.on("error", console.error);
   server.on("close", () => {
