@@ -7,7 +7,6 @@ import { type Metadata } from "../../client/types/metadata";
 import { queryPdfpcNotes } from "./queryPdfpcNotes";
 import { queryTypstHeadings } from "./queryTypstHeadings";
 import { runProcess } from "./runProcess";
-import { writeMetadataJSON } from "./writeMatadataJSON";
 
 const CompilationInputsSchema = v.object({
   inputs: v.array(v.string()),
@@ -125,7 +124,10 @@ export const compileTypst = async (
     ...(Object.keys(slides).length > 0 ? { slides } : {}),
   };
 
-  writeMetadataJSON(metadata, path.join(stagingDir, "metadata.json"));
+  fs.writeFileSync(
+    path.join(stagingDir, "metadata.json"),
+    JSON.stringify(metadata),
+  );
   replaceDirectory(stagingDir, resolvedPublicDir);
   return compilationInputs;
 };
