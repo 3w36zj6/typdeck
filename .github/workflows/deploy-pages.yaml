@@ -26,11 +26,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Install dependencies
-        run: bun install --frozen-lockfile
+        run: aube ci
       - name: Build client
-        run: bun run build:client
+        run: aube run build:client
       - name: Build server
-        run: bun run build:server
+        run: aube run build:server
       - name: Build demo slides
         run: node bin/index.js build demo.typ
       - name: Prepare deployment directory

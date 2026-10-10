@@ -55,6 +55,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Install dependencies
-        run: bun install --frozen-lockfile
+        run: aube ci
       - name: ${{ matrix.step_name }}
-        run: bun run ${{ matrix.command }}
+        run: aube run ${{ matrix.command }}

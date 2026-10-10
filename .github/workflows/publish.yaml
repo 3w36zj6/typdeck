@@ -19,7 +19,6 @@ jobs:
           persist-credentials: false
       - uses: jdx/mise-action@94c60b39bc2d90ab2f9bab27f38d3cc4812c1834 # v5.1.0
         with:
-          install_args: node bun
           cache: false
-      - run: bun install --frozen-lockfile
-      - run: npm publish
+      - run: aube ci
+      - run: aube publish --provenance
