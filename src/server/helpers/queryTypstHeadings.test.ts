@@ -12,6 +12,7 @@ describe("queryTypstHeadings", () => {
 
     expect(headings).toEqual([
       { text: "Introduction", label: "introduction", page: 1 },
+      { text: "Outline-only heading", label: undefined, page: 1 },
       { text: "An inserted page", label: undefined, page: 2 },
       { text: "Typst's Details", label: "details", page: 3 },
       { text: "Rich details", label: undefined, page: 3 },

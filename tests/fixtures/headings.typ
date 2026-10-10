@@ -2,6 +2,10 @@
 
 = Introduction <introduction>
 
+#heading(outlined: false)[Internal marker]
+
+#heading(bookmarked: false)[Outline-only heading]
+
 #pagebreak()
 
 #heading("An inserted page")
