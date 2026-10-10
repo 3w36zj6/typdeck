@@ -57,10 +57,18 @@ const compileDeck = async (typstFile: string) => {
 };
 
 const buildPresentation = async (typstFile: string, outDir: string) => {
-  const { deckDirectory } = await compileDeck(typstFile);
   const output = path.resolve(outDir);
-  if (containsPath(output, process.cwd())) {
-    throw new Error("outDir must not contain the project directory");
+  const typstInput = path.resolve(typstFile);
+  if (containsPath(output, process.cwd()) || containsPath(output, typstInput)) {
+    throw new Error(
+      "outDir must not contain the project directory or Typst input",
+    );
+  }
+  const { compilationInputs, deckDirectory } = await compileDeck(typstFile);
+  if (compilationInputs.some((input) => containsPath(output, input))) {
+    throw new Error(
+      "outDir must not contain the project directory or Typst input",
+    );
   }
   fs.mkdirSync(path.dirname(output), { recursive: true });
   using staging = fs.mkdtempDisposableSync(
