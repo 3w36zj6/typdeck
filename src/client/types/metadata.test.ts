@@ -18,6 +18,8 @@ describe("parseMetadata", () => {
           2: {
             speakerNotes: "Remember this",
             hidden: true,
+            endSlide: true,
+            savedSlide: true,
             logicalSlide: 1,
             overlay: 0,
           },
@@ -33,6 +35,8 @@ describe("parseMetadata", () => {
         2: {
           speakerNotes: "Remember this",
           hidden: true,
+          endSlide: true,
+          savedSlide: true,
           logicalSlide: 1,
           overlay: 0,
         },

@@ -2,11 +2,13 @@ import { describe, expect, it } from "vitest";
 import type { Metadata } from "./types/metadata";
 import {
   actionForKey,
+  endSlidePage,
   formatElapsedTime,
   nextPreviewPage,
   pageLabel,
   presentationPositionLabel,
   previousPresentationPage,
+  savedSlidePage,
 } from "./presentation";
 
 const metadata: Metadata = {
@@ -105,6 +107,9 @@ describe("presentation controls", () => {
     ["ArrowUp", false, "previous"],
     ["ArrowRight", false, "next"],
     ["ArrowDown", false, "next"],
+    ["End", false, "last"],
+    ["KeyM", true, "saved"],
+    ["KeyM", false, undefined],
     ["KeyB", false, "blackout"],
     ["Slash", true, "shortcuts"],
     ["Slash", false, undefined],
@@ -132,5 +137,64 @@ describe("presentation controls", () => {
         isComposing: true,
       }),
     ).toBeUndefined();
+  });
+});
+
+describe("pdfpc navigation markers", () => {
+  it("uses the first visible overlay in the first marked logical slide", () => {
+    const deck: Metadata = {
+      pageCount: 4,
+      outline: [],
+      slides: {
+        1: {
+          logicalSlide: 1,
+          overlay: 0,
+          hidden: true,
+          endSlide: true,
+          savedSlide: true,
+        },
+        2: {
+          logicalSlide: 1,
+          overlay: 1,
+          endSlide: true,
+          savedSlide: true,
+        },
+        4: { endSlide: true, savedSlide: true },
+      },
+    };
+
+    expect(endSlidePage(deck)).toBe(2);
+    expect(savedSlidePage(deck)).toBe(2);
+  });
+
+  it("keeps the marker page when every overlay is hidden", () => {
+    const deck: Metadata = {
+      pageCount: 2,
+      outline: [],
+      slides: {
+        1: {
+          logicalSlide: 1,
+          overlay: 0,
+          hidden: true,
+          endSlide: true,
+          savedSlide: true,
+        },
+        2: { logicalSlide: 1, overlay: 1, hidden: true },
+      },
+    };
+
+    expect(endSlidePage(deck)).toBe(1);
+    expect(savedSlidePage(deck)).toBe(1);
+  });
+
+  it("falls back only for the end slide", () => {
+    const deck: Metadata = {
+      pageCount: 3,
+      outline: [],
+      slides: { 3: { hidden: true } },
+    };
+
+    expect(endSlidePage(deck)).toBe(2);
+    expect(savedSlidePage(deck)).toBeUndefined();
   });
 });

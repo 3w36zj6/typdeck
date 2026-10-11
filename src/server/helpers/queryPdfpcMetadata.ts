@@ -5,6 +5,8 @@ type PdfpcSlide = {
   page: number;
   speakerNotes?: string;
   hidden?: true;
+  endSlide?: true;
+  savedSlide?: true;
   logicalSlide?: number;
   overlay?: number;
 };
@@ -12,7 +14,7 @@ type PdfpcSlide = {
 const expression = `query(<pdfpc>)
   .filter(item => type(item.value) == dictionary)
   .filter(item => item.value.at("t", default: none) in (
-    "Note", "HiddenSlide", "LogicalSlide", "Overlay"
+    "Note", "HiddenSlide", "EndSlide", "SaveSlide", "LogicalSlide", "Overlay"
   ))
   .map(item => (
     page: item.location().page(),
@@ -31,6 +33,16 @@ const PdfpcEventSchema = v.array(
     v.object({
       page: PageSchema,
       type: v.literal("HiddenSlide"),
+      value: v.null(),
+    }),
+    v.object({
+      page: PageSchema,
+      type: v.literal("EndSlide"),
+      value: v.null(),
+    }),
+    v.object({
+      page: PageSchema,
+      type: v.literal("SaveSlide"),
       value: v.null(),
     }),
     v.object({
@@ -67,6 +79,10 @@ export const queryPdfpcMetadata = async (
           : `${slide.speakerNotes}\n\n${event.value}`;
     } else if (event.type === "HiddenSlide") {
       slide.hidden = true;
+    } else if (event.type === "EndSlide") {
+      slide.endSlide = true;
+    } else if (event.type === "SaveSlide") {
+      slide.savedSlide = true;
     } else if (event.type === "LogicalSlide") {
       slide.logicalSlide = event.value;
     } else {

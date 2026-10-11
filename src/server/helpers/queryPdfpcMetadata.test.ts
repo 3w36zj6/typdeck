@@ -40,21 +40,24 @@ describe("queryPdfpcMetadata", () => {
         page: 1,
         logicalSlide: 1,
         overlay: 0,
+        savedSlide: true,
         speakerNotes: "Explain every overlay step.",
       },
       {
         page: 2,
         logicalSlide: 1,
         overlay: 1,
+        savedSlide: true,
         speakerNotes: "Explain every overlay step.",
       },
       {
         page: 3,
         logicalSlide: 1,
         overlay: 2,
+        savedSlide: true,
         speakerNotes: "Explain every overlay step.",
       },
-      { page: 4, logicalSlide: 2, overlay: 0 },
+      { page: 4, logicalSlide: 2, overlay: 0, endSlide: true },
     ]);
   });
 
@@ -70,21 +73,24 @@ describe("queryPdfpcMetadata", () => {
         page: 1,
         logicalSlide: 1,
         overlay: 0,
+        savedSlide: true,
         speakerNotes: "Explain every overlay step.",
       },
       {
         page: 2,
         logicalSlide: 1,
         overlay: 1,
+        savedSlide: true,
         speakerNotes: "Explain every overlay step.",
       },
       {
         page: 3,
         logicalSlide: 1,
         overlay: 2,
+        savedSlide: true,
         speakerNotes: "Explain every overlay step.",
       },
-      { page: 4, logicalSlide: 2, overlay: 0 },
+      { page: 4, logicalSlide: 2, overlay: 0, endSlide: true },
     ]);
   });
 

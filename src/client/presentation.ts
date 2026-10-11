@@ -15,6 +15,10 @@ export const actionForKey = ({
     case "ArrowRight":
     case "ArrowDown":
       return "next";
+    case "End":
+      return "last";
+    case "KeyM":
+      return shiftKey ? "saved" : undefined;
     case "KeyB":
       return "blackout";
     case "Slash":
@@ -67,6 +71,24 @@ const logicalSlideStartPage = (metadata: Metadata, page: number): number => {
     ? page
     : (visibleOverlayPages(metadata, logicalSlide)[0] ?? page);
 };
+
+const markedSlidePage = (
+  metadata: Metadata,
+  marker: "endSlide" | "savedSlide",
+): number | undefined => {
+  for (let page = 1; page <= metadata.pageCount; page += 1) {
+    const slide = metadata.slides?.[`${page}`];
+    if (!slide?.[marker]) continue;
+    return logicalSlideStartPage(metadata, page);
+  }
+};
+
+export const endSlidePage = (metadata: Metadata): number =>
+  markedSlidePage(metadata, "endSlide") ??
+  adjacentVisiblePage(metadata, metadata.pageCount + 1, -1);
+
+export const savedSlidePage = (metadata: Metadata): number | undefined =>
+  markedSlidePage(metadata, "savedSlide");
 
 export const previousPresentationPage = (
   metadata: Metadata,

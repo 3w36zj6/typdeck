@@ -82,6 +82,22 @@ it directly accessible.
 #metadata((t: "HiddenSlide")) <pdfpc>
 ```
 
+### End slide
+
+`EndSlide` marks the slide opened by the `End` key. Without this marker, `End` opens the final visible slide.
+
+```typst
+#metadata((t: "EndSlide")) <pdfpc>
+```
+
+### Saved slide
+
+`SaveSlide` marks the slide opened by `Shift+M`.
+
+```typst
+#metadata((t: "SaveSlide")) <pdfpc>
+```
+
 ### Speaker notes
 
 `Note` stores speaker notes for the page containing the marker.

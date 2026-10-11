@@ -21,6 +21,8 @@ const SlideSchema = v.pipe(
   v.object({
     speakerNotes: v.optional(v.string()),
     hidden: v.optional(v.literal(true)),
+    endSlide: v.optional(v.literal(true)),
+    savedSlide: v.optional(v.literal(true)),
     logicalSlide: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0))),
     overlay: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0))),
   }),

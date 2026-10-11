@@ -3,6 +3,7 @@
 #set page(paper: "presentation-16-9")
 
 #slide[
+  #toolbox.pdfpc.save-slide
   #metadata((t: "Note", v: "Explain every overlay step.")) <pdfpc>
 
   = Polylux overlay
@@ -13,5 +14,7 @@
 ]
 
 #slide[
+  #toolbox.pdfpc.end-slide
+
   == Done
 ]

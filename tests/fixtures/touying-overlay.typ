@@ -5,6 +5,8 @@
 
 == Touying overlay
 
+#pdfpc.save-slide
+
 First
 
 #pause
@@ -18,3 +20,5 @@ Third
 #speaker-note(subslide: none)[Explain every overlay step.]
 
 == Done
+
+#pdfpc.end-slide

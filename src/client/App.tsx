@@ -12,11 +12,13 @@ import { Icon } from "@iconify-icon/solid";
 import { adjacentVisiblePage, hashForPage, pageFromHash } from "./navigation";
 import {
   actionForKey,
+  endSlidePage,
   formatElapsedTime,
   nextPreviewPage,
   pageLabel,
   presentationPositionLabel,
   previousPresentationPage,
+  savedSlidePage,
 } from "./presentation";
 import { createPresentationSync } from "./presentationSync";
 import {
@@ -77,6 +79,14 @@ const ShortcutDialog = (props: {
           <kbd>→ / ↓</kbd>
         </dt>
         <dd>Next slide</dd>
+        <dt>
+          <kbd>End</kbd>
+        </dt>
+        <dd>Go to the end slide</dd>
+        <dt>
+          <kbd>Shift+M</kbd>
+        </dt>
+        <dd>Go to the saved slide</dd>
         <dt>
           <kbd>B</kbd>
         </dt>
@@ -199,13 +209,25 @@ const App = () => {
     }
     if (shortcutDialog.open || !metadata()) return;
 
-    switch (actionForKey(event)) {
+    const action = actionForKey(event);
+    if (!action) return;
+    event.preventDefault();
+
+    switch (action) {
       case "previous":
         goPreviousPage();
         break;
       case "next":
         goNextPage();
         break;
+      case "last":
+        setCurrentPage(endSlidePage(metadata()!));
+        break;
+      case "saved": {
+        const page = savedSlidePage(metadata()!);
+        if (page !== undefined) setCurrentPage(page);
+        break;
+      }
       case "blackout":
         toggleBlackout();
         break;
