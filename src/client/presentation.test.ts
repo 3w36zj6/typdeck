@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { Metadata } from "./types/metadata";
-import { actionForKey, formatElapsedTime, pageLabel } from "./presentation";
+import {
+  actionForKey,
+  formatElapsedTime,
+  nextPreviewPage,
+  pageLabel,
+  presentationPositionLabel,
+  previousPresentationPage,
+} from "./presentation";
 
 const metadata: Metadata = {
   pageCount: 3,
@@ -32,6 +39,58 @@ describe("pageLabel", () => {
     expect(
       pageLabel({ pageCount: 1, pageLabels: ["A-1"], outline: [] }, 1),
     ).toBe("Page A-1");
+  });
+});
+
+describe("overlay presentation", () => {
+  const deck: Metadata = {
+    pageCount: 5,
+    outline: [{ text: "Reveal", level: 1, page: 1 }],
+    slides: {
+      1: { logicalSlide: 1, overlay: 0 },
+      2: { logicalSlide: 1, overlay: 1 },
+      3: { logicalSlide: 1, overlay: 2 },
+      4: { logicalSlide: 2, overlay: 0 },
+    },
+  };
+
+  it("uses the logical slide heading on every overlay", () => {
+    expect(pageLabel(deck, 2)).toBe("2. Reveal");
+  });
+
+  it("previews the completed logical slide", () => {
+    expect(nextPreviewPage(deck, 1)).toBe(3);
+    expect(nextPreviewPage(deck, 2)).toBe(3);
+    expect(nextPreviewPage(deck, 3)).toBe(4);
+  });
+
+  it("excludes hidden overlays from previews and progress", () => {
+    const hiddenOverlay: Metadata = {
+      ...deck,
+      slides: {
+        ...deck.slides,
+        3: { logicalSlide: 1, overlay: 2, hidden: true },
+      },
+    };
+
+    expect(nextPreviewPage(hiddenOverlay, 1)).toBe(2);
+    expect(nextPreviewPage(hiddenOverlay, 3)).toBe(4);
+    expect(presentationPositionLabel(hiddenOverlay, 2)).toBe(
+      "Slide 1 of 3\nStep 2 of 2",
+    );
+  });
+
+  it("returns to the first overlay across slide boundaries", () => {
+    expect(previousPresentationPage(deck, 3)).toBe(2);
+    expect(previousPresentationPage(deck, 4)).toBe(1);
+  });
+
+  it("reports logical slide and overlay progress", () => {
+    expect(presentationPositionLabel(deck, 2)).toBe(
+      "Slide 1 of 3\nStep 2 of 3",
+    );
+    expect(presentationPositionLabel(deck, 4)).toBe("Slide 2 of 3");
+    expect(presentationPositionLabel(deck, 5)).toBe("Slide 3 of 3");
   });
 });
 

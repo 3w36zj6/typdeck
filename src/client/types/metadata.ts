@@ -17,6 +17,20 @@ const LanguageSchema = v.pipe(
   }, "Language must be a valid BCP 47 tag"),
 );
 
+const SlideSchema = v.pipe(
+  v.object({
+    speakerNotes: v.optional(v.string()),
+    hidden: v.optional(v.literal(true)),
+    logicalSlide: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0))),
+    overlay: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0))),
+  }),
+  v.check(
+    ({ logicalSlide, overlay }) =>
+      (logicalSlide === undefined) === (overlay === undefined),
+    "Overlay and logical slide must be provided together",
+  ),
+);
+
 const MetadataSchema = v.pipe(
   v.object({
     pageCount: v.pipe(v.number(), v.integer(), v.minValue(1)),
@@ -31,15 +45,7 @@ const MetadataSchema = v.pipe(
         page: v.pipe(v.number(), v.integer(), v.minValue(1)),
       }),
     ),
-    slides: v.optional(
-      v.record(
-        PageKeySchema,
-        v.object({
-          speakerNotes: v.optional(v.string()),
-          hidden: v.optional(v.literal(true)),
-        }),
-      ),
-    ),
+    slides: v.optional(v.record(PageKeySchema, SlideSchema)),
   }),
   v.check(
     ({ pageCount, pageLabels }) =>

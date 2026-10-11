@@ -10,7 +10,14 @@ import {
 import { parseMetadata } from "./types/metadata";
 import { Icon } from "@iconify-icon/solid";
 import { adjacentVisiblePage, hashForPage, pageFromHash } from "./navigation";
-import { actionForKey, formatElapsedTime, pageLabel } from "./presentation";
+import {
+  actionForKey,
+  formatElapsedTime,
+  nextPreviewPage,
+  pageLabel,
+  presentationPositionLabel,
+  previousPresentationPage,
+} from "./presentation";
 import { createPresentationSync } from "./presentationSync";
 import {
   getDocument,
@@ -157,11 +164,15 @@ const App = () => {
 
   const previousPage = () => {
     const deck = metadata();
-    return deck ? adjacentVisiblePage(deck, currentPage(), -1) : currentPage();
+    return deck ? previousPresentationPage(deck, currentPage()) : currentPage();
   };
   const nextPage = () => {
     const deck = metadata();
     return deck ? adjacentVisiblePage(deck, currentPage(), 1) : currentPage();
+  };
+  const previewPage = () => {
+    const deck = metadata();
+    return deck ? nextPreviewPage(deck, currentPage()) : currentPage();
   };
 
   const goPreviousPage = () => {
@@ -325,6 +336,9 @@ const App = () => {
                 left: "50%",
                 transform: "translateX(-50%)",
                 background: "rgba(0, 0, 0, 0.5)",
+                width: "max-content",
+                "max-width": "calc(100vw - 20px)",
+                "box-sizing": "border-box",
                 padding: "10px",
                 "border-radius": "5px",
                 display: "flex",
@@ -339,12 +353,12 @@ const App = () => {
               <div
                 class="menu-row"
                 style={{
-                  position: "relative",
                   width: "100%",
-                  height: "32px",
-                  display: "flex",
+                  height: "36px",
+                  display: "grid",
+                  "grid-template-columns": "auto minmax(0, 1fr) auto",
                   "align-items": "center",
-                  "justify-content": "center",
+                  gap: "8px",
                 }}
               >
                 <button
@@ -352,26 +366,32 @@ const App = () => {
                   onClick={goPreviousPage}
                   aria-label="Previous slide"
                   disabled={previousPage() === currentPage()}
-                  style={{ position: "absolute", left: "0", height: "100%" }}
+                  style={{ height: "100%" }}
                 >
                   <MenuIcon icon="lucide:chevron-left" />
                 </button>
                 <span
+                  role="status"
+                  aria-atomic="true"
                   style={{
                     color: "#fff",
-                    "min-width": "200px",
+                    "font-size": "14px",
+                    "line-height": "16px",
+                    "min-width": "0",
+                    "white-space": "pre-line",
                     "text-align": "center",
                   }}
                 >
-                  Page {currentPage()}{" "}
-                  {metadata() ? `of ${metadata()!.pageCount}` : ""}
+                  {metadata()
+                    ? presentationPositionLabel(metadata()!, currentPage())
+                    : ""}
                 </span>
                 <button
                   class="icon-button"
                   onClick={goNextPage}
                   aria-label="Next slide"
                   disabled={nextPage() === currentPage()}
-                  style={{ position: "absolute", right: "0", height: "100%" }}
+                  style={{ height: "100%" }}
                 >
                   <MenuIcon icon="lucide:chevron-right" />
                 </button>
@@ -496,10 +516,10 @@ const App = () => {
                   >
                     <PdfSlide
                       document={document()}
-                      page={nextPage()}
+                      page={previewPage()}
                       label={`Next slide: ${pageLabel(
                         metadata()!,
-                        nextPage(),
+                        previewPage(),
                       )}`}
                       opacity={0.5}
                       onNavigate={setCurrentPage}
@@ -651,14 +671,20 @@ const App = () => {
                 <MenuIcon icon="lucide:chevron-left" />
               </button>
               <span
+                role="status"
+                aria-atomic="true"
                 style={{
                   color: "#fff",
-                  "font-size": "16px",
+                  "font-size": "14px",
+                  "line-height": "16px",
                   "min-width": "120px",
+                  "white-space": "pre-line",
                   "text-align": "center",
                 }}
               >
-                Page {currentPage()} of {metadata() ? metadata()!.pageCount : 0}
+                {metadata()
+                  ? presentationPositionLabel(metadata()!, currentPage())
+                  : ""}
               </span>
               <button
                 class="icon-button"

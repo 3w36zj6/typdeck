@@ -14,7 +14,14 @@ describe("parseMetadata", () => {
         title: "Example deck",
         language: "en-GB",
         outline: [{ text: "Introduction", label: "intro", level: 1, page: 1 }],
-        slides: { 2: { speakerNotes: "Remember this", hidden: true } },
+        slides: {
+          2: {
+            speakerNotes: "Remember this",
+            hidden: true,
+            logicalSlide: 1,
+            overlay: 0,
+          },
+        },
       }),
     ).toEqual({
       pageCount: 2,
@@ -22,7 +29,14 @@ describe("parseMetadata", () => {
       title: "Example deck",
       language: "en-GB",
       outline: [{ text: "Introduction", label: "intro", level: 1, page: 1 }],
-      slides: { 2: { speakerNotes: "Remember this", hidden: true } },
+      slides: {
+        2: {
+          speakerNotes: "Remember this",
+          hidden: true,
+          logicalSlide: 1,
+          overlay: 0,
+        },
+      },
     });
   });
 
@@ -62,6 +76,13 @@ describe("parseMetadata", () => {
         pageCount: 1,
         outline: [],
         slides: { 1: { hidden: false } },
+      }),
+    ).toThrow();
+    expect(() =>
+      parseMetadata({
+        pageCount: 1,
+        outline: [],
+        slides: { 1: { logicalSlide: 0 } },
       }),
     ).toThrow();
   });

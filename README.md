@@ -75,7 +75,8 @@ typdeck preview
 
 ### Hidden slides
 
-Hidden slides are skipped during normal navigation but remain directly accessible.
+`HiddenSlide` marks a page to be skipped during normal navigation while keeping
+it directly accessible.
 
 ```typst
 #metadata((t: "HiddenSlide")) <pdfpc>
@@ -83,8 +84,34 @@ Hidden slides are skipped during normal navigation but remain directly accessibl
 
 ### Speaker notes
 
-Attach a note to the current slide with `<pdfpc>` metadata:
+`Note` stores speaker notes for the page containing the marker.
 
 ```typst
 #metadata((t: "Note", v: "Explain this result.")) <pdfpc>
 ```
+
+`v` is the note text as a Typst `str`.
+
+### Logical slides
+
+`LogicalSlide` identifies the pages that form one slide.
+
+```typst
+#metadata((t: "LogicalSlide", v: 1)) <pdfpc>
+#metadata((t: "Overlay", v: 0)) <pdfpc>
+```
+
+`v` is a non-negative integer shared by every page in the group. Each grouped
+page must also have an `Overlay` marker.
+
+### Overlays
+
+`Overlay` orders pages within a logical slide.
+
+```typst
+#metadata((t: "LogicalSlide", v: 1)) <pdfpc>
+#metadata((t: "Overlay", v: 1)) <pdfpc>
+```
+
+`v` is the zero-based step number. typdeck reveals each step while counting the
+group as one slide and previews the final step in Presenter View.

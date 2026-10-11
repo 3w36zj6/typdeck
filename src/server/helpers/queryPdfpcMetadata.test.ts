@@ -15,18 +15,20 @@ describe("queryPdfpcMetadata", () => {
 
   it("joins multiple Touying speaker notes", async () => {
     const root = process.cwd();
-    await expect(
-      queryPdfpcMetadata(path.join(root, "tests/fixtures/touying.typ"), root),
-    ).resolves.toEqual([
-      {
-        page: 2,
-        speakerNotes:
-          "Explain that typdeck reuses the existing note.\n\nThen show that multiple notes are preserved.",
-      },
-    ]);
+    const slides = await queryPdfpcMetadata(
+      path.join(root, "tests/fixtures/touying.typ"),
+      root,
+    );
+    expect(slides).toContainEqual({
+      page: 2,
+      logicalSlide: 1,
+      overlay: 0,
+      speakerNotes:
+        "Explain that typdeck reuses the existing note.\n\nThen show that multiple notes are preserved.",
+    });
   });
 
-  it("reads Touying speaker notes on every overlay", async () => {
+  it("reads Touying overlay groups and speaker notes", async () => {
     const root = process.cwd();
     await expect(
       queryPdfpcMetadata(
@@ -34,13 +36,29 @@ describe("queryPdfpcMetadata", () => {
         root,
       ),
     ).resolves.toEqual([
-      { page: 1, speakerNotes: "Explain every overlay step." },
-      { page: 2, speakerNotes: "Explain every overlay step." },
-      { page: 3, speakerNotes: "Explain every overlay step." },
+      {
+        page: 1,
+        logicalSlide: 1,
+        overlay: 0,
+        speakerNotes: "Explain every overlay step.",
+      },
+      {
+        page: 2,
+        logicalSlide: 1,
+        overlay: 1,
+        speakerNotes: "Explain every overlay step.",
+      },
+      {
+        page: 3,
+        logicalSlide: 1,
+        overlay: 2,
+        speakerNotes: "Explain every overlay step.",
+      },
+      { page: 4, logicalSlide: 2, overlay: 0 },
     ]);
   });
 
-  it("reads Polylux speaker notes on every overlay", async () => {
+  it("reads Polylux overlay groups and speaker notes", async () => {
     const root = process.cwd();
     await expect(
       queryPdfpcMetadata(
@@ -48,9 +66,25 @@ describe("queryPdfpcMetadata", () => {
         root,
       ),
     ).resolves.toEqual([
-      { page: 1, speakerNotes: "Explain every overlay step." },
-      { page: 2, speakerNotes: "Explain every overlay step." },
-      { page: 3, speakerNotes: "Explain every overlay step." },
+      {
+        page: 1,
+        logicalSlide: 1,
+        overlay: 0,
+        speakerNotes: "Explain every overlay step.",
+      },
+      {
+        page: 2,
+        logicalSlide: 1,
+        overlay: 1,
+        speakerNotes: "Explain every overlay step.",
+      },
+      {
+        page: 3,
+        logicalSlide: 1,
+        overlay: 2,
+        speakerNotes: "Explain every overlay step.",
+      },
+      { page: 4, logicalSlide: 2, overlay: 0 },
     ]);
   });
 

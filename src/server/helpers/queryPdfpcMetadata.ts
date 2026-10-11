@@ -5,11 +5,15 @@ type PdfpcSlide = {
   page: number;
   speakerNotes?: string;
   hidden?: true;
+  logicalSlide?: number;
+  overlay?: number;
 };
 
 const expression = `query(<pdfpc>)
   .filter(item => type(item.value) == dictionary)
-  .filter(item => item.value.at("t", default: none) in ("Note", "HiddenSlide"))
+  .filter(item => item.value.at("t", default: none) in (
+    "Note", "HiddenSlide", "LogicalSlide", "Overlay"
+  ))
   .map(item => (
     page: item.location().page(),
     type: item.value.t,
@@ -28,6 +32,16 @@ const PdfpcEventSchema = v.array(
       page: PageSchema,
       type: v.literal("HiddenSlide"),
       value: v.null(),
+    }),
+    v.object({
+      page: PageSchema,
+      type: v.literal("LogicalSlide"),
+      value: v.pipe(v.number(), v.integer(), v.minValue(0)),
+    }),
+    v.object({
+      page: PageSchema,
+      type: v.literal("Overlay"),
+      value: v.pipe(v.number(), v.integer(), v.minValue(0)),
     }),
   ]),
 );
@@ -51,10 +65,18 @@ export const queryPdfpcMetadata = async (
         slide.speakerNotes === undefined
           ? event.value
           : `${slide.speakerNotes}\n\n${event.value}`;
-    } else {
+    } else if (event.type === "HiddenSlide") {
       slide.hidden = true;
+    } else if (event.type === "LogicalSlide") {
+      slide.logicalSlide = event.value;
+    } else {
+      slide.overlay = event.value;
     }
     slides.set(event.page, slide);
   }
-  return [...slides.values()];
+  return [...slides.values()].map(({ logicalSlide, overlay, ...slide }) =>
+    logicalSlide !== undefined && overlay !== undefined
+      ? { ...slide, logicalSlide, overlay }
+      : slide,
+  );
 };
