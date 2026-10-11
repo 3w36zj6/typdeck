@@ -86,6 +86,8 @@ it directly accessible.
 
 `EndSlide` marks the slide opened by the `End` key. Without this marker, `End` opens the final visible slide.
 
+Slides after `EndSlide` remain accessible as appendices and are excluded from presentation progress.
+
 ```typst
 #metadata((t: "EndSlide")) <pdfpc>
 ```

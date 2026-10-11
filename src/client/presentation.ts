@@ -134,10 +134,12 @@ export const presentationPositionLabel = (
   page: number,
 ): string => {
   if (metadata.slides?.[`${page}`]?.hidden) {
-    return `Page ${page} of ${metadata.pageCount} (hidden)`;
+    return "Hidden slide";
   }
 
+  const endPage = endSlidePage(metadata);
   const slideKeys = new Set<string>();
+  const appendixKeys = new Set<string>();
   for (let candidate = 1; candidate <= metadata.pageCount; candidate += 1) {
     const slide = metadata.slides?.[`${candidate}`];
     if (slide?.hidden) continue;
@@ -145,7 +147,11 @@ export const presentationPositionLabel = (
       slide?.logicalSlide === undefined
         ? `page:${candidate}`
         : `logical:${slide.logicalSlide}`;
-    slideKeys.add(key);
+    if (candidate <= endPage || slideKeys.has(key)) {
+      slideKeys.add(key);
+    } else {
+      appendixKeys.add(key);
+    }
   }
 
   const slide = metadata.slides?.[`${page}`];
@@ -155,14 +161,22 @@ export const presentationPositionLabel = (
       : `logical:${slide.logicalSlide}`;
   const slides = [...slideKeys];
   const position = slides.indexOf(key) + 1;
-  if (position === 0) return `Page ${page} of ${metadata.pageCount}`;
+  const appendix = [...appendixKeys];
+  const appendixPosition = appendix.indexOf(key) + 1;
+  if (position === 0 && appendixPosition === 0) {
+    return "Slide";
+  }
+  const label =
+    position > 0
+      ? `Slide ${position} of ${slides.length}`
+      : `Appendix ${appendixPosition} of ${appendix.length}`;
 
   if (slide?.logicalSlide === undefined) {
-    return `Slide ${position} of ${slides.length}`;
+    return label;
   }
   const overlays = visibleOverlayPages(metadata, slide.logicalSlide);
   const step = overlays.indexOf(page) + 1;
   return overlays.length > 1 && step > 0
-    ? `Slide ${position} of ${slides.length}\nStep ${step} of ${overlays.length}`
-    : `Slide ${position} of ${slides.length}`;
+    ? `${label}\nStep ${step} of ${overlays.length}`
+    : label;
 };

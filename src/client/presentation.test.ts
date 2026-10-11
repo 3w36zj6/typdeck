@@ -80,6 +80,7 @@ describe("overlay presentation", () => {
     expect(presentationPositionLabel(hiddenOverlay, 2)).toBe(
       "Slide 1 of 3\nStep 2 of 2",
     );
+    expect(presentationPositionLabel(hiddenOverlay, 3)).toBe("Hidden slide");
   });
 
   it("returns to the first overlay across slide boundaries", () => {
@@ -93,6 +94,28 @@ describe("overlay presentation", () => {
     );
     expect(presentationPositionLabel(deck, 4)).toBe("Slide 2 of 3");
     expect(presentationPositionLabel(deck, 5)).toBe("Slide 3 of 3");
+  });
+
+  it("labels logical slides after the end slide as appendices", () => {
+    const deckWithAppendix: Metadata = {
+      ...deck,
+      pageCount: 6,
+      slides: {
+        ...deck.slides,
+        4: { logicalSlide: 2, overlay: 0, endSlide: true },
+        5: { logicalSlide: 3, overlay: 0 },
+        6: { logicalSlide: 3, overlay: 1 },
+      },
+    };
+
+    expect(presentationPositionLabel(deckWithAppendix, 4)).toBe("Slide 2 of 2");
+    expect(presentationPositionLabel(deckWithAppendix, 5)).toBe(
+      "Appendix 1 of 1\nStep 1 of 2",
+    );
+    expect(presentationPositionLabel(deckWithAppendix, 6)).toBe(
+      "Appendix 1 of 1\nStep 2 of 2",
+    );
+    expect(nextPreviewPage(deckWithAppendix, 4)).toBe(6);
   });
 });
 
