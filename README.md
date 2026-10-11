@@ -111,6 +111,26 @@ Slides after `EndSlide` remain accessible as appendices and are excluded from pr
 
 Without a positive `Duration`, Presenter View shows elapsed time only.
 
+### Start time
+
+`StartTime` sets the local start time in 24-hour `HH:MM` format.
+
+```typst
+#metadata((t: "StartTime", v: "14:10")) <pdfpc>
+```
+
+Presenter View counts down to `StartTime` and starts automatically. A manual start or slide navigation starts it early.
+
+### End time
+
+`EndTime` sets the local end time in 24-hour `HH:MM` format.
+
+```typst
+#metadata((t: "EndTime", v: "14:40")) <pdfpc>
+```
+
+Together, `StartTime` and `EndTime` define the duration. With `EndTime` and `Duration`, typdeck derives the missing `StartTime`.
+
 ### Speaker notes
 
 `Note` stores speaker notes for the page containing the marker.
