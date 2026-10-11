@@ -155,9 +155,9 @@ const ShortcutDialog = (props: {
         </dt>
         <dd>Open slide overview</dd>
         <dt>
-          <kbd>Shift+M</kbd>
+          <kbd>M / Shift+M</kbd>
         </dt>
-        <dd>Go to the saved slide</dd>
+        <dd>Bookmark / return to the bookmarked or saved slide</dd>
         <dt>
           <kbd>S</kbd>
         </dt>
@@ -324,6 +324,8 @@ const App = () => {
     setCurrentPage,
     blankScreen,
     setBlankScreen,
+    bookmarkPage,
+    setBookmarkPage,
     drawings,
     setDrawings,
     drawingsHidden,
@@ -524,6 +526,29 @@ const App = () => {
 
   const toggleFreeze = () =>
     setFrozenPage((page) => (page === null ? currentPage() : null));
+
+  const bookmarkCurrentSlide = () => {
+    const deck = metadata();
+    if (deck) setBookmarkPage(logicalSlideStartPage(deck, currentPage()));
+  };
+
+  const bookmarkDestination = () => {
+    const deck = metadata();
+    return bookmarkPage() ?? (deck ? savedSlidePage(deck) : undefined);
+  };
+
+  const goToBookmark = () => {
+    const page = bookmarkDestination();
+    if (page !== undefined) setCurrentPage(page);
+  };
+
+  const isCurrentSlideBookmarked = () => {
+    const deck = metadata();
+    return (
+      deck !== undefined &&
+      bookmarkPage() === logicalSlideStartPage(deck, currentPage())
+    );
+  };
 
   const pointerForPage = (page: number) => {
     const value = pointer();
@@ -783,11 +808,12 @@ const App = () => {
       case "last":
         setCurrentPage(endSlidePage(metadata()!));
         break;
-      case "saved": {
-        const page = savedSlidePage(metadata()!);
-        if (page !== undefined) setCurrentPage(page);
+      case "bookmark":
+        bookmarkCurrentSlide();
         break;
-      }
+      case "saved":
+        goToBookmark();
+        break;
       case "blackout":
         toggleBlankScreen("black");
         break;
@@ -1769,6 +1795,27 @@ const App = () => {
                 style={{ height: "32px" }}
               >
                 <MenuIcon icon="lucide:search" />
+              </button>
+              <button
+                class="icon-button"
+                onClick={bookmarkCurrentSlide}
+                aria-label="Bookmark current slide"
+                aria-pressed={isCurrentSlideBookmarked()}
+                data-tooltip="Bookmark current slide"
+                disabled={!metadata()}
+                style={{ height: "32px" }}
+              >
+                <MenuIcon icon="lucide:bookmark-plus" />
+              </button>
+              <button
+                class="icon-button"
+                onClick={goToBookmark}
+                aria-label="Go to bookmarked or saved slide"
+                data-tooltip="Go to bookmarked or saved slide"
+                disabled={bookmarkDestination() === undefined}
+                style={{ height: "32px" }}
+              >
+                <MenuIcon icon="lucide:bookmark-check" />
               </button>
             </div>
             <Show when={metadata()}>

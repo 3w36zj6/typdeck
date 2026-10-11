@@ -85,7 +85,7 @@ export const actionForKey = ({
     case "End":
       return shiftKey ? undefined : "last";
     case "KeyM":
-      return shiftKey ? "saved" : undefined;
+      return shiftKey ? "saved" : "bookmark";
     case "KeyP":
       return shiftKey ? undefined : "toggle-timer";
     case "KeyS":

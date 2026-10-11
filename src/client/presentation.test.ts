@@ -358,7 +358,7 @@ describe("presentation controls", () => {
     ["End", false, "last"],
     ["End", true, undefined],
     ["KeyM", true, "saved"],
-    ["KeyM", false, undefined],
+    ["KeyM", false, "bookmark"],
     ["KeyP", false, "toggle-timer"],
     ["KeyP", true, undefined],
     ["KeyS", false, "start-timer"],

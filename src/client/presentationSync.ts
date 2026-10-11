@@ -64,6 +64,7 @@ const DrawingSchema = v.variant("kind", [
 const SlideStateSchema = v.object({
   activeDrawing: v.nullable(DrawingSchema),
   blankScreen: v.picklist(["none", "black", "white"]),
+  bookmarkPage: v.nullable(v.pipe(v.number(), v.integer(), v.minValue(1))),
   currentPage: v.pipe(v.number(), v.integer(), v.minValue(1)),
   drawings: v.array(DrawingSchema),
   drawingsHidden: v.boolean(),
@@ -73,6 +74,7 @@ const SlideStateSchema = v.object({
 });
 const PersistentStateSchema = v.object({
   blankScreen: v.picklist(["none", "black", "white"]),
+  bookmarkPage: v.nullable(v.pipe(v.number(), v.integer(), v.minValue(1))),
   drawings: v.array(DrawingSchema),
   drawingsHidden: v.boolean(),
   frozenPage: v.nullable(v.pipe(v.number(), v.integer(), v.minValue(1))),
@@ -129,6 +131,7 @@ type SlideState = v.InferOutput<typeof SlideStateSchema>;
 type PersistentState = v.InferOutput<typeof PersistentStateSchema>;
 
 const fitsDeck = (state: PersistentState, pageCount: number) =>
+  (state.bookmarkPage === null || state.bookmarkPage <= pageCount) &&
   state.drawings.every(({ page }) => page <= pageCount) &&
   (state.frozenPage === null || state.frozenPage <= pageCount);
 
@@ -139,6 +142,7 @@ export const shouldBroadcastState = (
   received === undefined ||
   !sameDrawing(received.activeDrawing, current.activeDrawing) ||
   received.blankScreen !== current.blankScreen ||
+  received.bookmarkPage !== current.bookmarkPage ||
   received.currentPage !== current.currentPage ||
   !sameDrawings(received.drawings, current.drawings) ||
   received.drawingsHidden !== current.drawingsHidden ||
@@ -154,6 +158,7 @@ export const createPresentationSync = (
   const [currentPage, setCurrentPage] = createSignal(initialPage);
   const [blankScreen, setBlankScreen] =
     createSignal<BlankScreen>(initialBlankScreen);
+  const [bookmarkPage, setBookmarkPage] = createSignal<number | null>(null);
   const [activeDrawing, setActiveDrawing] = createSignal<DrawingStroke | null>(
     null,
     { equals: sameDrawing },
@@ -176,6 +181,7 @@ export const createPresentationSync = (
   const currentState = () => ({
     activeDrawing: activeDrawing(),
     blankScreen: blankScreen(),
+    bookmarkPage: bookmarkPage(),
     currentPage: currentPage(),
     drawings: drawings(),
     drawingsHidden: drawingsHidden(),
@@ -195,6 +201,7 @@ export const createPresentationSync = (
           deck: metadataIdentity(deck),
           state: {
             blankScreen: blankScreen(),
+            bookmarkPage: bookmarkPage(),
             drawings: drawings(),
             drawingsHidden: drawingsHidden(),
             frozenPage: frozenPage(),
@@ -218,6 +225,7 @@ export const createPresentationSync = (
     const pages = metadata()?.pageCount ?? 0;
     if (
       state.currentPage > pages ||
+      (state.bookmarkPage !== null && state.bookmarkPage > pages) ||
       (state.frozenPage !== null && state.frozenPage > pages) ||
       (state.activeDrawing !== null && state.activeDrawing.page > pages) ||
       state.drawings.some(({ page }) => page > pages) ||
@@ -231,6 +239,7 @@ export const createPresentationSync = (
       setActiveDrawing(state.activeDrawing);
       setCurrentPage(state.currentPage);
       setBlankScreen(state.blankScreen);
+      setBookmarkPage(state.bookmarkPage);
       setDrawings(state.drawings);
       setDrawingsHidden(state.drawingsHidden);
       setFrozenPage(state.frozenPage);
@@ -245,6 +254,7 @@ export const createPresentationSync = (
         activeDrawing,
         currentPage,
         blankScreen,
+        bookmarkPage,
         drawings,
         drawingsHidden,
         frozenPage,
@@ -279,6 +289,7 @@ export const createPresentationSync = (
                 if (initialBlankScreen === "none") {
                   setBlankScreen(stored.output.state.blankScreen);
                 }
+                setBookmarkPage(stored.output.state.bookmarkPage);
                 setDrawings(stored.output.state.drawings);
                 setDrawingsHidden(stored.output.state.drawingsHidden);
                 setFrozenPage(stored.output.state.frozenPage);
@@ -294,7 +305,7 @@ export const createPresentationSync = (
   );
   createEffect(
     on(
-      [blankScreen, drawings, drawingsHidden, frozenPage],
+      [blankScreen, bookmarkPage, drawings, drawingsHidden, frozenPage],
       savePersistentState,
       { defer: true },
     ),
@@ -308,6 +319,8 @@ export const createPresentationSync = (
     setCurrentPage,
     blankScreen,
     setBlankScreen,
+    bookmarkPage,
+    setBookmarkPage,
     drawings,
     setDrawings,
     drawingsHidden,

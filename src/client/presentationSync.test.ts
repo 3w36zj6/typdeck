@@ -54,6 +54,7 @@ const syncedState = {
     ],
   },
   blankScreen: "white" as const,
+  bookmarkPage: 1,
   currentPage: 2,
   drawings: [
     {
@@ -89,6 +90,7 @@ describe("createPresentationSync", () => {
     await Promise.resolve();
     expect(sync.currentPage()).toBe(1);
     expect(sync.blankScreen()).toBe("none");
+    expect(sync.bookmarkPage()).toBeNull();
     expect(sync.activeDrawing()).toBeNull();
     expect(sync.drawings()).toEqual([]);
     expect(sync.drawingsHidden()).toBe(false);
@@ -103,6 +105,7 @@ describe("createPresentationSync", () => {
     });
     expect(sync.currentPage()).toBe(2);
     expect(sync.blankScreen()).toBe("white");
+    expect(sync.bookmarkPage()).toBe(1);
     expect(sync.activeDrawing()?.kind).toBe("pen");
     expect(sync.drawings()).toHaveLength(1);
     expect(sync.drawingsHidden()).toBe(true);
@@ -120,6 +123,10 @@ describe("createPresentationSync", () => {
     channel.dispatch({
       type: "state",
       state: { ...syncedState, currentPage: 3 },
+    });
+    channel.dispatch({
+      type: "state",
+      state: { ...syncedState, bookmarkPage: 3 },
     });
     channel.dispatch({
       type: "state",
@@ -178,6 +185,7 @@ describe("createPresentationSync", () => {
         deck,
         state: {
           blankScreen: "black",
+          bookmarkPage: 1,
           drawings: syncedState.drawings,
           drawingsHidden: true,
           frozenPage: 1,
@@ -192,6 +200,7 @@ describe("createPresentationSync", () => {
 
     expect(sync.currentPage()).toBe(2);
     expect(sync.blankScreen()).toBe("black");
+    expect(sync.bookmarkPage()).toBe(1);
     expect(sync.drawings()).toEqual(syncedState.drawings);
     expect(sync.drawingsHidden()).toBe(true);
     expect(sync.frozenPage()).toBe(1);
@@ -208,6 +217,7 @@ describe("createPresentationSync", () => {
         deck: "another deck",
         state: {
           blankScreen: "white",
+          bookmarkPage: 1,
           drawings: syncedState.drawings,
           drawingsHidden: true,
           frozenPage: 1,
@@ -227,6 +237,7 @@ describe("createPresentationSync", () => {
         deck,
         state: {
           blankScreen: "white",
+          bookmarkPage: null,
           drawings: [],
           drawingsHidden: false,
           frozenPage: null,
@@ -248,7 +259,8 @@ describe("createPresentationSync", () => {
         deck,
         state: {
           blankScreen: "black",
-          drawings: [{ ...syncedState.drawings[0], page: 3 }],
+          bookmarkPage: 3,
+          drawings: syncedState.drawings,
           drawingsHidden: true,
           frozenPage: null,
         },
@@ -260,6 +272,7 @@ describe("createPresentationSync", () => {
     }));
 
     expect(sync.blankScreen()).toBe("none");
+    expect(sync.bookmarkPage()).toBeNull();
     expect(sync.drawings()).toEqual([]);
     dispose();
   });
@@ -272,6 +285,7 @@ describe("createPresentationSync", () => {
       dispose,
     }));
     sync.setActiveDrawing(syncedState.activeDrawing);
+    sync.setBookmarkPage(2);
     sync.setPointer(syncedState.pointer);
     sync.setZoom(syncedState.zoom);
     sync.setDrawings(syncedState.drawings);
@@ -281,6 +295,7 @@ describe("createPresentationSync", () => {
       vi.mocked(sessionStorage.setItem).mock.lastCall?.[1] ?? "null",
     );
     expect(stored.state.drawings).toEqual(syncedState.drawings);
+    expect(stored.state.bookmarkPage).toBe(2);
     expect(stored.state).not.toHaveProperty("activeDrawing");
     expect(stored.state).not.toHaveProperty("pointer");
     expect(stored.state).not.toHaveProperty("zoom");
@@ -314,6 +329,7 @@ describe("shouldBroadcastState", () => {
   const state = {
     activeDrawing: null,
     blankScreen: "none" as const,
+    bookmarkPage: null,
     currentPage: 1,
     drawings: [],
     drawingsHidden: false,
@@ -330,6 +346,12 @@ describe("shouldBroadcastState", () => {
       shouldBroadcastState(state, {
         ...state,
         pointer: { ...state.pointer, x: 0.75 },
+      }),
+    ).toBe(true);
+    expect(
+      shouldBroadcastState(state, {
+        ...state,
+        bookmarkPage: 1,
       }),
     ).toBe(true);
     expect(
