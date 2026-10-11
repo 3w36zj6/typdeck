@@ -20,6 +20,7 @@ import {
   nextPreviewPage,
   pageLabel,
   presentationDurationMinutes,
+  presentationPace,
   presentationPositionLabel,
   presentationStartAt,
   previousPresentationPage,
@@ -180,6 +181,12 @@ const App = () => {
       seconds,
       warning: lastMinutes !== undefined && seconds <= lastMinutes * 60,
     };
+  });
+  const pace = createMemo(() => {
+    const deck = metadata();
+    return deck
+      ? presentationPace(deck, currentPage(), elapsedSeconds())
+      : undefined;
   });
   let shortcutDialog!: HTMLDialogElement;
   const setShortcutDialog = (dialog: HTMLDialogElement) => {
@@ -784,6 +791,26 @@ const App = () => {
                           : "Remaining"}
                     </span>
                     <span>{formatRemainingTime(remaining().seconds)}</span>
+                  </div>
+                )}
+              </Show>
+              <Show when={timerStartedAt() !== undefined && pace()}>
+                {(currentPace) => (
+                  <div
+                    aria-label="Presentation pace"
+                    data-status={currentPace().status}
+                    style={{
+                      color:
+                        currentPace().status === "ahead"
+                          ? "#7db7ff"
+                          : currentPace().status === "behind"
+                            ? "#ffb020"
+                            : "inherit",
+                    }}
+                  >
+                    {currentPace().status === "on-pace"
+                      ? "On pace"
+                      : `${currentPace().status === "ahead" ? "Ahead" : "Behind"} ${formatElapsedTime(Math.abs(currentPace().differenceSeconds))}`}
                   </div>
                 )}
               </Show>

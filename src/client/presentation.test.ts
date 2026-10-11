@@ -8,6 +8,7 @@ import {
   nextPreviewPage,
   pageLabel,
   presentationDurationMinutes,
+  presentationPace,
   presentationPositionLabel,
   presentationStartAt,
   previousPresentationPage,
@@ -120,6 +121,40 @@ describe("overlay presentation", () => {
       "Appendix 1 of 1\nStep 2 of 2",
     );
     expect(nextPreviewPage(deckWithAppendix, 4)).toBe(6);
+    expect(
+      presentationPace({ ...deckWithAppendix, durationMinutes: 30 }, 6, 0),
+    ).toBeUndefined();
+  });
+
+  it("compares elapsed time with logical slide pace", () => {
+    const timedDeck = { ...deck, durationMinutes: 30 };
+    expect(presentationPace(timedDeck, 1, 0)).toEqual({
+      status: "ahead",
+      differenceSeconds: -300,
+    });
+    expect(presentationPace(timedDeck, 2, 300)).toEqual({
+      status: "on-pace",
+      differenceSeconds: 0,
+    });
+    expect(presentationPace(timedDeck, 4, 1_000)).toEqual({
+      status: "behind",
+      differenceSeconds: 100,
+    });
+    expect(presentationPace(timedDeck, 4, 839)?.status).toBe("ahead");
+    expect(presentationPace(timedDeck, 4, 840)?.status).toBe("on-pace");
+    expect(presentationPace(timedDeck, 4, 960)?.status).toBe("on-pace");
+    expect(presentationPace(timedDeck, 4, 961)?.status).toBe("behind");
+    expect(
+      presentationPace(
+        {
+          ...timedDeck,
+          slides: { ...timedDeck.slides, 4: { hidden: true } },
+        },
+        4,
+        0,
+      ),
+    ).toBeUndefined();
+    expect(presentationPace(deck, 1, 0)).toBeUndefined();
   });
 });
 

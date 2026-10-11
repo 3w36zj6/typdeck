@@ -135,6 +135,25 @@ export const endSlidePage = (metadata: Metadata): number =>
 export const savedSlidePage = (metadata: Metadata): number | undefined =>
   markedSlidePage(metadata, "savedSlide");
 
+const slideKey = (metadata: Metadata, page: number): string => {
+  const logicalSlide = metadata.slides?.[`${page}`]?.logicalSlide;
+  return logicalSlide === undefined
+    ? `page:${page}`
+    : `logical:${logicalSlide}`;
+};
+
+const presentationSections = (metadata: Metadata) => {
+  const endPage = endSlidePage(metadata);
+  const slides = new Set<string>();
+  const appendices = new Set<string>();
+  for (let page = 1; page <= metadata.pageCount; page += 1) {
+    if (metadata.slides?.[`${page}`]?.hidden) continue;
+    const key = slideKey(metadata, page);
+    (page <= endPage || slides.has(key) ? slides : appendices).add(key);
+  }
+  return { slides: [...slides], appendices: [...appendices] };
+};
+
 export const previousPresentationPage = (
   metadata: Metadata,
   page: number,
@@ -182,39 +201,18 @@ export const presentationPositionLabel = (
     return "Hidden slide";
   }
 
-  const endPage = endSlidePage(metadata);
-  const slideKeys = new Set<string>();
-  const appendixKeys = new Set<string>();
-  for (let candidate = 1; candidate <= metadata.pageCount; candidate += 1) {
-    const slide = metadata.slides?.[`${candidate}`];
-    if (slide?.hidden) continue;
-    const key =
-      slide?.logicalSlide === undefined
-        ? `page:${candidate}`
-        : `logical:${slide.logicalSlide}`;
-    if (candidate <= endPage || slideKeys.has(key)) {
-      slideKeys.add(key);
-    } else {
-      appendixKeys.add(key);
-    }
-  }
-
+  const { slides, appendices } = presentationSections(metadata);
   const slide = metadata.slides?.[`${page}`];
-  const key =
-    slide?.logicalSlide === undefined
-      ? `page:${page}`
-      : `logical:${slide.logicalSlide}`;
-  const slides = [...slideKeys];
+  const key = slideKey(metadata, page);
   const position = slides.indexOf(key) + 1;
-  const appendix = [...appendixKeys];
-  const appendixPosition = appendix.indexOf(key) + 1;
+  const appendixPosition = appendices.indexOf(key) + 1;
   if (position === 0 && appendixPosition === 0) {
     return "Slide";
   }
   const label =
     position > 0
       ? `Slide ${position} of ${slides.length}`
-      : `Appendix ${appendixPosition} of ${appendix.length}`;
+      : `Appendix ${appendixPosition} of ${appendices.length}`;
 
   if (slide?.logicalSlide === undefined) {
     return label;
@@ -224,4 +222,31 @@ export const presentationPositionLabel = (
   return overlays.length > 1 && step > 0
     ? `${label}\nStep ${step} of ${overlays.length}`
     : label;
+};
+
+export const presentationPace = (
+  metadata: Metadata,
+  page: number,
+  elapsedSeconds: number,
+) => {
+  const durationMinutes = presentationDurationMinutes(metadata);
+  if (durationMinutes === undefined || metadata.slides?.[`${page}`]?.hidden) {
+    return;
+  }
+  const slides = presentationSections(metadata).slides;
+  const position = slides.indexOf(slideKey(metadata, page)) + 1;
+  if (position === 0) return;
+
+  const expectedSeconds =
+    (durationMinutes * 60 * (position - 0.5)) / slides.length;
+  const differenceSeconds = Math.round(elapsedSeconds - expectedSeconds);
+  return {
+    status:
+      differenceSeconds > 60
+        ? "behind"
+        : differenceSeconds < -60
+          ? "ahead"
+          : "on-pace",
+    differenceSeconds,
+  };
 };

@@ -109,9 +109,7 @@ Slides after `EndSlide` remain accessible as appendices and are excluded from pr
 #metadata((t: "LastMinutes", v: 5)) <pdfpc>
 ```
 
-Without a positive `Duration`, Presenter View shows elapsed time only.
-
-The timer starts manually or when you first leave the opening slide.
+The Presenter View timer starts manually or on first navigation, tracks elapsed time, and shows pace when a positive `Duration` is set.
 
 ### Start time
 
