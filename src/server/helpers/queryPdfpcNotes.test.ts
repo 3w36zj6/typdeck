@@ -10,14 +10,15 @@ describe("queryPdfpcNotes", () => {
     ).resolves.toEqual([{ page: 1, speakerNotes: "Explain this result." }]);
   });
 
-  it("reads Touying speaker notes from shared pdfpc metadata", async () => {
+  it("joins multiple Touying speaker notes", async () => {
     const root = process.cwd();
     await expect(
       queryPdfpcNotes(path.join(root, "tests/fixtures/touying.typ"), root),
     ).resolves.toEqual([
       {
         page: 2,
-        speakerNotes: "Explain that typdeck reuses the existing note.",
+        speakerNotes:
+          "Explain that typdeck reuses the existing note.\n\nThen show that multiple notes are preserved.",
       },
     ]);
   });

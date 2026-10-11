@@ -29,7 +29,8 @@ export const queryPdfpcNotes = async (
   const values: unknown = JSON.parse(stdout);
   if (!Array.isArray(values)) throw new Error("expected an array");
 
-  return values.map((value, index) => {
+  const notes = new Map<number, string[]>();
+  for (const [index, value] of values.entries()) {
     if (
       !isRecord(value) ||
       !Number.isInteger(value.page) ||
@@ -38,9 +39,14 @@ export const queryPdfpcNotes = async (
     ) {
       throw new Error(`invalid pdfpc note at index ${index}`);
     }
-    return {
-      page: Number(value.page),
-      speakerNotes: value["speaker-notes"],
-    };
-  });
+    const page = Number(value.page);
+    const pageNotes = notes.get(page);
+    if (pageNotes) pageNotes.push(value["speaker-notes"]);
+    else notes.set(page, [value["speaker-notes"]]);
+  }
+
+  return Array.from(notes, ([page, pageNotes]) => ({
+    page,
+    speakerNotes: pageNotes.join("\n\n"),
+  }));
 };
