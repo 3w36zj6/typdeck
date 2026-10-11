@@ -149,13 +149,15 @@ const App = () => {
   const [currentTime, setCurrentTime] = createSignal(Date.now());
   const [timerTime, setTimerTime] = createSignal(performance.now());
   const [elapsedMilliseconds, setElapsedMilliseconds] = createSignal(0);
-  const [timerStartedAt, setTimerStartedAt] = createSignal<number>();
+  const [timerStartedAt, setTimerStartedAt] = createSignal<number | null>();
   const [scheduledStartAt, setScheduledStartAt] = createSignal<number>();
   const elapsedSeconds = createMemo(() => {
     const startedAt = timerStartedAt();
     return Math.floor(
       (elapsedMilliseconds() +
-        (startedAt === undefined ? 0 : Math.max(0, timerTime() - startedAt))) /
+        (typeof startedAt === "number"
+          ? Math.max(0, timerTime() - startedAt)
+          : 0)) /
         1000,
     );
   });
@@ -175,7 +177,7 @@ const App = () => {
   const setShortcutDialog = (dialog: HTMLDialogElement) => {
     shortcutDialog = dialog;
   };
-  const startTimer = (elapsedBeforeStart = 0) => {
+  const startTimer = (elapsedBeforeStart = elapsedMilliseconds()) => {
     const wallTime = Date.now();
     const now = performance.now();
     batch(() => {
@@ -185,8 +187,31 @@ const App = () => {
       setTimerStartedAt(now);
     });
   };
+  const toggleTimer = () => {
+    const startedAt = timerStartedAt();
+    if (typeof startedAt !== "number") {
+      startTimer();
+      return;
+    }
+
+    const now = performance.now();
+    batch(() => {
+      setTimerTime(now);
+      setElapsedMilliseconds(
+        (elapsed) => elapsed + Math.max(0, now - startedAt),
+      );
+      setTimerStartedAt(null);
+    });
+  };
   const resetElapsedSeconds = () => {
-    if (timerStartedAt() !== undefined) startTimer();
+    const startedAt = timerStartedAt();
+    if (startedAt === undefined) return;
+    const now = performance.now();
+    batch(() => {
+      setTimerTime(now);
+      setElapsedMilliseconds(0);
+      if (typeof startedAt === "number") setTimerStartedAt(now);
+    });
   };
   const [isMenuVisible, setIsMenuVisible] = createSignal(true);
   let hideMenuTimeout: number;
@@ -764,6 +789,22 @@ const App = () => {
                   style={{ height: "32px" }}
                 >
                   <MenuIcon icon="lucide:play" />
+                </button>
+              </Show>
+              <Show when={timerStartedAt() !== undefined}>
+                <button
+                  class="icon-button"
+                  onClick={toggleTimer}
+                  aria-label={
+                    timerStartedAt() === null ? "Resume timer" : "Pause timer"
+                  }
+                  style={{ height: "32px" }}
+                >
+                  <MenuIcon
+                    icon={
+                      timerStartedAt() === null ? "lucide:play" : "lucide:pause"
+                    }
+                  />
                 </button>
               </Show>
               <button
