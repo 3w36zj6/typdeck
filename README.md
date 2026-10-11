@@ -161,6 +161,12 @@ Together, `StartTime` and `EndTime` define the duration. With `EndTime` and `Dur
 
 `v` is the note text as a Typst `str`.
 
+Presenter View renders notes as Markdown and sanitizes the generated HTML. Add `DisableMarkdown` to preserve plain text.
+
+```typst
+#metadata((t: "DisableMarkdown", v: true)) <pdfpc>
+```
+
 ### Logical slides
 
 `LogicalSlide` identifies the pages that form one slide.

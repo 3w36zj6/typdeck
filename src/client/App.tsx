@@ -49,6 +49,8 @@ import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { PdfSlide } from "./PdfSlide";
 import { SlideOverviewDialog } from "./SlideOverviewDialog";
 import { SlideSearchDialog } from "./SlideSearchDialog";
+import DOMPurify from "dompurify";
+import { marked } from "marked";
 
 GlobalWorkerOptions.workerSrc = pdfWorker;
 
@@ -916,6 +918,26 @@ const App = () => {
       : "typdeck";
   });
 
+  const currentSpeakerNote = createMemo(
+    () => metadata()?.slides?.[`${currentPage()}`]?.speakerNotes,
+  );
+  const speakerNoteContent = createMemo(() => {
+    const note = currentSpeakerNote();
+    if (!note || metadata()?.disableMarkdown === true) return;
+    const content = DOMPurify.sanitize(marked.parse(note, { async: false }), {
+      USE_PROFILES: { html: true },
+      SANITIZE_NAMED_PROPS: true,
+      FORBID_ATTR: ["style"],
+      FORBID_TAGS: ["style"],
+      RETURN_DOM_FRAGMENT: true,
+    });
+    for (const link of content.querySelectorAll("a")) {
+      link.target = "_blank";
+      link.relList.add("noopener", "noreferrer");
+    }
+    return content;
+  });
+
   let timerInitialized = !isPresenterMode;
   createEffect(() => {
     const deck = metadata();
@@ -1395,17 +1417,27 @@ const App = () => {
               "flex-shrink": "0",
             }}
           >
-            {metadata()?.slides?.[`${currentPage()}`]?.speakerNotes ? (
-              <p
-                lang={metadata()?.language}
-                style={{
-                  margin: "0",
-                  "white-space": "pre-wrap",
-                  "word-break": "break-word",
-                }}
-              >
-                {metadata()!.slides?.[`${currentPage()}`]?.speakerNotes}
-              </p>
+            {currentSpeakerNote() ? (
+              metadata()?.disableMarkdown === true ? (
+                <p
+                  lang={metadata()?.language}
+                  style={{
+                    margin: "0",
+                    "white-space": "pre-wrap",
+                    "word-break": "break-word",
+                  }}
+                >
+                  {currentSpeakerNote()}
+                </p>
+              ) : (
+                <div
+                  class="speaker-note-content"
+                  lang={metadata()?.language}
+                  style={{ "word-break": "break-word" }}
+                >
+                  {speakerNoteContent()}
+                </div>
+              )
             ) : (
               <p style={{ margin: "0", color: "#666", "font-style": "italic" }}>
                 No speaker notes for this slide.

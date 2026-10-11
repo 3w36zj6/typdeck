@@ -45,6 +45,7 @@ const MetadataSchema = v.pipe(
     startTime: v.optional(TimeSchema),
     endTime: v.optional(TimeSchema),
     lastMinutes: v.optional(v.pipe(v.number(), v.minValue(0))),
+    disableMarkdown: v.optional(v.boolean()),
     outline: v.array(
       v.object({
         text: v.string(),

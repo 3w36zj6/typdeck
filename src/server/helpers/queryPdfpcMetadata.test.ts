@@ -15,6 +15,7 @@ describe("queryPdfpcMetadata", () => {
       startTime: "14:10",
       endTime: "14:40",
       lastMinutes: 5,
+      disableMarkdown: false,
       slides: [{ page: 1, speakerNotes: "Explain this result." }],
     });
   });

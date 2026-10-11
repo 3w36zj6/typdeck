@@ -17,6 +17,7 @@ describe("parseMetadata", () => {
         startTime: "14:10",
         endTime: "14:40",
         lastMinutes: 0,
+        disableMarkdown: false,
         outline: [{ text: "Introduction", label: "intro", level: 1, page: 1 }],
         slides: {
           2: {
@@ -38,6 +39,7 @@ describe("parseMetadata", () => {
       startTime: "14:10",
       endTime: "14:40",
       lastMinutes: 0,
+      disableMarkdown: false,
       outline: [{ text: "Introduction", label: "intro", level: 1, page: 1 }],
       slides: {
         2: {
@@ -72,6 +74,9 @@ describe("parseMetadata", () => {
     ).toThrow();
     expect(() =>
       parseMetadata({ pageCount: 1, lastMinutes: -1, outline: [] }),
+    ).toThrow();
+    expect(() =>
+      parseMetadata({ pageCount: 1, disableMarkdown: "yes", outline: [] }),
     ).toThrow();
     expect(() =>
       parseMetadata({ pageCount: 2, outline: [], slides: { foo: {} } }),

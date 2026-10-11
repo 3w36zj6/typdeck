@@ -17,13 +17,14 @@ type PdfpcMetadata = {
   startTime?: string;
   endTime?: string;
   lastMinutes?: number;
+  disableMarkdown?: boolean;
 };
 
 const expression = `query(<pdfpc>)
   .filter(item => type(item.value) == dictionary)
   .filter(item => item.value.at("t", default: none) in (
     "Note", "HiddenSlide", "EndSlide", "SaveSlide", "LogicalSlide", "Overlay",
-    "Duration", "StartTime", "EndTime", "LastMinutes"
+    "Duration", "StartTime", "EndTime", "LastMinutes", "DisableMarkdown"
   ))
   .map(item => (
     page: item.location().page(),
@@ -79,6 +80,11 @@ const PdfpcEventSchema = v.array(
       type: v.literal("LastMinutes"),
       value: v.pipe(v.number(), v.minValue(0)),
     }),
+    v.object({
+      page: PageSchema,
+      type: v.literal("DisableMarkdown"),
+      value: v.boolean(),
+    }),
   ]),
 );
 
@@ -93,12 +99,16 @@ export const queryPdfpcMetadata = async (
     signal,
   );
 
+  const events = v.parse(PdfpcEventSchema, JSON.parse(stdout));
+  const disableMarkdown = events
+    .flatMap((event) => (event.type === "DisableMarkdown" ? [event.value] : []))
+    .at(-1);
   const slides = new Map<number, PdfpcSlide>();
   let durationMinutes: number | undefined;
   let startTime: string | undefined;
   let endTime: string | undefined;
   let lastMinutes: number | undefined;
-  for (const event of v.parse(PdfpcEventSchema, JSON.parse(stdout))) {
+  for (const event of events) {
     if (event.type === "Duration") {
       durationMinutes = event.value > 0 ? event.value : undefined;
       continue;
@@ -115,6 +125,7 @@ export const queryPdfpcMetadata = async (
       lastMinutes = event.value;
       continue;
     }
+    if (event.type === "DisableMarkdown") continue;
     const slide = slides.get(event.page) ?? { page: event.page };
     if (event.type === "Note") {
       slide.speakerNotes =
@@ -144,5 +155,6 @@ export const queryPdfpcMetadata = async (
     ...(startTime === undefined ? {} : { startTime }),
     ...(endTime === undefined ? {} : { endTime }),
     ...(lastMinutes === undefined ? {} : { lastMinutes }),
+    ...(disableMarkdown === undefined ? {} : { disableMarkdown }),
   };
 };
