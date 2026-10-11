@@ -29,6 +29,9 @@ import {
   previousPresentationPage,
   remainingSeconds,
   savedSlidePage,
+  type SlideTimingState,
+  timingBreakdownRows,
+  updateSlideTiming,
   type BlankScreen,
   type DrawingStroke,
   type SlidePoint,
@@ -203,6 +206,64 @@ const ShortcutDialog = (props: {
   </dialog>
 );
 
+const TimingDialog = (props: {
+  rows: { label: string; level: number; milliseconds: number }[];
+  totalMilliseconds: number;
+  setDialog: (dialog: HTMLDialogElement) => void;
+}) => (
+  <dialog
+    ref={props.setDialog}
+    aria-labelledby="timing-heading"
+    class="shortcut-dialog timing-dialog"
+    onClick={(event) => {
+      if (event.target === event.currentTarget) event.currentTarget.close();
+    }}
+  >
+    <div>
+      <h2 id="timing-heading">Timing breakdown</h2>
+      <Show when={props.rows.length > 0} fallback={<p>No timing data yet.</p>}>
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Slide</th>
+              <th scope="col">Time</th>
+            </tr>
+          </thead>
+          <tbody>
+            <For each={props.rows}>
+              {(row) => (
+                <tr>
+                  <th
+                    scope="row"
+                    aria-label={`Level ${row.level}: ${row.label}`}
+                    style={{ "padding-left": `${(row.level - 1) * 1.5}rem` }}
+                  >
+                    {row.label}
+                  </th>
+                  <td>
+                    {formatElapsedTime(Math.floor(row.milliseconds / 1000))}
+                  </td>
+                </tr>
+              )}
+            </For>
+          </tbody>
+          <tfoot>
+            <tr>
+              <th scope="row">Total</th>
+              <td>
+                {formatElapsedTime(Math.floor(props.totalMilliseconds / 1000))}
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </Show>
+      <form method="dialog">
+        <button>Close</button>
+      </form>
+    </div>
+  </dialog>
+);
+
 const App = () => {
   const [metadata] = createResource(async () => {
     const response = await fetch("./metadata.json");
@@ -292,6 +353,11 @@ const App = () => {
   const [timerTime, setTimerTime] = createSignal(performance.now());
   const [elapsedMilliseconds, setElapsedMilliseconds] = createSignal(0);
   const [timerStartedAt, setTimerStartedAt] = createSignal<number | null>();
+  const [slideTiming, setSlideTiming] = createSignal<SlideTimingState>({
+    page: currentPage(),
+    elapsedMilliseconds: 0,
+    durations: {},
+  });
   const [scheduledStartAt, setScheduledStartAt] = createSignal<number>();
   const [autoAdvanceSeconds, setAutoAdvanceSeconds] = createSignal(10);
   const [autoAdvanceState, setAutoAdvanceState] = createSignal<
@@ -299,16 +365,40 @@ const App = () => {
   >("stopped");
   const [autoAdvanceDeadline, setAutoAdvanceDeadline] = createSignal<number>();
   const [autoAdvanceRemaining, setAutoAdvanceRemaining] = createSignal(10_000);
-  const elapsedSeconds = createMemo(() => {
+  const currentElapsedMilliseconds = (now = timerTime()) => {
     const startedAt = timerStartedAt();
-    return Math.floor(
-      (elapsedMilliseconds() +
-        (typeof startedAt === "number"
-          ? Math.max(0, timerTime() - startedAt)
-          : 0)) /
-        1000,
+    return (
+      elapsedMilliseconds() +
+      (typeof startedAt === "number" ? Math.max(0, now - startedAt) : 0)
     );
+  };
+  const elapsedSeconds = createMemo(() =>
+    Math.floor(currentElapsedMilliseconds() / 1000),
+  );
+  const timingSnapshot = createMemo(() => {
+    const deck = metadata();
+    return deck
+      ? updateSlideTiming(
+          deck,
+          slideTiming(),
+          currentPage(),
+          currentElapsedMilliseconds(),
+        )
+      : undefined;
   });
+  const timingRows = createMemo(() => {
+    const deck = metadata();
+    const snapshot = timingSnapshot();
+    return deck && snapshot
+      ? timingBreakdownRows(deck, snapshot.durations)
+      : [];
+  });
+  const timingTotalMilliseconds = createMemo(() =>
+    Object.values(timingSnapshot()?.durations ?? {}).reduce(
+      (total, duration) => total + duration,
+      0,
+    ),
+  );
   const remainingTime = createMemo(() => {
     const deck = metadata();
     if (!deck) return;
@@ -330,6 +420,7 @@ const App = () => {
   let shortcutDialog!: HTMLDialogElement;
   let overviewDialog!: HTMLDialogElement;
   let searchDialog!: HTMLDialogElement;
+  let timingDialog!: HTMLDialogElement;
   let searchInput!: HTMLInputElement;
   const [searchPage, setSearchPage] = createSignal(1);
   const setShortcutDialog = (dialog: HTMLDialogElement) => {
@@ -353,11 +444,16 @@ const App = () => {
     }
 
     const now = performance.now();
+    const elapsed = currentElapsedMilliseconds(now);
     batch(() => {
       setTimerTime(now);
-      setElapsedMilliseconds(
-        (elapsed) => elapsed + Math.max(0, now - startedAt),
-      );
+      setElapsedMilliseconds(elapsed);
+      const deck = metadata();
+      if (deck) {
+        setSlideTiming((state) =>
+          updateSlideTiming(deck, state, currentPage(), elapsed),
+        );
+      }
       setTimerStartedAt(null);
     });
   };
@@ -368,6 +464,11 @@ const App = () => {
     batch(() => {
       setTimerTime(now);
       setElapsedMilliseconds(0);
+      setSlideTiming({
+        page: currentPage(),
+        elapsedMilliseconds: 0,
+        durations: {},
+      });
       if (typeof startedAt === "number") setTimerStartedAt(now);
     });
   };
@@ -761,10 +862,21 @@ const App = () => {
   createEffect(
     on(
       currentPage,
-      () => {
+      (page) => {
         if (isPresenterMode) endDrawing(false);
         setZoom(null);
         setIsSelectingZoom(false);
+        const deck = metadata();
+        if (deck) {
+          setSlideTiming((state) =>
+            updateSlideTiming(
+              deck,
+              state,
+              page,
+              currentElapsedMilliseconds(performance.now()),
+            ),
+          );
+        }
       },
       { defer: true },
     ),
@@ -1386,6 +1498,15 @@ const App = () => {
               >
                 <MenuIcon icon="lucide:timer-reset" />
               </button>
+              <button
+                class="icon-button"
+                onClick={() => timingDialog.showModal()}
+                aria-label="Show timing breakdown"
+                data-tooltip="Show timing breakdown"
+                style={{ height: "32px" }}
+              >
+                <MenuIcon icon="lucide:chart-no-axes-column" />
+              </button>
               <label
                 style={{
                   display: "flex",
@@ -1722,6 +1843,13 @@ const App = () => {
             </div>
           </div>
           <ShortcutDialog setDialog={setShortcutDialog} />
+          <TimingDialog
+            rows={timingRows()}
+            totalMilliseconds={timingTotalMilliseconds()}
+            setDialog={(dialog) => {
+              timingDialog = dialog;
+            }}
+          />
           <Show when={pdfDocument()}>
             {(document) => (
               <SlideOverviewDialog

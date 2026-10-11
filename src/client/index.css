@@ -184,6 +184,31 @@ button {
   color: #fff;
 }
 
+.timing-dialog table {
+  margin-bottom: 20px;
+  border-collapse: collapse;
+}
+
+.timing-dialog {
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+}
+
+.timing-dialog th,
+.timing-dialog td {
+  padding: 6px 12px;
+  text-align: left;
+}
+
+.timing-dialog td {
+  font-variant-numeric: tabular-nums;
+}
+
+.timing-dialog tfoot {
+  border-top: 1px solid #555;
+}
+
 .overview-dialog > div {
   box-sizing: border-box;
   width: min(1200px, calc(100vw - 32px));

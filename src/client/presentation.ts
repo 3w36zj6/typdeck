@@ -238,6 +238,110 @@ export const overviewPages = (metadata: Metadata): number[] => {
     .map((page) => completedSlidePage(metadata, page));
 };
 
+export type SlideTimingState = {
+  page: number;
+  elapsedMilliseconds: number;
+  durations: Record<number, number>;
+};
+
+export const updateSlideTiming = (
+  metadata: Metadata,
+  state: SlideTimingState,
+  page: number,
+  elapsedMilliseconds: number,
+): SlideTimingState => {
+  const elapsed = Math.max(state.elapsedMilliseconds, elapsedMilliseconds);
+  const duration = elapsed - state.elapsedMilliseconds;
+  if (duration === 0 && page === state.page) return state;
+  const timingPage = logicalSlideStartPage(metadata, state.page);
+  return {
+    page,
+    elapsedMilliseconds: elapsed,
+    durations:
+      duration === 0
+        ? state.durations
+        : {
+            ...state.durations,
+            [timingPage]: (state.durations[timingPage] ?? 0) + duration,
+          },
+  };
+};
+
+export type TimingBreakdownRow = {
+  label: string;
+  level: number;
+  milliseconds: number;
+};
+
+export const timingBreakdownRows = (
+  metadata: Metadata,
+  durations: Record<number, number>,
+): TimingBreakdownRow[] => {
+  const timedPages = Object.entries(durations)
+    .map(([page, milliseconds]) => ({ page: Number(page), milliseconds }))
+    .filter(({ milliseconds }) => milliseconds > 0)
+    .sort((left, right) => left.page - right.page);
+  const outline = metadata.outline
+    .map((heading) => ({
+      ...heading,
+      page: logicalSlideStartPage(metadata, heading.page),
+    }))
+    .filter(
+      (heading, index, headings) =>
+        headings.findIndex(
+          (candidate) =>
+            candidate.page === heading.page &&
+            candidate.level === heading.level &&
+            candidate.text === heading.text,
+        ) === index,
+    );
+  const minimumLevel =
+    outline.length > 0 ? Math.min(...outline.map(({ level }) => level)) : 1;
+  const endPage = (index: number) =>
+    outline.slice(index + 1).find(({ level }) => level <= outline[index]!.level)
+      ?.page ?? metadata.pageCount + 1;
+  const headings = outline.flatMap((heading, index) => {
+    const end = endPage(index);
+    const milliseconds = timedPages
+      .filter(({ page }) => page >= heading.page && page < end)
+      .reduce((total, timing) => total + timing.milliseconds, 0);
+    return milliseconds > 0
+      ? [
+          {
+            page: heading.page,
+            order: index,
+            label: `${heading.page}. ${heading.text}`,
+            level: heading.level - minimumLevel + 1,
+            milliseconds,
+          },
+        ]
+      : [];
+  });
+  const headingPages = new Set(outline.map(({ page }) => page));
+  const fallback = timedPages.flatMap(({ page, milliseconds }) => {
+    if (headingPages.has(page)) return [];
+    const parent = outline.findLast(
+      (heading, index) => heading.page <= page && page < endPage(index),
+    );
+    return [
+      {
+        page,
+        order: Number.POSITIVE_INFINITY,
+        label: pageLabel(metadata, page),
+        level: parent ? parent.level - minimumLevel + 2 : 1,
+        milliseconds,
+      },
+    ];
+  });
+  return [...headings, ...fallback]
+    .sort((left, right) => left.page - right.page || left.order - right.order)
+    .map(({ label, level, milliseconds }) => ({
+      label,
+      level,
+      milliseconds,
+    }));
+};
+
 const markedSlidePage = (
   metadata: Metadata,
   marker: "endSlide" | "savedSlide",

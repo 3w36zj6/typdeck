@@ -20,6 +20,8 @@ import {
   remainingSeconds,
   savedSlidePage,
   slideRectFromPoints,
+  timingBreakdownRows,
+  updateSlideTiming,
 } from "./presentation";
 
 describe("slideRectFromPoints", () => {
@@ -62,6 +64,69 @@ describe("pageLabel", () => {
     expect(
       pageLabel({ pageCount: 1, pageLabels: ["A-1"], outline: [] }, 1),
     ).toBe("Page A-1");
+  });
+});
+
+describe("presentation timing", () => {
+  it("combines overlays and repeated visits without counting paused time", () => {
+    const deck: Metadata = {
+      pageCount: 3,
+      outline: [],
+      slides: {
+        1: { logicalSlide: 1, overlay: 0 },
+        2: { logicalSlide: 1, overlay: 1 },
+        3: { logicalSlide: 2, overlay: 0 },
+      },
+    };
+    const initial = { page: 1, elapsedMilliseconds: 0, durations: {} };
+    const overlay = updateSlideTiming(deck, initial, 2, 1_000);
+    const next = updateSlideTiming(deck, overlay, 3, 2_000);
+    const paused = updateSlideTiming(deck, next, 1, 2_000);
+    const revisited = updateSlideTiming(deck, paused, 3, 2_500);
+
+    expect(updateSlideTiming(deck, revisited, 3, 3_500).durations).toEqual({
+      1: 2_500,
+      3: 1_000,
+    });
+  });
+
+  it("aggregates Typst heading sections without losing unheaded slides", () => {
+    const deck: Metadata = {
+      pageCount: 4,
+      outline: [
+        { text: "Section", level: 1, page: 1 },
+        { text: "Opening", level: 2, page: 1 },
+        { text: "Details", level: 2, page: 2 },
+        { text: "Conclusion", level: 1, page: 4 },
+      ],
+    };
+
+    expect(
+      timingBreakdownRows(deck, { 1: 1_000, 2: 2_000, 3: 3_000, 4: 4_000 }),
+    ).toEqual([
+      { label: "1. Section", level: 1, milliseconds: 6_000 },
+      { label: "1. Opening", level: 2, milliseconds: 1_000 },
+      { label: "2. Details", level: 2, milliseconds: 5_000 },
+      { label: "Page 3", level: 3, milliseconds: 3_000 },
+      { label: "4. Conclusion", level: 1, milliseconds: 4_000 },
+    ]);
+
+    expect(
+      timingBreakdownRows(
+        {
+          pageCount: 2,
+          outline: [
+            { text: "Reveal", level: 2, page: 1 },
+            { text: "Reveal", level: 2, page: 2 },
+          ],
+          slides: {
+            1: { logicalSlide: 1, overlay: 0 },
+            2: { logicalSlide: 1, overlay: 1 },
+          },
+        },
+        { 1: 1_000 },
+      ),
+    ).toEqual([{ label: "1. Reveal", level: 1, milliseconds: 1_000 }]);
   });
 });
 
