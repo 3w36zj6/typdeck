@@ -352,9 +352,7 @@ const App = () => {
     const startAt = presentationStartAt(deck, now);
     setCurrentTime(now);
     setScheduledStartAt(startAt);
-    if (startAt === undefined || startAt <= now) {
-      startTimer(startAt === undefined ? 0 : now - startAt);
-    }
+    if (startAt !== undefined && startAt <= now) startTimer(now - startAt);
   });
 
   createEffect(() => {
@@ -370,13 +368,7 @@ const App = () => {
 
   createEffect(() => {
     const deck = metadata();
-    if (
-      !deck ||
-      scheduledStartAt() === undefined ||
-      timerStartedAt() !== undefined
-    ) {
-      return;
-    }
+    if (!deck || timerStartedAt() !== undefined) return;
     if (currentPage() !== adjacentVisiblePage(deck, 0, 1)) startTimer();
   });
 
@@ -796,12 +788,7 @@ const App = () => {
                 )}
               </Show>
               <IconSeparator />
-              <Show
-                when={
-                  timerStartedAt() === undefined &&
-                  scheduledStartAt() !== undefined
-                }
-              >
+              <Show when={timerStartedAt() === undefined}>
                 <button
                   class="icon-button"
                   onClick={() => startTimer()}

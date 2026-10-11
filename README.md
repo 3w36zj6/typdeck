@@ -111,6 +111,8 @@ Slides after `EndSlide` remain accessible as appendices and are excluded from pr
 
 Without a positive `Duration`, Presenter View shows elapsed time only.
 
+The timer starts manually or when you first leave the opening slide.
+
 ### Start time
 
 `StartTime` sets the local start time in 24-hour `HH:MM` format.
