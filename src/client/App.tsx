@@ -136,6 +136,10 @@ const ShortcutDialog = (props: {
         </dt>
         <dd>Next slide</dd>
         <dt>
+          <kbd>Shift + Backspace / Space</kbd>
+        </dt>
+        <dd>Back / forward in slide history</dd>
+        <dt>
           <kbd>Home / End</kbd>
         </dt>
         <dd>Go to the first / end slide</dd>
@@ -622,6 +626,10 @@ const App = () => {
     overviewDialog.close();
   };
 
+  const syncPageFromHash = () => {
+    if (metadata()) setCurrentPage(getPageFromHash());
+  };
+
   const handleKeyDown = (event: KeyboardEvent) => {
     if (event.target instanceof Element) {
       if (
@@ -661,6 +669,12 @@ const App = () => {
         break;
       case "next":
         goNextPage();
+        break;
+      case "history-back":
+        window.history.back();
+        break;
+      case "history-forward":
+        window.history.forward();
         break;
       case "first":
         setCurrentPage(adjacentVisiblePage(metadata()!, 0, 1));
@@ -735,12 +749,7 @@ const App = () => {
     }
   };
 
-  createEffect(() => {
-    if (metadata()) {
-      const page = getPageFromHash();
-      setCurrentPage(Math.min(page, metadata()!.pageCount));
-    }
-  });
+  createEffect(syncPageFromHash);
 
   createEffect(() => {
     const page = currentPage();
@@ -838,6 +847,7 @@ const App = () => {
       savePersistentState();
     };
     window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("hashchange", syncPageFromHash);
     window.addEventListener("pagehide", saveBeforeUnload);
     window.addEventListener("mousemove", showMenu);
     window.addEventListener("touchstart", showMenu);
@@ -856,6 +866,7 @@ const App = () => {
 
     onCleanup(() => {
       window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("hashchange", syncPageFromHash);
       window.removeEventListener("pagehide", saveBeforeUnload);
       window.removeEventListener("mousemove", showMenu);
       window.removeEventListener("touchstart", showMenu);
