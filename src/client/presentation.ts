@@ -12,16 +12,23 @@ export const actionForKey = ({
     case "ArrowLeft":
     case "ArrowUp":
       return "previous";
+    case "PageUp":
+      return shiftKey ? undefined : "previous";
     case "ArrowRight":
     case "ArrowDown":
       return "next";
+    case "PageDown":
+    case "Space":
+      return shiftKey ? undefined : "next";
     case "Enter":
     case "NumpadEnter":
       return shiftKey ? undefined : "next";
     case "Backspace":
       return shiftKey ? undefined : "previous";
+    case "Home":
+      return shiftKey ? undefined : "first";
     case "End":
-      return "last";
+      return shiftKey ? undefined : "last";
     case "KeyM":
       return shiftKey ? "saved" : undefined;
     case "KeyP":

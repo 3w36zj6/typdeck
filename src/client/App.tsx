@@ -80,17 +80,17 @@ const ShortcutDialog = (props: {
       <h2>Keyboard shortcuts</h2>
       <dl>
         <dt>
-          <kbd>← / ↑ / Backspace</kbd>
+          <kbd>← / ↑ / PageUp / Backspace</kbd>
         </dt>
         <dd>Previous slide</dd>
         <dt>
-          <kbd>→ / ↓ / Enter</kbd>
+          <kbd>→ / ↓ / PageDown / Space / Enter</kbd>
         </dt>
         <dd>Next slide</dd>
         <dt>
-          <kbd>End</kbd>
+          <kbd>Home / End</kbd>
         </dt>
-        <dd>Go to the end slide</dd>
+        <dd>Go to the first / end slide</dd>
         <dt>
           <kbd>Shift+M</kbd>
         </dt>
@@ -332,7 +332,7 @@ const App = () => {
     if (event.target instanceof Element) {
       if (
         event.target.closest("input, select, textarea, [contenteditable]") ||
-        (["Enter", "NumpadEnter"].includes(event.code) &&
+        (["Enter", "NumpadEnter", "Space"].includes(event.code) &&
           event.target.closest("a, button, summary"))
       ) {
         return;
@@ -356,6 +356,9 @@ const App = () => {
         break;
       case "next":
         goNextPage();
+        break;
+      case "first":
+        setCurrentPage(adjacentVisiblePage(metadata()!, 0, 1));
         break;
       case "last":
         setCurrentPage(endSlidePage(metadata()!));
