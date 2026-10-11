@@ -11,6 +11,7 @@ const MetadataSchema = v.pipe(
       v.object({
         text: v.string(),
         label: v.optional(v.string()),
+        level: v.pipe(v.number(), v.integer(), v.minValue(1)),
         page: v.pipe(v.number(), v.integer(), v.minValue(1)),
       }),
     ),

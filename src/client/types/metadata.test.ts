@@ -10,12 +10,12 @@ describe("parseMetadata", () => {
     expect(
       parseMetadata({
         pageCount: 2,
-        outline: [{ text: "Introduction", label: "intro", page: 1 }],
+        outline: [{ text: "Introduction", label: "intro", level: 1, page: 1 }],
         slides: { 2: { speakerNotes: "Remember this" } },
       }),
     ).toEqual({
       pageCount: 2,
-      outline: [{ text: "Introduction", label: "intro", page: 1 }],
+      outline: [{ text: "Introduction", label: "intro", level: 1, page: 1 }],
       slides: { 2: { speakerNotes: "Remember this" } },
     });
   });
@@ -29,7 +29,7 @@ describe("parseMetadata", () => {
     expect(() =>
       parseMetadata({
         pageCount: 2,
-        outline: [{ text: "Outside", page: 3 }],
+        outline: [{ text: "Outside", level: 1, page: 3 }],
       }),
     ).toThrow();
     expect(() =>

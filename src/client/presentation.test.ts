@@ -7,10 +7,12 @@ const metadata: Metadata = {
   outline: [
     {
       text: "Opening",
+      level: 1,
       page: 1,
     },
     {
       text: "Details",
+      level: 1,
       page: 2,
     },
   ],

@@ -8,11 +8,13 @@ const metadata: Metadata = {
     {
       text: "Introduction",
       label: "introduction",
+      level: 1,
       page: 1,
     },
     {
       text: "Details",
       label: "details",
+      level: 1,
       page: 3,
     },
   ],
@@ -35,7 +37,7 @@ describe("stable slide hashes", () => {
   it("does not confuse numeric Typst labels with physical pages", () => {
     const numericLabel: Metadata = {
       ...metadata,
-      outline: [{ text: "Numeric label", label: "2", page: 3 }],
+      outline: [{ text: "Numeric label", label: "2", level: 1, page: 3 }],
     };
 
     expect(hashForPage(3, numericLabel)).toBe("#3");
