@@ -2,10 +2,14 @@ import { describe, expect, it } from "vitest";
 import type { Metadata } from "./types/metadata";
 import {
   actionForKey,
+  completedSlidePage,
   endSlidePage,
   formatElapsedTime,
   formatRemainingTime,
+  headingForPage,
+  logicalSlideStartPage,
   nextPreviewPage,
+  overviewPages,
   pageLabel,
   presentationDurationMinutes,
   presentationPace,
@@ -63,6 +67,25 @@ describe("overlay presentation", () => {
 
   it("uses the logical slide heading on every overlay", () => {
     expect(pageLabel(deck, 2)).toBe("2. Reveal");
+  });
+
+  it("keeps the heading level on every overlay", () => {
+    expect(headingForPage(deck, 2)?.level).toBe(1);
+  });
+
+  it("lists the completed overlay once and keeps hidden pages", () => {
+    const deckWithHiddenOverlay: Metadata = {
+      ...deck,
+      slides: {
+        ...deck.slides,
+        3: { logicalSlide: 1, overlay: 2, hidden: true },
+        5: { hidden: true },
+      },
+    };
+
+    expect(completedSlidePage(deckWithHiddenOverlay, 1)).toBe(3);
+    expect(overviewPages(deckWithHiddenOverlay)).toEqual([3, 4, 5]);
+    expect(logicalSlideStartPage(deckWithHiddenOverlay, 3)).toBe(1);
   });
 
   it("previews the completed logical slide", () => {
@@ -244,6 +267,8 @@ describe("presentation controls", () => {
     ["KeyS", false, "start-timer"],
     ["KeyS", true, undefined],
     ["KeyB", false, "blackout"],
+    ["KeyO", false, "overview"],
+    ["KeyO", true, undefined],
     ["Slash", true, "shortcuts"],
     ["Slash", false, "search"],
     ["KeyA", false, undefined],

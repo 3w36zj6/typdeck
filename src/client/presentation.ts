@@ -49,6 +49,8 @@ export const actionForKey = ({
       return shiftKey ? undefined : "start-timer";
     case "KeyB":
       return "blackout";
+    case "KeyO":
+      return shiftKey ? undefined : "overview";
     case "Slash":
       return shiftKey ? "shortcuts" : "search";
   }
@@ -104,21 +106,22 @@ export const presentationStartAt = (
 export const formatRemainingTime = (seconds: number): string =>
   `${seconds < 0 ? "+" : "−"}${formatElapsedTime(Math.abs(seconds))}`;
 
-const visibleOverlayPages = (
+const overlayPages = (
   metadata: Metadata,
   logicalSlide: number,
+  includeHidden = false,
 ): number[] =>
   Object.entries(metadata.slides ?? {})
     .filter(
       ([, slide]) =>
         slide?.logicalSlide === logicalSlide &&
         slide.overlay !== undefined &&
-        !slide.hidden,
+        (includeHidden || !slide.hidden),
     )
     .sort(([, left], [, right]) => (left?.overlay ?? 0) - (right?.overlay ?? 0))
     .map(([page]) => Number(page));
 
-const headingForPage = (metadata: Metadata, page: number) => {
+export const headingForPage = (metadata: Metadata, page: number) => {
   const logicalSlide = metadata.slides?.[`${page}`]?.logicalSlide;
   return metadata.outline.find(
     (heading) =>
@@ -134,11 +137,37 @@ export const pageLabel = (metadata: Metadata, page: number): string => {
   return title ? `${number}. ${title}` : `Page ${number}`;
 };
 
-const logicalSlideStartPage = (metadata: Metadata, page: number): number => {
+export const logicalSlideStartPage = (
+  metadata: Metadata,
+  page: number,
+): number => {
   const logicalSlide = metadata.slides?.[`${page}`]?.logicalSlide;
   return logicalSlide === undefined
     ? page
-    : (visibleOverlayPages(metadata, logicalSlide)[0] ?? page);
+    : (overlayPages(metadata, logicalSlide)[0] ?? page);
+};
+
+export const completedSlidePage = (
+  metadata: Metadata,
+  page: number,
+): number => {
+  const logicalSlide = metadata.slides?.[`${page}`]?.logicalSlide;
+  if (logicalSlide === undefined) return page;
+  const pages = overlayPages(metadata, logicalSlide, true);
+  return pages[pages.length - 1] ?? page;
+};
+
+export const overviewPages = (metadata: Metadata): number[] => {
+  const logicalSlides = new Set<number>();
+  return Array.from({ length: metadata.pageCount }, (_, index) => index + 1)
+    .filter((page) => {
+      const logicalSlide = metadata.slides?.[`${page}`]?.logicalSlide;
+      if (logicalSlide === undefined) return true;
+      if (logicalSlides.has(logicalSlide)) return false;
+      logicalSlides.add(logicalSlide);
+      return true;
+    })
+    .map((page) => completedSlidePage(metadata, page));
 };
 
 const markedSlidePage = (
@@ -197,9 +226,9 @@ const completedVisibleSlidePage = (
   page: number,
 ): number => {
   const logicalSlide = metadata.slides?.[`${page}`]?.logicalSlide;
-  return logicalSlide === undefined
-    ? page
-    : (visibleOverlayPages(metadata, logicalSlide).at(-1) ?? page);
+  if (logicalSlide === undefined) return page;
+  const pages = overlayPages(metadata, logicalSlide);
+  return pages[pages.length - 1] ?? page;
 };
 
 export const nextPreviewPage = (metadata: Metadata, page: number): number => {
@@ -241,7 +270,7 @@ export const presentationPositionLabel = (
   if (slide?.logicalSlide === undefined) {
     return label;
   }
-  const overlays = visibleOverlayPages(metadata, slide.logicalSlide);
+  const overlays = overlayPages(metadata, slide.logicalSlide);
   const step = overlays.indexOf(page) + 1;
   return overlays.length > 1 && step > 0
     ? `${label}\nStep ${step} of ${overlays.length}`

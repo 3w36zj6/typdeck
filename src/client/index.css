@@ -143,6 +143,70 @@ button {
   color: #fff;
 }
 
+.overview-dialog > div {
+  box-sizing: border-box;
+  width: min(1200px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+}
+
+.overview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.overview-header h2 {
+  margin: 0;
+}
+
+.overview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr));
+  gap: 16px;
+  max-height: calc(100vh - 120px);
+  margin: 16px 0 0;
+  padding: 0;
+  overflow: auto;
+  list-style: none;
+}
+
+.overview-grid button {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 8px;
+  width: 100%;
+  height: 100%;
+  padding: 8px;
+  overflow: hidden;
+  background: #111;
+  text-align: left;
+}
+
+.overview-grid button:is(:hover, :focus-visible) {
+  border-color: #fff;
+}
+
+.overview-grid button[aria-current="page"] {
+  border-color: #6da9ff;
+  background: #1c2b40;
+}
+
+.overview-thumbnail {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: #000;
+}
+
+.overview-label {
+  overflow: hidden;
+  color: #fff;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .search-dialog {
   max-width: calc(100vw - 32px);
   max-height: calc(100vh - 32px);

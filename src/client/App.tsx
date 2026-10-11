@@ -15,6 +15,7 @@ import { Icon } from "@iconify-icon/solid";
 import { adjacentVisiblePage, hashForPage, pageFromHash } from "./navigation";
 import {
   actionForKey,
+  completedSlidePage,
   endSlidePage,
   formatElapsedTime,
   formatRemainingTime,
@@ -36,6 +37,7 @@ import {
 } from "pdfjs-dist";
 import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { PdfSlide } from "./PdfSlide";
+import { SlideOverviewDialog } from "./SlideOverviewDialog";
 import { SlideSearchDialog } from "./SlideSearchDialog";
 
 GlobalWorkerOptions.workerSrc = pdfWorker;
@@ -96,6 +98,10 @@ const ShortcutDialog = (props: {
           <kbd>/ / Ctrl/Cmd+K</kbd>
         </dt>
         <dd>Search slide text</dd>
+        <dt>
+          <kbd>O</kbd>
+        </dt>
+        <dd>Open slide overview</dd>
         <dt>
           <kbd>Shift+M</kbd>
         </dt>
@@ -227,6 +233,7 @@ const App = () => {
       : undefined;
   });
   let shortcutDialog!: HTMLDialogElement;
+  let overviewDialog!: HTMLDialogElement;
   let searchDialog!: HTMLDialogElement;
   let searchInput!: HTMLInputElement;
   const [searchPage, setSearchPage] = createSignal(1);
@@ -375,6 +382,16 @@ const App = () => {
     searchDialog.close();
   };
 
+  const openOverview = () => {
+    if (!metadata() || !pdfDocument()) return;
+    overviewDialog.showModal();
+  };
+
+  const confirmOverview = (page: number) => {
+    setCurrentPage(page);
+    overviewDialog.close();
+  };
+
   const handleKeyDown = (event: KeyboardEvent) => {
     if (event.target instanceof Element) {
       if (
@@ -429,6 +446,9 @@ const App = () => {
         break;
       case "search":
         openSearch();
+        break;
+      case "overview":
+        openOverview();
         break;
     }
   };
@@ -713,6 +733,16 @@ const App = () => {
                 </button>
                 <button
                   class="icon-button"
+                  onClick={openOverview}
+                  aria-label="Open slide overview"
+                  data-tooltip="Open slide overview"
+                  disabled={!pdfDocument()}
+                  style={{ height: "100%" }}
+                >
+                  <MenuIcon icon="lucide:grid-2x2" />
+                </button>
+                <button
+                  class="icon-button"
                   onClick={openSearch}
                   aria-label="Search slides"
                   data-tooltip="Search slides"
@@ -747,6 +777,19 @@ const App = () => {
               </div>
             </div>
             <ShortcutDialog setDialog={setShortcutDialog} />
+            <Show when={pdfDocument()}>
+              {(document) => (
+                <SlideOverviewDialog
+                  document={document()}
+                  metadata={metadata()!}
+                  currentPage={completedSlidePage(metadata()!, currentPage())}
+                  setDialog={(dialog) => {
+                    overviewDialog = dialog;
+                  }}
+                  onConfirm={confirmOverview}
+                />
+              )}
+            </Show>
             <Show when={pdfDocument()}>
               {(document) => (
                 <SlideSearchDialog
@@ -1125,6 +1168,16 @@ const App = () => {
               </button>
               <button
                 class="icon-button"
+                onClick={openOverview}
+                aria-label="Open slide overview"
+                data-tooltip="Open slide overview"
+                disabled={!pdfDocument()}
+                style={{ height: "32px" }}
+              >
+                <MenuIcon icon="lucide:grid-2x2" />
+              </button>
+              <button
+                class="icon-button"
                 onClick={openSearch}
                 aria-label="Search slides"
                 data-tooltip="Search slides"
@@ -1206,6 +1259,19 @@ const App = () => {
             </div>
           </div>
           <ShortcutDialog setDialog={setShortcutDialog} />
+          <Show when={pdfDocument()}>
+            {(document) => (
+              <SlideOverviewDialog
+                document={document()}
+                metadata={metadata()!}
+                currentPage={completedSlidePage(metadata()!, currentPage())}
+                setDialog={(dialog) => {
+                  overviewDialog = dialog;
+                }}
+                onConfirm={confirmOverview}
+              />
+            )}
+          </Show>
           <Show when={pdfDocument()}>
             {(document) => (
               <SlideSearchDialog
