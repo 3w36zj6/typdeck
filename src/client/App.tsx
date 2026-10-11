@@ -253,8 +253,8 @@ const App = () => {
     url.hash = hashForPage(currentPage(), metadata());
     window.open(
       url.href,
-      "presenter",
-      "width=1024,height=768,noopener,noreferrer",
+      `typdeck-presenter:${url.origin}${url.pathname}`,
+      "width=1024,height=768",
     );
   };
 
