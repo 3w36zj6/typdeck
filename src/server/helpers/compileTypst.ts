@@ -4,7 +4,7 @@ import chalk from "chalk";
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 import * as v from "valibot";
 import { type Metadata } from "../../client/types/metadata";
-import { queryPdfpcNotes } from "./queryPdfpcNotes";
+import { queryPdfpcMetadata } from "./queryPdfpcMetadata";
 import { queryTypstHeadings } from "./queryTypstHeadings";
 import { runProcess } from "./runProcess";
 
@@ -125,16 +125,16 @@ export const compileTypst = async (
     };
   });
 
-  const [{ pageCount, pageLabels, title, language }, outline, notes] =
+  const [{ pageCount, pageLabels, title, language }, outline, pdfpcSlides] =
     await Promise.all([
       pdfMetadata.finally(() => pdfTask.destroy()),
       queryTypstHeadings(typstFile, process.cwd(), signal),
-      queryPdfpcNotes(typstFile, process.cwd(), signal),
+      queryPdfpcMetadata(typstFile, process.cwd(), signal),
     ]);
   const slides: NonNullable<Metadata["slides"]> = Object.fromEntries(
-    notes
+    pdfpcSlides
       .filter(({ page }) => page <= pageCount)
-      .map(({ page, speakerNotes }) => [`${page}`, { speakerNotes }]),
+      .map(({ page, ...slide }) => [`${page}`, slide]),
   );
   const metadata: Metadata = {
     pageCount,

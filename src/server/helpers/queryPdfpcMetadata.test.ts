@@ -1,19 +1,22 @@
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { queryPdfpcNotes } from "./queryPdfpcNotes";
+import { queryPdfpcMetadata } from "./queryPdfpcMetadata";
 
-describe("queryPdfpcNotes", () => {
-  it("reads direct Typst metadata", async () => {
+describe("queryPdfpcMetadata", () => {
+  it("reads direct Typst notes", async () => {
     const root = process.cwd();
     await expect(
-      queryPdfpcNotes(path.join(root, "tests/fixtures/pdfpc-note.typ"), root),
+      queryPdfpcMetadata(
+        path.join(root, "tests/fixtures/pdfpc-note.typ"),
+        root,
+      ),
     ).resolves.toEqual([{ page: 1, speakerNotes: "Explain this result." }]);
   });
 
   it("joins multiple Touying speaker notes", async () => {
     const root = process.cwd();
     await expect(
-      queryPdfpcNotes(path.join(root, "tests/fixtures/touying.typ"), root),
+      queryPdfpcMetadata(path.join(root, "tests/fixtures/touying.typ"), root),
     ).resolves.toEqual([
       {
         page: 2,
@@ -26,7 +29,7 @@ describe("queryPdfpcNotes", () => {
   it("reads Touying speaker notes on every overlay", async () => {
     const root = process.cwd();
     await expect(
-      queryPdfpcNotes(
+      queryPdfpcMetadata(
         path.join(root, "tests/fixtures/touying-overlay.typ"),
         root,
       ),
@@ -40,7 +43,7 @@ describe("queryPdfpcNotes", () => {
   it("reads Polylux speaker notes on every overlay", async () => {
     const root = process.cwd();
     await expect(
-      queryPdfpcNotes(
+      queryPdfpcMetadata(
         path.join(root, "tests/fixtures/polylux-overlay.typ"),
         root,
       ),
@@ -49,5 +52,15 @@ describe("queryPdfpcNotes", () => {
       { page: 2, speakerNotes: "Explain every overlay step." },
       { page: 3, speakerNotes: "Explain every overlay step." },
     ]);
+  });
+
+  it("reads shared pdfpc hidden-slide metadata", async () => {
+    const root = process.cwd();
+    await expect(
+      queryPdfpcMetadata(
+        path.join(root, "tests/fixtures/pdfpc-hidden.typ"),
+        root,
+      ),
+    ).resolves.toEqual([{ page: 2, hidden: true }]);
   });
 });

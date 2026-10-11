@@ -34,7 +34,10 @@ const MetadataSchema = v.pipe(
     slides: v.optional(
       v.record(
         PageKeySchema,
-        v.object({ speakerNotes: v.optional(v.string()) }),
+        v.object({
+          speakerNotes: v.optional(v.string()),
+          hidden: v.optional(v.literal(true)),
+        }),
       ),
     ),
   }),
