@@ -5,6 +5,7 @@ import {
   createResource,
   createSignal,
   For,
+  on,
   onCleanup,
   onMount,
   Show,
@@ -160,6 +161,12 @@ const App = () => {
   const [elapsedMilliseconds, setElapsedMilliseconds] = createSignal(0);
   const [timerStartedAt, setTimerStartedAt] = createSignal<number | null>();
   const [scheduledStartAt, setScheduledStartAt] = createSignal<number>();
+  const [autoAdvanceSeconds, setAutoAdvanceSeconds] = createSignal(10);
+  const [autoAdvanceState, setAutoAdvanceState] = createSignal<
+    "stopped" | "running" | "paused"
+  >("stopped");
+  const [autoAdvanceDeadline, setAutoAdvanceDeadline] = createSignal<number>();
+  const [autoAdvanceRemaining, setAutoAdvanceRemaining] = createSignal(10_000);
   const elapsedSeconds = createMemo(() => {
     const startedAt = timerStartedAt();
     return Math.floor(
@@ -227,6 +234,47 @@ const App = () => {
       setElapsedMilliseconds(0);
       if (typeof startedAt === "number") setTimerStartedAt(now);
     });
+  };
+  const stopAutoAdvance = () => {
+    batch(() => {
+      setAutoAdvanceState("stopped");
+      setAutoAdvanceDeadline(undefined);
+      setAutoAdvanceRemaining(autoAdvanceSeconds() * 1000);
+    });
+  };
+  const startAutoAdvance = () => {
+    const duration = autoAdvanceSeconds() * 1000;
+    batch(() => {
+      setAutoAdvanceState("running");
+      setAutoAdvanceRemaining(duration);
+      setAutoAdvanceDeadline(performance.now() + duration);
+    });
+  };
+  const pauseAutoAdvance = () => {
+    const deadline = autoAdvanceDeadline();
+    if (deadline === undefined) return;
+    batch(() => {
+      setAutoAdvanceRemaining(Math.max(0, deadline - performance.now()));
+      setAutoAdvanceDeadline(undefined);
+      setAutoAdvanceState("paused");
+    });
+  };
+  const resumeAutoAdvance = () => {
+    setAutoAdvanceState("running");
+    setAutoAdvanceDeadline(performance.now() + autoAdvanceRemaining());
+  };
+  const changeAutoAdvanceSeconds = (input: HTMLInputElement) => {
+    if (!input.checkValidity()) {
+      input.value = String(autoAdvanceSeconds());
+      return;
+    }
+    const seconds = input.valueAsNumber;
+    const duration = seconds * 1000;
+    setAutoAdvanceSeconds(seconds);
+    setAutoAdvanceRemaining(duration);
+    if (autoAdvanceState() === "running") {
+      setAutoAdvanceDeadline(performance.now() + duration);
+    }
   };
   const [isMenuVisible, setIsMenuVisible] = createSignal(true);
   let hideMenuTimeout: number;
@@ -377,6 +425,41 @@ const App = () => {
     const deck = metadata();
     if (!deck || timerStartedAt() !== undefined) return;
     if (currentPage() !== adjacentVisiblePage(deck, 0, 1)) startTimer();
+  });
+
+  createEffect(
+    on(
+      currentPage,
+      () => {
+        const state = autoAdvanceState();
+        if (state === "stopped") return;
+        const duration = autoAdvanceSeconds() * 1000;
+        if (nextPage() === currentPage()) stopAutoAdvance();
+        else if (state === "running") {
+          setAutoAdvanceDeadline(performance.now() + duration);
+        } else setAutoAdvanceRemaining(duration);
+      },
+      { defer: true },
+    ),
+  );
+
+  createEffect(() => {
+    const deadline = autoAdvanceDeadline();
+    const deck = metadata();
+    const page = currentPage();
+    const next = deck ? adjacentVisiblePage(deck, page, 1) : page;
+    if (
+      autoAdvanceState() !== "running" ||
+      deadline === undefined ||
+      next === page
+    ) {
+      return;
+    }
+    const timeout = window.setTimeout(
+      () => setCurrentPage(next),
+      Math.max(0, deadline - performance.now()),
+    );
+    onCleanup(() => window.clearTimeout(timeout));
   });
 
   onMount(() => {
@@ -849,6 +932,87 @@ const App = () => {
                 style={{ height: "32px" }}
               >
                 <MenuIcon icon="lucide:timer-reset" />
+              </button>
+              <label
+                style={{
+                  display: "flex",
+                  "align-items": "center",
+                  gap: "4px",
+                }}
+              >
+                Auto
+                <input
+                  aria-label="Auto advance interval in seconds"
+                  type="number"
+                  min="1"
+                  step="1"
+                  required
+                  value={autoAdvanceSeconds()}
+                  onChange={(event) =>
+                    changeAutoAdvanceSeconds(event.currentTarget)
+                  }
+                  style={{ width: "4em" }}
+                />
+                s
+              </label>
+              <button
+                class="icon-button"
+                onClick={() =>
+                  autoAdvanceState() === "stopped"
+                    ? startAutoAdvance()
+                    : stopAutoAdvance()
+                }
+                aria-label={
+                  autoAdvanceState() === "stopped"
+                    ? "Start auto advance"
+                    : "Stop auto advance"
+                }
+                data-tooltip={
+                  autoAdvanceState() === "stopped"
+                    ? "Start auto advance"
+                    : "Stop auto advance"
+                }
+                disabled={
+                  autoAdvanceState() === "stopped" &&
+                  (!metadata() || nextPage() === currentPage())
+                }
+                style={{ height: "32px" }}
+              >
+                <MenuIcon
+                  icon={
+                    autoAdvanceState() === "stopped"
+                      ? "lucide:play"
+                      : "lucide:square"
+                  }
+                />
+              </button>
+              <button
+                class="icon-button"
+                onClick={() =>
+                  autoAdvanceState() === "paused"
+                    ? resumeAutoAdvance()
+                    : pauseAutoAdvance()
+                }
+                aria-label={
+                  autoAdvanceState() === "paused"
+                    ? "Resume auto advance"
+                    : "Pause auto advance"
+                }
+                data-tooltip={
+                  autoAdvanceState() === "paused"
+                    ? "Resume auto advance"
+                    : "Pause auto advance"
+                }
+                disabled={autoAdvanceState() === "stopped"}
+                style={{ height: "32px" }}
+              >
+                <MenuIcon
+                  icon={
+                    autoAdvanceState() === "paused"
+                      ? "lucide:play"
+                      : "lucide:pause"
+                  }
+                />
               </button>
               <button
                 class="icon-button"
