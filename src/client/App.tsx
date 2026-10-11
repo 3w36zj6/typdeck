@@ -9,6 +9,7 @@ import {
   onCleanup,
   onMount,
   Show,
+  untrack,
 } from "solid-js";
 import { parseMetadata } from "./types/metadata";
 import { Icon } from "@iconify-icon/solid";
@@ -980,15 +981,46 @@ const App = () => {
   });
 
   onMount(() => {
+    const [wakeLock, setWakeLock] = createSignal<WakeLockSentinel>();
+    const [acquiringWakeLock, setAcquiringWakeLock] = createSignal(false);
+    const lifecycle = new AbortController();
     const saveBeforeUnload = () => {
       endDrawing(false);
       savePersistentState();
+    };
+    const releaseWakeLock = (lock: WakeLockSentinel | undefined) => {
+      if (lock) void lock.release().then(undefined, () => undefined);
+    };
+    const keepScreenAwake = () => {
+      if (
+        !metadata() ||
+        !pdfDocument() ||
+        !("wakeLock" in navigator) ||
+        document.visibilityState !== "visible" ||
+        acquiringWakeLock() ||
+        wakeLock()?.released === false
+      ) {
+        return;
+      }
+      setAcquiringWakeLock(true);
+      void navigator.wakeLock.request().then(
+        (lock) => {
+          if (lifecycle.signal.aborted) releaseWakeLock(lock);
+          else setWakeLock(lock);
+          setAcquiringWakeLock(false);
+        },
+        () => setAcquiringWakeLock(false),
+      );
     };
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("hashchange", syncPageFromHash);
     window.addEventListener("pagehide", saveBeforeUnload);
     window.addEventListener("mousemove", showMenu);
     window.addEventListener("touchstart", showMenu);
+    document.addEventListener("visibilitychange", keepScreenAwake);
+    createEffect(() => {
+      if (metadata() && pdfDocument()) untrack(keepScreenAwake);
+    });
 
     if (isPresenterMode) {
       const intervalId = window.setInterval(() => {
@@ -1003,11 +1035,14 @@ const App = () => {
     }
 
     onCleanup(() => {
+      lifecycle.abort();
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("hashchange", syncPageFromHash);
       window.removeEventListener("pagehide", saveBeforeUnload);
       window.removeEventListener("mousemove", showMenu);
       window.removeEventListener("touchstart", showMenu);
+      document.removeEventListener("visibilitychange", keepScreenAwake);
+      releaseWakeLock(wakeLock());
       window.clearTimeout(hideMenuTimeout);
       window.clearTimeout(pointerHideTimeout);
     });
