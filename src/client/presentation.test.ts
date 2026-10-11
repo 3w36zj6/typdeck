@@ -24,6 +24,15 @@ describe("pageLabel", () => {
     expect(pageLabel(metadata, 2)).toBe("2. Details");
     expect(pageLabel(metadata, 3)).toBe("Page 3");
   });
+
+  it("uses Typst page numbering when the PDF provides it", () => {
+    expect(pageLabel({ ...metadata, pageLabels: ["i", "ii", "iii"] }, 2)).toBe(
+      "ii. Details",
+    );
+    expect(
+      pageLabel({ pageCount: 1, pageLabels: ["A-1"], outline: [] }, 1),
+    ).toBe("Page A-1");
+  });
 });
 
 describe("presentation controls", () => {

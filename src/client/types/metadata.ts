@@ -7,6 +7,7 @@ const PageKeySchema = v.custom<`${number}`>(
 const MetadataSchema = v.pipe(
   v.object({
     pageCount: v.pipe(v.number(), v.integer(), v.minValue(1)),
+    pageLabels: v.optional(v.array(v.string())),
     outline: v.array(
       v.object({
         text: v.string(),
@@ -22,6 +23,11 @@ const MetadataSchema = v.pipe(
       ),
     ),
   }),
+  v.check(
+    ({ pageCount, pageLabels }) =>
+      pageLabels === undefined || pageLabels.length === pageCount,
+    "Page labels must match the page count",
+  ),
   v.check(
     ({ pageCount, outline, slides }) =>
       outline.every(({ page }) => page <= pageCount) &&

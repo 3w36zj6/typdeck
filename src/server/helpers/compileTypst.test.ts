@@ -30,7 +30,10 @@ describe("compileTypst", () => {
       JSON.parse(
         fs.readFileSync(path.join(output.path, "metadata.json"), "utf8"),
       ),
-    ).toMatchObject({ pageCount: 1 });
+    ).toMatchObject({
+      pageCount: 1,
+      pageLabels: ["i"],
+    });
   });
 
   it("compiles Slydst 0.1.5 slides", async () => {

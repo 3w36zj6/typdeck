@@ -34,5 +34,6 @@ export const pageLabel = (metadata: Metadata, page: number): string => {
   const title = metadata.outline?.find(
     (heading) => heading.page === page,
   )?.text;
-  return title ? `${page}. ${title}` : `Page ${page}`;
+  const number = metadata.pageLabels?.[page - 1] ?? String(page);
+  return title ? `${number}. ${title}` : `Page ${number}`;
 };

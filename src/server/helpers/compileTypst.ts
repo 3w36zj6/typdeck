@@ -105,8 +105,11 @@ export const compileTypst = async (
     data: new Uint8Array(fs.readFileSync(pdfPath)),
   });
   let pageCount: number;
+  let pageLabels: string[] | undefined;
   try {
-    pageCount = (await pdfTask.promise).numPages;
+    const document = await pdfTask.promise;
+    pageCount = document.numPages;
+    pageLabels = (await document.getPageLabels()) ?? undefined;
   } finally {
     await pdfTask.destroy();
   }
@@ -120,6 +123,7 @@ export const compileTypst = async (
   );
   const metadata: Metadata = {
     pageCount,
+    ...(pageLabels === undefined ? {} : { pageLabels }),
     outline,
     ...(Object.keys(slides).length > 0 ? { slides } : {}),
   };
