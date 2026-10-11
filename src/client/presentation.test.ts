@@ -4,10 +4,12 @@ import {
   actionForKey,
   endSlidePage,
   formatElapsedTime,
+  formatRemainingTime,
   nextPreviewPage,
   pageLabel,
   presentationPositionLabel,
   previousPresentationPage,
+  remainingSeconds,
   savedSlidePage,
 } from "./presentation";
 
@@ -123,6 +125,13 @@ describe("presentation controls", () => {
   it("formats elapsed time", () => {
     expect(formatElapsedTime(0)).toBe("00:00:00");
     expect(formatElapsedTime(3661)).toBe("01:01:01");
+  });
+
+  it("formats remaining time and overtime", () => {
+    expect(remainingSeconds(30, 25 * 60)).toBe(5 * 60);
+    expect(formatRemainingTime(5 * 60)).toBe("−00:05:00");
+    expect(formatRemainingTime(0)).toBe("−00:00:00");
+    expect(formatRemainingTime(-1)).toBe("+00:00:01");
   });
 
   it.each([

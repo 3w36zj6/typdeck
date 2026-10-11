@@ -35,6 +35,14 @@ export const formatElapsedTime = (seconds: number): string => {
     .join(":");
 };
 
+export const remainingSeconds = (
+  durationMinutes: number,
+  elapsedSeconds: number,
+): number => Math.round(durationMinutes * 60) - elapsedSeconds;
+
+export const formatRemainingTime = (seconds: number): string =>
+  `${seconds < 0 ? "+" : "−"}${formatElapsedTime(Math.abs(seconds))}`;
+
 const visibleOverlayPages = (
   metadata: Metadata,
   logicalSlide: number,

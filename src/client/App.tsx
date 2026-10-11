@@ -1,5 +1,6 @@
 import {
   createEffect,
+  createMemo,
   createResource,
   createSignal,
   For,
@@ -14,10 +15,12 @@ import {
   actionForKey,
   endSlidePage,
   formatElapsedTime,
+  formatRemainingTime,
   nextPreviewPage,
   pageLabel,
   presentationPositionLabel,
   previousPresentationPage,
+  remainingSeconds,
   savedSlidePage,
 } from "./presentation";
 import { createPresentationSync } from "./presentationSync";
@@ -141,6 +144,16 @@ const App = () => {
       () => metadata()?.pageCount,
     );
   const [elapsedSeconds, setElapsedSeconds] = createSignal(0);
+  const remainingTime = createMemo(() => {
+    const duration = metadata()?.durationMinutes;
+    if (duration === undefined) return;
+    const seconds = remainingSeconds(duration, elapsedSeconds());
+    const lastMinutes = metadata()?.lastMinutes;
+    return {
+      seconds,
+      warning: lastMinutes !== undefined && seconds <= lastMinutes * 60,
+    };
+  });
   let shortcutDialog!: HTMLDialogElement;
   const setShortcutDialog = (dialog: HTMLDialogElement) => {
     shortcutDialog = dialog;
@@ -583,18 +596,20 @@ const App = () => {
             class="presenter-footer"
             style={{
               display: "flex",
+              "flex-wrap": "wrap",
               "justify-content": "space-between",
               "align-items": "center",
+              gap: "10px",
               padding: "10px",
               "background-color": "#222",
-              height: "32px",
+              "min-height": "32px",
               "flex-shrink": "0",
             }}
           >
             <div
               style={{
-                height: "32px",
                 display: "flex",
+                "flex-wrap": "wrap",
                 gap: "10px",
                 "align-items": "center",
               }}
@@ -609,12 +624,42 @@ const App = () => {
               />
 
               <div
+                role="timer"
+                aria-label="Elapsed time"
                 style={{
                   "font-size": "32px",
                 }}
               >
                 {formatElapsedTime(elapsedSeconds())}
               </div>
+              <Show when={remainingTime()}>
+                {(remaining) => (
+                  <div
+                    role="timer"
+                    aria-label={
+                      remaining().seconds < 0
+                        ? "Overtime"
+                        : remaining().warning
+                          ? "Remaining time warning"
+                          : "Remaining time"
+                    }
+                    style={{
+                      display: "flex",
+                      gap: "4px",
+                      color: remaining().warning ? "#ffb020" : "inherit",
+                    }}
+                  >
+                    <span>
+                      {remaining().seconds < 0
+                        ? "Overtime"
+                        : remaining().warning
+                          ? "Ending soon"
+                          : "Remaining"}
+                    </span>
+                    <span>{formatRemainingTime(remaining().seconds)}</span>
+                  </div>
+                )}
+              </Show>
               <IconSeparator />
               <button
                 class="icon-button"

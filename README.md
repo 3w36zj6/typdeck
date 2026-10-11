@@ -100,6 +100,17 @@ Slides after `EndSlide` remain accessible as appendices and are excluded from pr
 #metadata((t: "SaveSlide")) <pdfpc>
 ```
 
+### Presentation timer
+
+`Duration` sets the planned presentation length in minutes. With a duration, `LastMinutes` sets when Presenter View starts showing its ending warning.
+
+```typst
+#metadata((t: "Duration", v: 30)) <pdfpc>
+#metadata((t: "LastMinutes", v: 5)) <pdfpc>
+```
+
+Without a positive `Duration`, Presenter View shows elapsed time only.
+
 ### Speaker notes
 
 `Note` stores speaker notes for the page containing the marker.
