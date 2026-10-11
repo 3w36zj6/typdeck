@@ -40,6 +40,39 @@ export const remainingSeconds = (
   elapsedSeconds: number,
 ): number => Math.round(durationMinutes * 60) - elapsedSeconds;
 
+const clockMinutes = (time: string) =>
+  Number(time.slice(0, 2)) * 60 + Number(time.slice(3));
+
+export const presentationDurationMinutes = ({
+  durationMinutes,
+  startTime,
+  endTime,
+}: Metadata): number | undefined => {
+  if (!startTime || !endTime) return durationMinutes;
+  const difference = clockMinutes(endTime) - clockMinutes(startTime);
+  return difference > 0 ? difference : difference + 24 * 60;
+};
+
+const nextClockTime = (time: string, now: number) => {
+  const date = new Date(now);
+  const scheduledMinutes = clockMinutes(time);
+  const currentMinutes = date.getHours() * 60 + date.getMinutes();
+  date.setHours(Math.floor(scheduledMinutes / 60), scheduledMinutes % 60, 0, 0);
+  if (scheduledMinutes < currentMinutes) date.setDate(date.getDate() + 1);
+  return date.getTime();
+};
+
+export const presentationStartAt = (
+  metadata: Metadata,
+  now: number,
+): number | undefined => {
+  if (metadata.startTime) return nextClockTime(metadata.startTime, now);
+  const duration = presentationDurationMinutes(metadata);
+  return metadata.endTime && duration !== undefined
+    ? nextClockTime(metadata.endTime, now) - duration * 60_000
+    : undefined;
+};
+
 export const formatRemainingTime = (seconds: number): string =>
   `${seconds < 0 ? "+" : "−"}${formatElapsedTime(Math.abs(seconds))}`;
 

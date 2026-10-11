@@ -7,7 +7,9 @@ import {
   formatRemainingTime,
   nextPreviewPage,
   pageLabel,
+  presentationDurationMinutes,
   presentationPositionLabel,
+  presentationStartAt,
   previousPresentationPage,
   remainingSeconds,
   savedSlidePage,
@@ -118,6 +120,52 @@ describe("overlay presentation", () => {
       "Appendix 1 of 1\nStep 2 of 2",
     );
     expect(nextPreviewPage(deckWithAppendix, 4)).toBe(6);
+  });
+});
+
+describe("scheduled presentation time", () => {
+  it("derives duration across midnight", () => {
+    expect(
+      presentationDurationMinutes({
+        ...metadata,
+        durationMinutes: 5,
+        startTime: "14:10",
+        endTime: "14:40",
+      }),
+    ).toBe(30);
+    expect(
+      presentationDurationMinutes({
+        ...metadata,
+        startTime: "23:50",
+        endTime: "00:20",
+      }),
+    ).toBe(30);
+  });
+
+  it("resolves the next occurrence of a start time", () => {
+    const now = new Date(2026, 0, 1, 14, 0, 30).getTime();
+    expect(presentationStartAt({ ...metadata, startTime: "14:10" }, now)).toBe(
+      new Date(2026, 0, 1, 14, 10).getTime(),
+    );
+    expect(presentationStartAt({ ...metadata, startTime: "13:50" }, now)).toBe(
+      new Date(2026, 0, 2, 13, 50).getTime(),
+    );
+    expect(presentationStartAt({ ...metadata, startTime: "14:00" }, now)).toBe(
+      new Date(2026, 0, 1, 14, 0).getTime(),
+    );
+  });
+
+  it("derives a start time from end time and duration", () => {
+    const now = new Date(2026, 0, 1, 14, 0).getTime();
+    expect(
+      presentationStartAt(
+        { ...metadata, durationMinutes: 30, endTime: "15:00" },
+        now,
+      ),
+    ).toBe(new Date(2026, 0, 1, 14, 30).getTime());
+    expect(presentationStartAt({ ...metadata, endTime: "15:00" }, now)).toBe(
+      undefined,
+    );
   });
 });
 
