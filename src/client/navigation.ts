@@ -10,7 +10,10 @@ const decodeHash = (hash: string): string => {
 
 export const pageFromHash = (hash: string, metadata?: Metadata): number => {
   const value = decodeHash(hash);
-  if (/^[1-9]\d*$/.test(value)) return Number(value);
+  const page = /^[1-9]\d*$/.test(value) ? Number(value) : undefined;
+  if (page !== undefined && (!metadata || page <= metadata.pageCount)) {
+    return page;
+  }
 
   return (
     metadata?.outline.find((heading) => heading.label === value)?.page ?? 1

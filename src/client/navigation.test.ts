@@ -26,6 +26,8 @@ describe("stable slide hashes", () => {
     expect(pageFromHash("#details", metadata)).toBe(3);
     expect(pageFromHash("#introduction", metadata)).toBe(1);
     expect(pageFromHash("#%", metadata)).toBe(1);
+    expect(pageFromHash("#4")).toBe(4);
+    expect(pageFromHash("#4", metadata)).toBe(1);
   });
 
   it("prefers heading labels when creating hashes", () => {
