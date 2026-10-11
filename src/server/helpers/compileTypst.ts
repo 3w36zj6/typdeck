@@ -104,32 +104,33 @@ export const compileTypst = async (
   const pdfTask = getDocument({
     data: new Uint8Array(fs.readFileSync(pdfPath)),
   });
-  let pageCount: number;
-  let pageLabels: string[] | undefined;
-  let title: string | undefined;
-  let language: string | undefined;
-  try {
-    const document = await pdfTask.promise;
-    pageCount = document.numPages;
+  const pdfMetadata = pdfTask.promise.then(async (document) => {
     const [labels, { info }] = await Promise.all([
       document.getPageLabels(),
       document.getMetadata(),
     ]);
-    pageLabels = labels ?? undefined;
-    title =
+    const title =
       "Title" in info && typeof info.Title === "string"
         ? info.Title.trim() || undefined
         : undefined;
-    language =
+    const language =
       "Language" in info && typeof info.Language === "string"
         ? info.Language.trim() || undefined
         : undefined;
-  } finally {
-    await pdfTask.destroy();
-  }
+    return {
+      pageCount: document.numPages,
+      pageLabels: labels ?? undefined,
+      title,
+      language,
+    };
+  });
 
-  const outline = await queryTypstHeadings(typstFile, process.cwd(), signal);
-  const notes = await queryPdfpcNotes(typstFile, process.cwd(), signal);
+  const [{ pageCount, pageLabels, title, language }, outline, notes] =
+    await Promise.all([
+      pdfMetadata.finally(() => pdfTask.destroy()),
+      queryTypstHeadings(typstFile, process.cwd(), signal),
+      queryPdfpcNotes(typstFile, process.cwd(), signal),
+    ]);
   const slides: NonNullable<Metadata["slides"]> = Object.fromEntries(
     notes
       .filter(({ page }) => page <= pageCount)
