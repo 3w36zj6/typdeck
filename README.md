@@ -85,6 +85,10 @@ Presenter View can select a region to enlarge on both displays while preserving 
 
 Presenter View synchronizes temporary pen and eraser strokes with the Stage. Drawings are shared across overlay steps and are never written to the source.
 
+### Blank screens
+
+Blackout and whiteout temporarily cover the Stage. Press `B` or `W` to toggle them.
+
 ### Freeze
 
 Freeze keeps the current slide on the Stage while Presenter View moves ahead. Use its button or press `Shift+F` in Presenter View.

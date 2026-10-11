@@ -36,7 +36,7 @@ const syncedState = {
       { x: 0.5, y: 0.5 },
     ],
   },
-  blackout: true,
+  blankScreen: "white" as const,
   currentPage: 2,
   drawings: [
     {
@@ -59,7 +59,7 @@ describe("createPresentationSync", () => {
     vi.stubGlobal("BroadcastChannel", MockBroadcastChannel);
     vi.stubGlobal("location", { pathname: "/talk" });
     const { sync, dispose } = createRoot((dispose) => ({
-      sync: createPresentationSync(1, false, () => 2),
+      sync: createPresentationSync(1, "none", () => 2),
       dispose,
     }));
     const channel = MockBroadcastChannel.latest;
@@ -71,7 +71,7 @@ describe("createPresentationSync", () => {
     });
     await Promise.resolve();
     expect(sync.currentPage()).toBe(1);
-    expect(sync.isBlackout()).toBe(false);
+    expect(sync.blankScreen()).toBe("none");
     expect(sync.activeDrawing()).toBeNull();
     expect(sync.drawings()).toEqual([]);
     expect(sync.drawingsHidden()).toBe(false);
@@ -85,7 +85,7 @@ describe("createPresentationSync", () => {
       state: syncedState,
     });
     expect(sync.currentPage()).toBe(2);
-    expect(sync.isBlackout()).toBe(true);
+    expect(sync.blankScreen()).toBe("white");
     expect(sync.activeDrawing()?.kind).toBe("pen");
     expect(sync.drawings()).toHaveLength(1);
     expect(sync.drawingsHidden()).toBe(true);
@@ -110,7 +110,7 @@ describe("createPresentationSync", () => {
     });
     channel.dispatch({
       type: "state",
-      state: { ...syncedState, blackout: "false" },
+      state: { ...syncedState, blankScreen: "blue" },
     });
     channel.dispatch({
       type: "state",
@@ -142,7 +142,7 @@ describe("createPresentationSync", () => {
       },
     });
     expect(sync.currentPage()).toBe(2);
-    expect(sync.isBlackout()).toBe(true);
+    expect(sync.blankScreen()).toBe("white");
 
     channel.dispatch({ type: "request-state" });
     expect(channel.postMessage).toHaveBeenCalledWith({
@@ -158,7 +158,7 @@ describe("createPresentationSync", () => {
 describe("shouldBroadcastState", () => {
   const state = {
     activeDrawing: null,
-    blackout: false,
+    blankScreen: "none" as const,
     currentPage: 1,
     drawings: [],
     drawingsHidden: false,
@@ -175,6 +175,12 @@ describe("shouldBroadcastState", () => {
       shouldBroadcastState(state, {
         ...state,
         pointer: { ...state.pointer, x: 0.75 },
+      }),
+    ).toBe(true);
+    expect(
+      shouldBroadcastState(state, {
+        ...state,
+        blankScreen: "black",
       }),
     ).toBe(true);
     expect(

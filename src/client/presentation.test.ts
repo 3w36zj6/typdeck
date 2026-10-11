@@ -299,6 +299,7 @@ describe("presentation controls", () => {
     ["KeyS", false, "start-timer"],
     ["KeyS", true, undefined],
     ["KeyB", false, "blackout"],
+    ["KeyW", false, "whiteout"],
     ["KeyF", true, "toggle-freeze"],
     ["KeyF", false, undefined],
     ["KeyD", false, "toggle-drawings"],

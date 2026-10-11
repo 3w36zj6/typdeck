@@ -2,6 +2,7 @@ import { adjacentVisiblePage } from "./navigation";
 import type { Metadata } from "./types/metadata";
 
 export type SlidePoint = { x: number; y: number };
+export type BlankScreen = "none" | "black" | "white";
 export type SlideRect = SlidePoint & { width: number; height: number };
 export type SlideZoom = SlideRect & { page: number };
 export type SlidePointer = SlidePoint & {
@@ -90,6 +91,8 @@ export const actionForKey = ({
       return shiftKey ? undefined : "start-timer";
     case "KeyB":
       return "blackout";
+    case "KeyW":
+      return "whiteout";
     case "KeyF":
       return shiftKey ? "toggle-freeze" : undefined;
     case "KeyD":

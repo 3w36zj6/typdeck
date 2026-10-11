@@ -29,6 +29,7 @@ import {
   previousPresentationPage,
   remainingSeconds,
   savedSlidePage,
+  type BlankScreen,
   type DrawingStroke,
   type SlidePoint,
   type SlidePointer,
@@ -71,6 +72,45 @@ const IconSeparator = () => (
       height: "32px",
     }}
   />
+);
+
+const BlankScreenButtons = (props: {
+  blankScreen: BlankScreen;
+  height: string;
+  onToggle: (color: Exclude<BlankScreen, "none">) => void;
+}) => (
+  <>
+    <button
+      class="icon-button"
+      onClick={() => props.onToggle("black")}
+      aria-label="Blackout"
+      aria-pressed={props.blankScreen === "black"}
+      data-tooltip={
+        props.blankScreen === "black" ? "Turn blackout off" : "Turn blackout on"
+      }
+      style={{ height: props.height }}
+    >
+      <MenuIcon
+        icon={
+          props.blankScreen === "black" ? "lucide:monitor" : "lucide:monitor-x"
+        }
+      />
+    </button>
+    <button
+      class="icon-button"
+      onClick={() => props.onToggle("white")}
+      aria-label="Whiteout"
+      aria-pressed={props.blankScreen === "white"}
+      data-tooltip={
+        props.blankScreen === "white" ? "Turn whiteout off" : "Turn whiteout on"
+      }
+      style={{ height: props.height }}
+    >
+      <MenuIcon
+        icon={props.blankScreen === "white" ? "lucide:monitor" : "lucide:sun"}
+      />
+    </button>
+  </>
 );
 
 const ShortcutDialog = (props: {
@@ -124,6 +164,10 @@ const ShortcutDialog = (props: {
         </dt>
         <dd>Toggle blackout</dd>
         <dt>
+          <kbd>W</kbd>
+        </dt>
+        <dd>Toggle whiteout</dd>
+        <dt>
           <kbd>Shift+F</kbd>
         </dt>
         <dd>Freeze or unfreeze the Stage (Presenter View)</dd>
@@ -146,7 +190,7 @@ const ShortcutDialog = (props: {
         <dt>
           <kbd>Esc</kbd>
         </dt>
-        <dd>Clear freeze, zoom, and the active tool</dd>
+        <dd>Clear blanking, freeze, zoom, and the active tool</dd>
       </dl>
       <form method="dialog">
         <button>Close</button>
@@ -213,8 +257,8 @@ const App = () => {
     setActiveDrawing,
     currentPage,
     setCurrentPage,
-    isBlackout,
-    setIsBlackout,
+    blankScreen,
+    setBlankScreen,
     drawings,
     setDrawings,
     drawingsHidden,
@@ -227,7 +271,7 @@ const App = () => {
     setZoom,
   } = createPresentationSync(
     pageFromHash(window.location.hash),
-    urlParams.has("blackout"),
+    urlParams.has("blackout") ? "black" : "none",
     () => metadata()?.pageCount,
   );
   const [pointerMode, setPointerMode] = createSignal<
@@ -367,7 +411,8 @@ const App = () => {
   let hideMenuTimeout: number;
   let pointerHideTimeout: number;
 
-  const toggleBlackout = () => setIsBlackout((value) => !value);
+  const toggleBlankScreen = (color: Exclude<BlankScreen, "none">) =>
+    setBlankScreen((value) => (value === color ? "none" : color));
 
   const stagePage = () => frozenPage() ?? currentPage();
 
@@ -628,7 +673,10 @@ const App = () => {
         break;
       }
       case "blackout":
-        toggleBlackout();
+        toggleBlankScreen("black");
+        break;
+      case "whiteout":
+        toggleBlankScreen("white");
         break;
       case "toggle-freeze":
         toggleFreeze();
@@ -677,6 +725,7 @@ const App = () => {
         break;
       case "reset-view":
         batch(() => {
+          setBlankScreen("none");
           setFrozenPage(null);
           setZoom(null);
           selectInputMode("normal");
@@ -816,7 +865,7 @@ const App = () => {
     const url = new URL(window.location.href);
     url.search = "";
     url.searchParams.set("mode", "presenter");
-    if (isBlackout()) url.searchParams.set("blackout", "1");
+    if (blankScreen() === "black") url.searchParams.set("blackout", "1");
     url.hash = hashForPage(currentPage(), metadata());
     window.open(
       url.href,
@@ -838,6 +887,7 @@ const App = () => {
           <>
             <div
               class="slide-container"
+              inert={blankScreen() !== "none"}
               lang={metadata()?.language}
               style={{
                 width: "100vw",
@@ -870,13 +920,14 @@ const App = () => {
                 )}
               </Show>
             </div>
-            <Show when={isBlackout()}>
+            <Show when={blankScreen() !== "none"}>
               <div
                 aria-hidden="true"
+                data-blank-screen={blankScreen()}
                 style={{
                   position: "fixed",
                   inset: "0",
-                  background: "#000",
+                  background: blankScreen(),
                   "z-index": "1",
                 }}
               />
@@ -1000,20 +1051,11 @@ const App = () => {
                 >
                   <MenuIcon icon="lucide:search" />
                 </button>
-                <button
-                  class="icon-button"
-                  onClick={toggleBlackout}
-                  aria-label="Blackout"
-                  aria-pressed={isBlackout()}
-                  data-tooltip={
-                    isBlackout() ? "Turn blackout off" : "Turn blackout on"
-                  }
-                  style={{ height: "100%" }}
-                >
-                  <MenuIcon
-                    icon={isBlackout() ? "lucide:monitor" : "lucide:monitor-x"}
-                  />
-                </button>
+                <BlankScreenButtons
+                  blankScreen={blankScreen()}
+                  height="100%"
+                  onToggle={toggleBlankScreen}
+                />
                 <button
                   class="icon-button"
                   onClick={() => shortcutDialog.showModal()}
@@ -1407,20 +1449,11 @@ const App = () => {
                   }
                 />
               </button>
-              <button
-                class="icon-button"
-                onClick={toggleBlackout}
-                aria-label="Blackout"
-                aria-pressed={isBlackout()}
-                data-tooltip={
-                  isBlackout() ? "Turn blackout off" : "Turn blackout on"
-                }
-                style={{ height: "32px" }}
-              >
-                <MenuIcon
-                  icon={isBlackout() ? "lucide:monitor" : "lucide:monitor-x"}
-                />
-              </button>
+              <BlankScreenButtons
+                blankScreen={blankScreen()}
+                height="32px"
+                onToggle={toggleBlankScreen}
+              />
               <button
                 class="icon-button"
                 onClick={toggleFreeze}

@@ -8,7 +8,12 @@ import {
   onCleanup,
 } from "solid-js";
 import * as v from "valibot";
-import type { DrawingStroke, SlidePointer, SlideZoom } from "./presentation";
+import type {
+  BlankScreen,
+  DrawingStroke,
+  SlidePointer,
+  SlideZoom,
+} from "./presentation";
 
 const PointSchema = v.object({
   x: v.pipe(v.number(), v.minValue(0), v.maxValue(1)),
@@ -57,7 +62,7 @@ const DrawingSchema = v.variant("kind", [
 
 const SlideStateSchema = v.object({
   activeDrawing: v.nullable(DrawingSchema),
-  blackout: v.boolean(),
+  blankScreen: v.picklist(["none", "black", "white"]),
   currentPage: v.pipe(v.number(), v.integer(), v.minValue(1)),
   drawings: v.array(DrawingSchema),
   drawingsHidden: v.boolean(),
@@ -117,7 +122,7 @@ export const shouldBroadcastState = (
 ) =>
   received === undefined ||
   !sameDrawing(received.activeDrawing, current.activeDrawing) ||
-  received.blackout !== current.blackout ||
+  received.blankScreen !== current.blankScreen ||
   received.currentPage !== current.currentPage ||
   !sameDrawings(received.drawings, current.drawings) ||
   received.drawingsHidden !== current.drawingsHidden ||
@@ -127,11 +132,12 @@ export const shouldBroadcastState = (
 
 export const createPresentationSync = (
   initialPage: number,
-  initialBlackout: boolean,
+  initialBlankScreen: BlankScreen,
   pageCount: Accessor<number | undefined>,
 ) => {
   const [currentPage, setCurrentPage] = createSignal(initialPage);
-  const [isBlackout, setIsBlackout] = createSignal(initialBlackout);
+  const [blankScreen, setBlankScreen] =
+    createSignal<BlankScreen>(initialBlankScreen);
   const [activeDrawing, setActiveDrawing] = createSignal<DrawingStroke | null>(
     null,
     { equals: sameDrawing },
@@ -152,7 +158,7 @@ export const createPresentationSync = (
 
   const currentState = () => ({
     activeDrawing: activeDrawing(),
-    blackout: isBlackout(),
+    blankScreen: blankScreen(),
     currentPage: currentPage(),
     drawings: drawings(),
     drawingsHidden: drawingsHidden(),
@@ -187,7 +193,7 @@ export const createPresentationSync = (
     batch(() => {
       setActiveDrawing(state.activeDrawing);
       setCurrentPage(state.currentPage);
-      setIsBlackout(state.blackout);
+      setBlankScreen(state.blankScreen);
       setDrawings(state.drawings);
       setDrawingsHidden(state.drawingsHidden);
       setFrozenPage(state.frozenPage);
@@ -201,7 +207,7 @@ export const createPresentationSync = (
       [
         activeDrawing,
         currentPage,
-        isBlackout,
+        blankScreen,
         drawings,
         drawingsHidden,
         frozenPage,
@@ -234,8 +240,8 @@ export const createPresentationSync = (
     setActiveDrawing,
     currentPage,
     setCurrentPage,
-    isBlackout,
-    setIsBlackout,
+    blankScreen,
+    setBlankScreen,
     drawings,
     setDrawings,
     drawingsHidden,
