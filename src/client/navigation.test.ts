@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Metadata } from "./types/metadata";
-import { hashForPage, pageFromHash } from "./navigation";
+import { adjacentVisiblePage, hashForPage, pageFromHash } from "./navigation";
 
 const metadata: Metadata = {
   pageCount: 3,
@@ -44,5 +44,42 @@ describe("stable slide hashes", () => {
 
     expect(hashForPage(3, numericLabel)).toBe("#3");
     expect(pageFromHash(hashForPage(3, numericLabel), numericLabel)).toBe(3);
+  });
+
+  it("starts on the first visible page", () => {
+    const hiddenFirstPage: Metadata = {
+      ...metadata,
+      slides: { 1: { hidden: true } },
+    };
+
+    expect(pageFromHash("", hiddenFirstPage)).toBe(2);
+    expect(pageFromHash("#4", hiddenFirstPage)).toBe(2);
+    expect(pageFromHash("#1", hiddenFirstPage)).toBe(1);
+    expect(
+      pageFromHash("", {
+        ...metadata,
+        slides: {
+          1: { hidden: true },
+          2: { hidden: true },
+          3: { hidden: true },
+        },
+      }),
+    ).toBe(1);
+  });
+
+  it("skips hidden slides in both directions", () => {
+    const deck: Metadata = {
+      ...metadata,
+      pageCount: 4,
+      slides: {
+        2: { hidden: true },
+        3: { hidden: true },
+      },
+    };
+
+    expect(adjacentVisiblePage(deck, 1, 1)).toBe(4);
+    expect(adjacentVisiblePage(deck, 4, -1)).toBe(1);
+    expect(adjacentVisiblePage(deck, 1, -1)).toBe(1);
+    expect(adjacentVisiblePage(deck, 4, 1)).toBe(4);
   });
 });

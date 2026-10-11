@@ -73,6 +73,14 @@ typdeck preview
 
 ## Features
 
+### Hidden slides
+
+Hidden slides are skipped during normal navigation but remain directly accessible.
+
+```typst
+#metadata((t: "HiddenSlide")) <pdfpc>
+```
+
 ### Speaker notes
 
 Attach a note to the current slide with `<pdfpc>` metadata:

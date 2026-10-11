@@ -1,5 +1,20 @@
 import type { Metadata } from "./types/metadata";
 
+export const adjacentVisiblePage = (
+  metadata: Metadata,
+  page: number,
+  direction: -1 | 1,
+): number => {
+  for (
+    let candidate = page + direction;
+    candidate >= 1 && candidate <= metadata.pageCount;
+    candidate += direction
+  ) {
+    if (!metadata.slides?.[`${candidate}`]?.hidden) return candidate;
+  }
+  return Math.min(Math.max(page, 1), metadata.pageCount);
+};
+
 const decodeHash = (hash: string): string => {
   try {
     return decodeURIComponent(hash.replace(/^#/, ""));
@@ -15,8 +30,12 @@ export const pageFromHash = (hash: string, metadata?: Metadata): number => {
     return page;
   }
 
+  const firstVisiblePage = metadata && adjacentVisiblePage(metadata, 0, 1);
+
   return (
-    metadata?.outline.find((heading) => heading.label === value)?.page ?? 1
+    metadata?.outline.find((heading) => heading.label === value)?.page ??
+    firstVisiblePage ??
+    1
   );
 };
 

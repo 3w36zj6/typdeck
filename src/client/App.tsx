@@ -9,7 +9,7 @@ import {
 } from "solid-js";
 import { parseMetadata } from "./types/metadata";
 import { Icon } from "@iconify-icon/solid";
-import { hashForPage, pageFromHash } from "./navigation";
+import { adjacentVisiblePage, hashForPage, pageFromHash } from "./navigation";
 import { actionForKey, formatElapsedTime, pageLabel } from "./presentation";
 import { createPresentationSync } from "./presentationSync";
 import {
@@ -155,15 +155,21 @@ const App = () => {
   const [isTransitioning, setIsTransitioning] = createSignal(false);
   const TRANSITION_DURATION_MS = 150;
 
+  const previousPage = () => {
+    const deck = metadata();
+    return deck ? adjacentVisiblePage(deck, currentPage(), -1) : currentPage();
+  };
+  const nextPage = () => {
+    const deck = metadata();
+    return deck ? adjacentVisiblePage(deck, currentPage(), 1) : currentPage();
+  };
+
   const goPreviousPage = () => {
     if (isTransitioning()) return;
     setIsTransitioning(true);
-    setCurrentPage((prev) => Math.max(prev - 1, 1));
+    setCurrentPage(previousPage());
     window.setTimeout(() => setIsTransitioning(false), TRANSITION_DURATION_MS);
   };
-
-  const nextPage = () =>
-    Math.min(currentPage() + 1, metadata()?.pageCount ?? currentPage());
 
   const goNextPage = () => {
     if (isTransitioning()) return;
@@ -345,7 +351,7 @@ const App = () => {
                   class="icon-button"
                   onClick={goPreviousPage}
                   aria-label="Previous slide"
-                  disabled={currentPage() === 1}
+                  disabled={previousPage() === currentPage()}
                   style={{ position: "absolute", left: "0", height: "100%" }}
                 >
                   <MenuIcon icon="lucide:chevron-left" />
@@ -364,7 +370,7 @@ const App = () => {
                   class="icon-button"
                   onClick={goNextPage}
                   aria-label="Next slide"
-                  disabled={currentPage() === metadata()?.pageCount}
+                  disabled={nextPage() === currentPage()}
                   style={{ position: "absolute", right: "0", height: "100%" }}
                 >
                   <MenuIcon icon="lucide:chevron-right" />
@@ -639,7 +645,7 @@ const App = () => {
                 class="icon-button"
                 onClick={goPreviousPage}
                 aria-label="Previous slide"
-                disabled={currentPage() === 1}
+                disabled={previousPage() === currentPage()}
                 style={{ height: "32px" }}
               >
                 <MenuIcon icon="lucide:chevron-left" />
@@ -658,9 +664,7 @@ const App = () => {
                 class="icon-button"
                 onClick={goNextPage}
                 aria-label="Next slide"
-                disabled={
-                  currentPage() === metadata()?.pageCount || !metadata()
-                }
+                disabled={nextPage() === currentPage()}
                 style={{ height: "32px" }}
               >
                 <MenuIcon icon="lucide:chevron-right" />
