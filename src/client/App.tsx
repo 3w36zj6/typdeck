@@ -94,6 +94,14 @@ const ShortcutDialog = (props: {
         </dt>
         <dd>Go to the saved slide</dd>
         <dt>
+          <kbd>S</kbd>
+        </dt>
+        <dd>Start or resume the timer (Presenter View)</dd>
+        <dt>
+          <kbd>P</kbd>
+        </dt>
+        <dd>Pause or resume the timer (Presenter View)</dd>
+        <dt>
           <kbd>B</kbd>
         </dt>
         <dd>Toggle blackout</dd>
@@ -275,7 +283,13 @@ const App = () => {
     if (shortcutDialog.open || !metadata()) return;
 
     const action = actionForKey(event);
-    if (!action) return;
+    if (
+      !action ||
+      (!isPresenterMode &&
+        (action === "start-timer" || action === "toggle-timer"))
+    ) {
+      return;
+    }
     event.preventDefault();
 
     switch (action) {
@@ -295,6 +309,12 @@ const App = () => {
       }
       case "blackout":
         toggleBlackout();
+        break;
+      case "start-timer":
+        if (typeof timerStartedAt() !== "number") startTimer();
+        break;
+      case "toggle-timer":
+        if (timerStartedAt() !== undefined) toggleTimer();
         break;
       case "shortcuts":
         shortcutDialog.showModal();

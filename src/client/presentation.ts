@@ -19,6 +19,10 @@ export const actionForKey = ({
       return "last";
     case "KeyM":
       return shiftKey ? "saved" : undefined;
+    case "KeyP":
+      return shiftKey ? undefined : "toggle-timer";
+    case "KeyS":
+      return shiftKey ? undefined : "start-timer";
     case "KeyB":
       return "blackout";
     case "Slash":
