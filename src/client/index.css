@@ -142,3 +142,96 @@ button {
   border: 1px solid #777;
   color: #fff;
 }
+
+.search-dialog {
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+}
+
+.search-dialog > form {
+  box-sizing: border-box;
+  min-width: 280px;
+  padding: 24px;
+  border: 1px solid #555;
+  border-radius: 8px;
+  background: #191919;
+  width: min(900px, calc(100vw - 64px));
+}
+
+.search-dialog label {
+  display: grid;
+  gap: 4px;
+}
+
+.search-dialog input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #777;
+  border-radius: 4px;
+  color: #fff;
+  background: #111;
+  font: inherit;
+}
+
+.search-content {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(0, 2fr);
+  gap: 20px;
+  height: min(55vh, 480px);
+  margin-top: 12px;
+}
+
+.search-content ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow: auto;
+}
+
+.search-content li + li {
+  margin-top: 4px;
+}
+
+.search-content li button {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  text-align: left;
+}
+
+.search-content li button[aria-current="page"] {
+  border-color: #fff;
+  background: #333;
+}
+
+.search-content small {
+  color: #bbb;
+  font-weight: 400;
+}
+
+.search-preview {
+  min-width: 0;
+  min-height: 0;
+  background: #000;
+}
+
+.search-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.search-actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (max-width: 640px) {
+  .search-content {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(100px, 1fr) minmax(0, 2fr);
+  }
+}

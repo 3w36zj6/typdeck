@@ -36,6 +36,7 @@ import {
 } from "pdfjs-dist";
 import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { PdfSlide } from "./PdfSlide";
+import { SlideSearchDialog } from "./SlideSearchDialog";
 
 GlobalWorkerOptions.workerSrc = pdfWorker;
 
@@ -92,6 +93,10 @@ const ShortcutDialog = (props: {
         </dt>
         <dd>Go to the first / end slide</dd>
         <dt>
+          <kbd>/ / Ctrl/Cmd+K</kbd>
+        </dt>
+        <dd>Search slide text</dd>
+        <dt>
           <kbd>Shift+M</kbd>
         </dt>
         <dd>Go to the saved slide</dd>
@@ -146,6 +151,32 @@ const App = () => {
       return document;
     },
   );
+  const [searchRequested, setSearchRequested] = createSignal(false);
+  const [searchableSlides] = createResource(
+    () => {
+      const document = pdfDocument();
+      const deck = metadata();
+      return searchRequested() && document && deck
+        ? { document, deck }
+        : undefined;
+    },
+    async ({ document, deck }) =>
+      Promise.all(
+        Array.from({ length: document.numPages }, async (_, index) => {
+          const page = index + 1;
+          const content = await (await document.getPage(page)).getTextContent();
+          return {
+            page,
+            logicalSlide: deck.slides?.[`${page}`]?.logicalSlide,
+            text: content.items
+              .map((item) =>
+                "str" in item ? `${item.str}${item.hasEOL ? "\n" : " "}` : "",
+              )
+              .join(""),
+          };
+        }),
+      ),
+  );
 
   const getPageFromHash = () => pageFromHash(window.location.hash, metadata());
   const urlParams = new URLSearchParams(window.location.search);
@@ -196,6 +227,9 @@ const App = () => {
       : undefined;
   });
   let shortcutDialog!: HTMLDialogElement;
+  let searchDialog!: HTMLDialogElement;
+  let searchInput!: HTMLInputElement;
+  const [searchPage, setSearchPage] = createSignal(1);
   const setShortcutDialog = (dialog: HTMLDialogElement) => {
     shortcutDialog = dialog;
   };
@@ -328,6 +362,19 @@ const App = () => {
     window.setTimeout(() => setIsTransitioning(false), TRANSITION_DURATION_MS);
   };
 
+  const openSearch = () => {
+    if (!metadata() || !pdfDocument()) return;
+    setSearchPage(currentPage());
+    setSearchRequested(true);
+    searchDialog.showModal();
+    searchInput.focus();
+  };
+
+  const confirmSearch = (page: number) => {
+    setCurrentPage(page);
+    searchDialog.close();
+  };
+
   const handleKeyDown = (event: KeyboardEvent) => {
     if (event.target instanceof Element) {
       if (
@@ -338,7 +385,7 @@ const App = () => {
         return;
       }
     }
-    if (shortcutDialog.open || !metadata()) return;
+    if (document.querySelector("dialog:modal") || !metadata()) return;
 
     const action = actionForKey(event);
     if (
@@ -379,6 +426,9 @@ const App = () => {
         break;
       case "shortcuts":
         shortcutDialog.showModal();
+        break;
+      case "search":
+        openSearch();
         break;
     }
   };
@@ -663,6 +713,16 @@ const App = () => {
                 </button>
                 <button
                   class="icon-button"
+                  onClick={openSearch}
+                  aria-label="Search slides"
+                  data-tooltip="Search slides"
+                  disabled={!pdfDocument()}
+                  style={{ height: "100%" }}
+                >
+                  <MenuIcon icon="lucide:search" />
+                </button>
+                <button
+                  class="icon-button"
                   onClick={toggleBlackout}
                   aria-label="Blackout"
                   aria-pressed={isBlackout()}
@@ -687,6 +747,26 @@ const App = () => {
               </div>
             </div>
             <ShortcutDialog setDialog={setShortcutDialog} />
+            <Show when={pdfDocument()}>
+              {(document) => (
+                <SlideSearchDialog
+                  document={document()}
+                  metadata={metadata()!}
+                  slides={searchableSlides()}
+                  loading={searchableSlides.loading}
+                  error={searchableSlides.error}
+                  selectedPage={searchPage()}
+                  setDialog={(dialog) => {
+                    searchDialog = dialog;
+                  }}
+                  setInput={(input) => {
+                    searchInput = input;
+                  }}
+                  onSelect={setSearchPage}
+                  onConfirm={confirmSearch}
+                />
+              )}
+            </Show>
           </>
         }
       >
@@ -1043,6 +1123,16 @@ const App = () => {
               >
                 <MenuIcon icon="lucide:circle-help" />
               </button>
+              <button
+                class="icon-button"
+                onClick={openSearch}
+                aria-label="Search slides"
+                data-tooltip="Search slides"
+                disabled={!pdfDocument()}
+                style={{ height: "32px" }}
+              >
+                <MenuIcon icon="lucide:search" />
+              </button>
             </div>
             <Show when={metadata()}>
               {(deck) => (
@@ -1116,6 +1206,26 @@ const App = () => {
             </div>
           </div>
           <ShortcutDialog setDialog={setShortcutDialog} />
+          <Show when={pdfDocument()}>
+            {(document) => (
+              <SlideSearchDialog
+                document={document()}
+                metadata={metadata()!}
+                slides={searchableSlides()}
+                loading={searchableSlides.loading}
+                error={searchableSlides.error}
+                selectedPage={searchPage()}
+                setDialog={(dialog) => {
+                  searchDialog = dialog;
+                }}
+                setInput={(input) => {
+                  searchInput = input;
+                }}
+                onSelect={setSearchPage}
+                onConfirm={confirmSearch}
+              />
+            )}
+          </Show>
         </div>
       </Show>
     </Show>

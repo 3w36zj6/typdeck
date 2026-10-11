@@ -245,12 +245,19 @@ describe("presentation controls", () => {
     ["KeyS", true, undefined],
     ["KeyB", false, "blackout"],
     ["Slash", true, "shortcuts"],
-    ["Slash", false, undefined],
+    ["Slash", false, "search"],
     ["KeyA", false, undefined],
   ] as const)("maps %s (shift: %s)", (code, shiftKey, expected) => {
     expect(
       actionForKey({ code, shiftKey, repeat: false, isComposing: false }),
     ).toBe(expected);
+  });
+
+  it("maps the browser search shortcut without stealing other modifiers", () => {
+    expect(actionForKey({ code: "KeyK", ctrlKey: true })).toBe("search");
+    expect(actionForKey({ code: "KeyK", metaKey: true })).toBe("search");
+    expect(actionForKey({ code: "ArrowRight", ctrlKey: true })).toBeUndefined();
+    expect(actionForKey({ code: "ArrowRight", altKey: true })).toBeUndefined();
   });
 
   it("ignores repeated and composing keys", () => {

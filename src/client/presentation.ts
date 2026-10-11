@@ -3,11 +3,23 @@ import type { Metadata } from "./types/metadata";
 
 export const actionForKey = ({
   code,
-  shiftKey,
-  repeat,
-  isComposing,
-}: Pick<KeyboardEvent, "code" | "shiftKey" | "repeat" | "isComposing">) => {
-  if (repeat || isComposing) return;
+  shiftKey = false,
+  repeat = false,
+  isComposing = false,
+  altKey = false,
+  ctrlKey = false,
+  metaKey = false,
+}: Pick<KeyboardEvent, "code"> &
+  Partial<
+    Pick<
+      KeyboardEvent,
+      "shiftKey" | "repeat" | "isComposing" | "altKey" | "ctrlKey" | "metaKey"
+    >
+  >) => {
+  if (repeat || isComposing || altKey) return;
+  if (ctrlKey || metaKey) {
+    return code === "KeyK" && !shiftKey ? "search" : undefined;
+  }
   switch (code) {
     case "ArrowLeft":
     case "ArrowUp":
@@ -38,7 +50,7 @@ export const actionForKey = ({
     case "KeyB":
       return "blackout";
     case "Slash":
-      return shiftKey ? "shortcuts" : undefined;
+      return shiftKey ? "shortcuts" : "search";
   }
 };
 
