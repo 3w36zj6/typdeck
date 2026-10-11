@@ -367,6 +367,8 @@ describe("presentation controls", () => {
     ["KeyW", false, "whiteout"],
     ["KeyF", true, "toggle-freeze"],
     ["KeyF", false, undefined],
+    ["KeyA", true, "toggle-current-slide-size"],
+    ["KeyA", false, undefined],
     ["KeyD", false, "toggle-drawings"],
     ["KeyC", false, "clear-drawings"],
     ["Digit1", false, "normal-mode"],
@@ -379,7 +381,6 @@ describe("presentation controls", () => {
     ["KeyO", true, undefined],
     ["Slash", true, "shortcuts"],
     ["Slash", false, "search"],
-    ["KeyA", false, undefined],
   ] as const)("maps %s (shift: %s)", (code, shiftKey, expected) => {
     expect(
       actionForKey({ code, shiftKey, repeat: false, isComposing: false }),

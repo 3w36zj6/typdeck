@@ -96,6 +96,8 @@ export const actionForKey = ({
       return "whiteout";
     case "KeyF":
       return shiftKey ? "toggle-freeze" : undefined;
+    case "KeyA":
+      return shiftKey ? "toggle-current-slide-size" : undefined;
     case "KeyD":
       return shiftKey ? undefined : "toggle-drawings";
     case "KeyC":

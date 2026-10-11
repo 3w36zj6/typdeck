@@ -182,6 +182,10 @@ const ShortcutDialog = (props: {
         </dt>
         <dd>Freeze or unfreeze the Stage (Presenter View)</dd>
         <dt>
+          <kbd>Shift+A</kbd>
+        </dt>
+        <dd>Maximize or restore the current slide (Presenter View)</dd>
+        <dt>
           <kbd>1 / 2 / 3 / 4 / 5</kbd>
         </dt>
         <dd>Normal / laser / pen / eraser / spotlight mode (Presenter View)</dd>
@@ -428,6 +432,10 @@ const App = () => {
   let timingDialog!: HTMLDialogElement;
   let searchInput!: HTMLInputElement;
   const [searchPage, setSearchPage] = createSignal(1);
+  const [isCurrentSlideMaximized, setIsCurrentSlideMaximized] =
+    createSignal(false);
+  const toggleCurrentSlideSize = () =>
+    setIsCurrentSlideMaximized((maximized) => !maximized);
   const setShortcutDialog = (dialog: HTMLDialogElement) => {
     shortcutDialog = dialog;
   };
@@ -778,6 +786,7 @@ const App = () => {
         (action === "start-timer" ||
           action === "toggle-timer" ||
           action === "toggle-freeze" ||
+          action === "toggle-current-slide-size" ||
           action === "toggle-drawings" ||
           action === "clear-drawings" ||
           action === "undo-drawing" ||
@@ -825,6 +834,9 @@ const App = () => {
         break;
       case "toggle-freeze":
         toggleFreeze();
+        break;
+      case "toggle-current-slide-size":
+        toggleCurrentSlideSize();
         break;
       case "start-timer":
         if (typeof timerStartedAt() !== "number") startTimer();
@@ -1348,7 +1360,7 @@ const App = () => {
                     class="current-slide"
                     lang={metadata()?.language}
                     style={{
-                      width: "49%",
+                      width: isCurrentSlideMaximized() ? "100%" : "49%",
                       display: "flex",
                       "align-items": "center",
                       "justify-content": "center",
@@ -1384,7 +1396,7 @@ const App = () => {
                     lang={metadata()?.language}
                     style={{
                       width: "49%",
-                      display: "flex",
+                      display: isCurrentSlideMaximized() ? "none" : "flex",
                       "align-items": "center",
                       "justify-content": "center",
                       overflow: "hidden",
@@ -1409,6 +1421,7 @@ const App = () => {
           <div
             class="speaker-notes"
             style={{
+              display: isCurrentSlideMaximized() ? "none" : undefined,
               padding: "10px",
               "border-top": "1px solid #333",
               "background-color": "#111",
@@ -1697,6 +1710,30 @@ const App = () => {
                 style={{ height: "32px" }}
               >
                 <MenuIcon icon="lucide:panels-top-left" />
+              </button>
+              <button
+                class="icon-button"
+                onClick={toggleCurrentSlideSize}
+                aria-label={
+                  isCurrentSlideMaximized()
+                    ? "Restore current slide size"
+                    : "Maximize current slide"
+                }
+                aria-pressed={isCurrentSlideMaximized()}
+                data-tooltip={
+                  isCurrentSlideMaximized()
+                    ? "Restore current slide size"
+                    : "Maximize current slide"
+                }
+                style={{ height: "32px" }}
+              >
+                <MenuIcon
+                  icon={
+                    isCurrentSlideMaximized()
+                      ? "lucide:minimize-2"
+                      : "lucide:maximize-2"
+                  }
+                />
               </button>
               <button
                 class="icon-button"
