@@ -124,6 +124,10 @@ const ShortcutDialog = (props: {
         </dt>
         <dd>Toggle blackout</dd>
         <dt>
+          <kbd>Shift+F</kbd>
+        </dt>
+        <dd>Freeze or unfreeze the Stage (Presenter View)</dd>
+        <dt>
           <kbd>1 / 2 / 3 / 4 / 5</kbd>
         </dt>
         <dd>Normal / laser / pen / eraser / spotlight mode (Presenter View)</dd>
@@ -142,7 +146,7 @@ const ShortcutDialog = (props: {
         <dt>
           <kbd>Esc</kbd>
         </dt>
-        <dd>Close dialogs or leave the active tool</dd>
+        <dd>Clear freeze, zoom, and the active tool</dd>
       </dl>
       <form method="dialog">
         <button>Close</button>
@@ -215,6 +219,8 @@ const App = () => {
     setDrawings,
     drawingsHidden,
     setDrawingsHidden,
+    frozenPage,
+    setFrozenPage,
     pointer,
     setPointer,
     zoom,
@@ -362,6 +368,11 @@ const App = () => {
   let pointerHideTimeout: number;
 
   const toggleBlackout = () => setIsBlackout((value) => !value);
+
+  const stagePage = () => frozenPage() ?? currentPage();
+
+  const toggleFreeze = () =>
+    setFrozenPage((page) => (page === null ? currentPage() : null));
 
   const pointerForPage = (page: number) => {
     const value = pointer();
@@ -583,6 +594,7 @@ const App = () => {
       (!isPresenterMode &&
         (action === "start-timer" ||
           action === "toggle-timer" ||
+          action === "toggle-freeze" ||
           action === "toggle-drawings" ||
           action === "clear-drawings" ||
           action === "undo-drawing" ||
@@ -595,7 +607,7 @@ const App = () => {
     ) {
       return;
     }
-    event.preventDefault();
+    if (action !== "reset-view") event.preventDefault();
 
     switch (action) {
       case "previous":
@@ -617,6 +629,9 @@ const App = () => {
       }
       case "blackout":
         toggleBlackout();
+        break;
+      case "toggle-freeze":
+        toggleFreeze();
         break;
       case "start-timer":
         if (typeof timerStartedAt() !== "number") startTimer();
@@ -660,6 +675,13 @@ const App = () => {
       case "spotlight-mode":
         selectInputMode("spotlight");
         break;
+      case "reset-view":
+        batch(() => {
+          setFrozenPage(null);
+          setZoom(null);
+          selectInputMode("normal");
+        });
+        break;
     }
   };
 
@@ -692,7 +714,7 @@ const App = () => {
   createEffect(() => {
     const deck = metadata();
     document.title = deck
-      ? `${pageLabel(deck, currentPage())}${deck.title ? ` — ${deck.title}` : ""} — typdeck ${isPresenterMode ? "Presenter" : "Stage"}`
+      ? `${pageLabel(deck, isPresenterMode ? currentPage() : stagePage())}${deck.title ? ` — ${deck.title}` : ""} — typdeck ${isPresenterMode ? "Presenter" : "Stage"}`
       : "typdeck";
   });
 
@@ -837,11 +859,11 @@ const App = () => {
                   >
                     <PdfSlide
                       document={document()}
-                      page={currentPage()}
-                      label={pageLabel(metadata()!, currentPage())}
-                      pointer={pointerForPage(currentPage())}
-                      zoom={zoomForPage(currentPage())}
-                      drawings={visibleDrawingsForPage(currentPage())}
+                      page={stagePage()}
+                      label={pageLabel(metadata()!, stagePage())}
+                      pointer={pointerForPage(stagePage())}
+                      zoom={zoomForPage(stagePage())}
+                      drawings={visibleDrawingsForPage(stagePage())}
                       onNavigate={setCurrentPage}
                     />
                   </div>
@@ -914,8 +936,9 @@ const App = () => {
                   }}
                 >
                   {metadata()
-                    ? presentationPositionLabel(metadata()!, currentPage())
+                    ? presentationPositionLabel(metadata()!, stagePage())
                     : ""}
+                  {frozenPage() === null ? "" : " (frozen)"}
                 </span>
                 <button
                   class="icon-button"
@@ -1397,6 +1420,18 @@ const App = () => {
                 <MenuIcon
                   icon={isBlackout() ? "lucide:monitor" : "lucide:monitor-x"}
                 />
+              </button>
+              <button
+                class="icon-button"
+                onClick={toggleFreeze}
+                aria-label="Freeze stage"
+                aria-pressed={frozenPage() !== null}
+                data-tooltip={
+                  frozenPage() === null ? "Freeze stage" : "Unfreeze stage"
+                }
+                style={{ height: "32px" }}
+              >
+                <MenuIcon icon="lucide:panels-top-left" />
               </button>
               <button
                 class="icon-button"

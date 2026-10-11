@@ -90,6 +90,8 @@ export const actionForKey = ({
       return shiftKey ? undefined : "start-timer";
     case "KeyB":
       return "blackout";
+    case "KeyF":
+      return shiftKey ? "toggle-freeze" : undefined;
     case "KeyD":
       return shiftKey ? undefined : "toggle-drawings";
     case "KeyC":
@@ -110,7 +112,7 @@ export const actionForKey = ({
     case "Numpad5":
       return shiftKey ? undefined : "spotlight-mode";
     case "Escape":
-      return "normal-mode";
+      return "reset-view";
     case "KeyO":
       return shiftKey ? undefined : "overview";
     case "Slash":

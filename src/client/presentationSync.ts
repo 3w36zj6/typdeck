@@ -61,6 +61,7 @@ const SlideStateSchema = v.object({
   currentPage: v.pipe(v.number(), v.integer(), v.minValue(1)),
   drawings: v.array(DrawingSchema),
   drawingsHidden: v.boolean(),
+  frozenPage: v.nullable(v.pipe(v.number(), v.integer(), v.minValue(1))),
   pointer: PointerSchema,
   zoom: ZoomSchema,
 });
@@ -120,6 +121,7 @@ export const shouldBroadcastState = (
   received.currentPage !== current.currentPage ||
   !sameDrawings(received.drawings, current.drawings) ||
   received.drawingsHidden !== current.drawingsHidden ||
+  received.frozenPage !== current.frozenPage ||
   !samePointer(received.pointer, current.pointer) ||
   !sameZoom(received.zoom, current.zoom);
 
@@ -138,6 +140,7 @@ export const createPresentationSync = (
     equals: sameDrawings,
   });
   const [drawingsHidden, setDrawingsHidden] = createSignal(false);
+  const [frozenPage, setFrozenPage] = createSignal<number | null>(null);
   const [pointer, setPointer] = createSignal<SlidePointer | null>(null, {
     equals: samePointer,
   });
@@ -153,6 +156,7 @@ export const createPresentationSync = (
     currentPage: currentPage(),
     drawings: drawings(),
     drawingsHidden: drawingsHidden(),
+    frozenPage: frozenPage(),
     pointer: pointer(),
     zoom: zoom(),
   });
@@ -171,6 +175,7 @@ export const createPresentationSync = (
     const pages = pageCount() ?? 0;
     if (
       state.currentPage > pages ||
+      (state.frozenPage !== null && state.frozenPage > pages) ||
       (state.activeDrawing !== null && state.activeDrawing.page > pages) ||
       state.drawings.some(({ page }) => page > pages) ||
       (state.pointer !== null && state.pointer.page > pages) ||
@@ -185,6 +190,7 @@ export const createPresentationSync = (
       setIsBlackout(state.blackout);
       setDrawings(state.drawings);
       setDrawingsHidden(state.drawingsHidden);
+      setFrozenPage(state.frozenPage);
       setPointer(state.pointer);
       setZoom(state.zoom);
     });
@@ -198,6 +204,7 @@ export const createPresentationSync = (
         isBlackout,
         drawings,
         drawingsHidden,
+        frozenPage,
         pointer,
         zoom,
       ],
@@ -233,6 +240,8 @@ export const createPresentationSync = (
     setDrawings,
     drawingsHidden,
     setDrawingsHidden,
+    frozenPage,
+    setFrozenPage,
     pointer,
     setPointer,
     zoom,

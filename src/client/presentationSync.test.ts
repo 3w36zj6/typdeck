@@ -49,6 +49,7 @@ const syncedState = {
     },
   ],
   drawingsHidden: true,
+  frozenPage: 1,
   pointer: { kind: "laser" as const, page: 2, x: 0.25, y: 0.75 },
   zoom: { page: 2, x: 0.1, y: 0.2, width: 0.5, height: 0.6 },
 };
@@ -74,6 +75,7 @@ describe("createPresentationSync", () => {
     expect(sync.activeDrawing()).toBeNull();
     expect(sync.drawings()).toEqual([]);
     expect(sync.drawingsHidden()).toBe(false);
+    expect(sync.frozenPage()).toBeNull();
     expect(sync.pointer()).toBeNull();
     expect(sync.zoom()).toBeNull();
 
@@ -87,6 +89,7 @@ describe("createPresentationSync", () => {
     expect(sync.activeDrawing()?.kind).toBe("pen");
     expect(sync.drawings()).toHaveLength(1);
     expect(sync.drawingsHidden()).toBe(true);
+    expect(sync.frozenPage()).toBe(1);
     expect(sync.pointer()).toEqual({
       kind: "laser",
       page: 2,
@@ -100,6 +103,10 @@ describe("createPresentationSync", () => {
     channel.dispatch({
       type: "state",
       state: { ...syncedState, currentPage: 3 },
+    });
+    channel.dispatch({
+      type: "state",
+      state: { ...syncedState, frozenPage: 3 },
     });
     channel.dispatch({
       type: "state",
@@ -155,6 +162,7 @@ describe("shouldBroadcastState", () => {
     currentPage: 1,
     drawings: [],
     drawingsHidden: false,
+    frozenPage: null,
     pointer: { kind: "laser" as const, page: 1, x: 0.5, y: 0.5 },
     zoom: null,
   };
@@ -167,6 +175,12 @@ describe("shouldBroadcastState", () => {
       shouldBroadcastState(state, {
         ...state,
         pointer: { ...state.pointer, x: 0.75 },
+      }),
+    ).toBe(true);
+    expect(
+      shouldBroadcastState(state, {
+        ...state,
+        frozenPage: 1,
       }),
     ).toBe(true);
     expect(
