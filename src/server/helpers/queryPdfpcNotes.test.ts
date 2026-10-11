@@ -36,4 +36,18 @@ describe("queryPdfpcNotes", () => {
       { page: 3, speakerNotes: "Explain every overlay step." },
     ]);
   });
+
+  it("reads Polylux speaker notes on every overlay", async () => {
+    const root = process.cwd();
+    await expect(
+      queryPdfpcNotes(
+        path.join(root, "tests/fixtures/polylux-overlay.typ"),
+        root,
+      ),
+    ).resolves.toEqual([
+      { page: 1, speakerNotes: "Explain every overlay step." },
+      { page: 2, speakerNotes: "Explain every overlay step." },
+      { page: 3, speakerNotes: "Explain every overlay step." },
+    ]);
+  });
 });
