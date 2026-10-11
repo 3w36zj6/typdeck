@@ -1,4 +1,5 @@
 import {
+  batch,
   createEffect,
   createMemo,
   createResource,
@@ -18,7 +19,9 @@ import {
   formatRemainingTime,
   nextPreviewPage,
   pageLabel,
+  presentationDurationMinutes,
   presentationPositionLabel,
+  presentationStartAt,
   previousPresentationPage,
   remainingSeconds,
   savedSlidePage,
@@ -143,12 +146,26 @@ const App = () => {
       urlParams.has("blackout"),
       () => metadata()?.pageCount,
     );
-  const [elapsedSeconds, setElapsedSeconds] = createSignal(0);
+  const [currentTime, setCurrentTime] = createSignal(Date.now());
+  const [timerTime, setTimerTime] = createSignal(performance.now());
+  const [elapsedMilliseconds, setElapsedMilliseconds] = createSignal(0);
+  const [timerStartedAt, setTimerStartedAt] = createSignal<number>();
+  const [scheduledStartAt, setScheduledStartAt] = createSignal<number>();
+  const elapsedSeconds = createMemo(() => {
+    const startedAt = timerStartedAt();
+    return Math.floor(
+      (elapsedMilliseconds() +
+        (startedAt === undefined ? 0 : Math.max(0, timerTime() - startedAt))) /
+        1000,
+    );
+  });
   const remainingTime = createMemo(() => {
-    const duration = metadata()?.durationMinutes;
+    const deck = metadata();
+    if (!deck) return;
+    const duration = presentationDurationMinutes(deck);
     if (duration === undefined) return;
     const seconds = remainingSeconds(duration, elapsedSeconds());
-    const lastMinutes = metadata()?.lastMinutes;
+    const lastMinutes = deck.lastMinutes;
     return {
       seconds,
       warning: lastMinutes !== undefined && seconds <= lastMinutes * 60,
@@ -158,8 +175,18 @@ const App = () => {
   const setShortcutDialog = (dialog: HTMLDialogElement) => {
     shortcutDialog = dialog;
   };
+  const startTimer = (elapsedBeforeStart = 0) => {
+    const wallTime = Date.now();
+    const now = performance.now();
+    batch(() => {
+      setCurrentTime(wallTime);
+      setTimerTime(now);
+      setElapsedMilliseconds(elapsedBeforeStart);
+      setTimerStartedAt(now);
+    });
+  };
   const resetElapsedSeconds = () => {
-    setElapsedSeconds(0);
+    if (timerStartedAt() !== undefined) startTimer();
   };
   const [isMenuVisible, setIsMenuVisible] = createSignal(true);
   let hideMenuTimeout: number;
@@ -271,6 +298,43 @@ const App = () => {
       : "typdeck";
   });
 
+  let timerInitialized = !isPresenterMode;
+  createEffect(() => {
+    const deck = metadata();
+    if (!deck || timerInitialized) return;
+    timerInitialized = true;
+    const now = Date.now();
+    const startAt = presentationStartAt(deck, now);
+    setCurrentTime(now);
+    setScheduledStartAt(startAt);
+    if (startAt === undefined || startAt <= now) {
+      startTimer(startAt === undefined ? 0 : now - startAt);
+    }
+  });
+
+  createEffect(() => {
+    const startAt = scheduledStartAt();
+    if (
+      startAt !== undefined &&
+      timerStartedAt() === undefined &&
+      currentTime() >= startAt
+    ) {
+      startTimer(currentTime() - startAt);
+    }
+  });
+
+  createEffect(() => {
+    const deck = metadata();
+    if (
+      !deck ||
+      scheduledStartAt() === undefined ||
+      timerStartedAt() !== undefined
+    ) {
+      return;
+    }
+    if (currentPage() !== adjacentVisiblePage(deck, 0, 1)) startTimer();
+  });
+
   onMount(() => {
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("mousemove", showMenu);
@@ -278,7 +342,10 @@ const App = () => {
 
     if (isPresenterMode) {
       const intervalId = window.setInterval(() => {
-        setElapsedSeconds((prev) => prev + 1);
+        batch(() => {
+          setCurrentTime(Date.now());
+          setTimerTime(performance.now());
+        });
       }, 1000);
       onCleanup(() => {
         window.clearInterval(intervalId);
@@ -623,16 +690,39 @@ const App = () => {
                 }}
               />
 
-              <div
-                role="timer"
-                aria-label="Elapsed time"
-                style={{
-                  "font-size": "32px",
-                }}
+              <Show
+                when={timerStartedAt() === undefined && scheduledStartAt()}
+                fallback={
+                  <div
+                    role="timer"
+                    aria-label="Elapsed time"
+                    style={{ "font-size": "32px" }}
+                  >
+                    {formatElapsedTime(elapsedSeconds())}
+                  </div>
+                }
               >
-                {formatElapsedTime(elapsedSeconds())}
-              </div>
-              <Show when={remainingTime()}>
+                {(startAt) => (
+                  <div
+                    role="timer"
+                    aria-label="Time until scheduled start"
+                    style={{ "font-size": "32px" }}
+                  >
+                    Starts in{" "}
+                    {formatElapsedTime(
+                      Math.max(
+                        0,
+                        Math.ceil((startAt() - currentTime()) / 1000),
+                      ),
+                    )}
+                  </div>
+                )}
+              </Show>
+              <Show
+                when={
+                  timerStartedAt() !== undefined ? remainingTime() : undefined
+                }
+              >
                 {(remaining) => (
                   <div
                     role="timer"
@@ -661,10 +751,26 @@ const App = () => {
                 )}
               </Show>
               <IconSeparator />
+              <Show
+                when={
+                  timerStartedAt() === undefined &&
+                  scheduledStartAt() !== undefined
+                }
+              >
+                <button
+                  class="icon-button"
+                  onClick={() => startTimer()}
+                  aria-label="Start timer"
+                  style={{ height: "32px" }}
+                >
+                  <MenuIcon icon="lucide:play" />
+                </button>
+              </Show>
               <button
                 class="icon-button"
                 onClick={resetElapsedSeconds}
                 aria-label="Reset timer"
+                disabled={timerStartedAt() === undefined}
                 style={{ height: "32px" }}
               >
                 <MenuIcon icon="lucide:timer-reset" />
