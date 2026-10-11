@@ -32,6 +32,7 @@ import {
   type DrawingStroke,
   type SlidePoint,
   type SlidePointer,
+  type SlideRect,
 } from "./presentation";
 import { createPresentationSync } from "./presentationSync";
 import {
@@ -216,6 +217,8 @@ const App = () => {
     setDrawingsHidden,
     pointer,
     setPointer,
+    zoom,
+    setZoom,
   } = createPresentationSync(
     pageFromHash(window.location.hash),
     urlParams.has("blackout"),
@@ -227,6 +230,7 @@ const App = () => {
   const [drawingTool, setDrawingTool] = createSignal<
     "none" | DrawingStroke["kind"]
   >("none");
+  const [isSelectingZoom, setIsSelectingZoom] = createSignal(false);
   const [penColor, setPenColor] = createSignal("#ff2222");
   const [redoStrokes, setRedoStrokes] = createSignal<DrawingStroke[]>([]);
   const [currentTime, setCurrentTime] = createSignal(Date.now());
@@ -364,6 +368,11 @@ const App = () => {
     return value?.page === page ? value : undefined;
   };
 
+  const zoomForPage = (page: number) => {
+    const value = zoom();
+    return value?.page === page ? value : undefined;
+  };
+
   const updatePointer = (point: SlidePoint | undefined) => {
     window.clearTimeout(pointerHideTimeout);
     const kind = pointerMode();
@@ -385,12 +394,14 @@ const App = () => {
   };
 
   const selectInputMode = (
-    mode: "normal" | SlidePointer["kind"] | DrawingStroke["kind"],
+    mode: "normal" | "zoom" | SlidePointer["kind"] | DrawingStroke["kind"],
   ) => {
     endDrawing(false);
     setPointer(null);
+    setZoom(null);
     setPointerMode(mode === "laser" || mode === "spotlight" ? mode : "none");
     setDrawingTool(mode === "pen" || mode === "eraser" ? mode : "none");
+    setIsSelectingZoom(mode === "zoom");
   };
 
   const togglePointer = (kind: SlidePointer["kind"]) => {
@@ -467,6 +478,21 @@ const App = () => {
 
   const toggleDrawing = (tool: DrawingStroke["kind"]) => {
     selectInputMode(drawingTool() === tool ? "normal" : tool);
+  };
+
+  const toggleZoom = () => {
+    if (zoom()) {
+      setZoom(null);
+      return;
+    }
+    selectInputMode(isSelectingZoom() ? "normal" : "zoom");
+  };
+
+  const applyZoom = (rect: SlideRect) => {
+    batch(() => {
+      setZoom({ ...rect, page: currentPage() });
+      setIsSelectingZoom(false);
+    });
   };
 
   const showMenu = () => {
@@ -656,6 +682,8 @@ const App = () => {
       currentPage,
       () => {
         if (isPresenterMode) endDrawing(false);
+        setZoom(null);
+        setIsSelectingZoom(false);
       },
       { defer: true },
     ),
@@ -812,6 +840,7 @@ const App = () => {
                       page={currentPage()}
                       label={pageLabel(metadata()!, currentPage())}
                       pointer={pointerForPage(currentPage())}
+                      zoom={zoomForPage(currentPage())}
                       drawings={visibleDrawingsForPage(currentPage())}
                       onNavigate={setCurrentPage}
                     />
@@ -1056,6 +1085,7 @@ const App = () => {
                         currentPage(),
                       )}`}
                       pointer={pointerForPage(currentPage())}
+                      zoom={zoomForPage(currentPage())}
                       drawings={visibleDrawingsForPage(currentPage())}
                       onNavigate={setCurrentPage}
                       onPointerMove={
@@ -1068,6 +1098,7 @@ const App = () => {
                         drawingTool() === "none" ? undefined : continueDrawing
                       }
                       onDrawEnd={endDrawing}
+                      onSelectZoom={isSelectingZoom() ? applyZoom : undefined}
                     />
                   </div>
                   <div
@@ -1394,6 +1425,30 @@ const App = () => {
                 style={{ height: "32px" }}
               >
                 <MenuIcon icon="lucide:scan" />
+              </button>
+              <button
+                class="icon-button"
+                onClick={toggleZoom}
+                aria-label={
+                  zoom()
+                    ? "Reset zoom"
+                    : isSelectingZoom()
+                      ? "Cancel zoom selection"
+                      : "Select zoom area"
+                }
+                aria-pressed={zoom() !== null || isSelectingZoom()}
+                data-tooltip={
+                  zoom()
+                    ? "Reset zoom"
+                    : isSelectingZoom()
+                      ? "Cancel zoom selection"
+                      : "Select zoom area"
+                }
+                style={{ height: "32px" }}
+              >
+                <MenuIcon
+                  icon={zoom() ? "lucide:zoom-out" : "lucide:scan-search"}
+                />
               </button>
               <button
                 class="icon-button"

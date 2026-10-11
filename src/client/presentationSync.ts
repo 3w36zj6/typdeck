@@ -8,7 +8,7 @@ import {
   onCleanup,
 } from "solid-js";
 import * as v from "valibot";
-import type { DrawingStroke, SlidePointer } from "./presentation";
+import type { DrawingStroke, SlidePointer, SlideZoom } from "./presentation";
 
 const PointSchema = v.object({
   x: v.pipe(v.number(), v.minValue(0), v.maxValue(1)),
@@ -22,6 +22,25 @@ const PointerSchema = v.nullable(
     x: v.pipe(v.number(), v.minValue(0), v.maxValue(1)),
     y: v.pipe(v.number(), v.minValue(0), v.maxValue(1)),
   }),
+);
+const ZoomSchema = v.nullable(
+  v.pipe(
+    v.object({
+      page: v.pipe(v.number(), v.integer(), v.minValue(1)),
+      x: v.pipe(v.number(), v.minValue(0), v.maxValue(1)),
+      y: v.pipe(v.number(), v.minValue(0), v.maxValue(1)),
+      width: v.pipe(v.number(), v.minValue(0), v.maxValue(1)),
+      height: v.pipe(v.number(), v.minValue(0), v.maxValue(1)),
+    }),
+    v.check(
+      ({ x, y, width, height }) =>
+        width > 0 &&
+        height > 0 &&
+        x + width <= 1 + Number.EPSILON &&
+        y + height <= 1 + Number.EPSILON,
+      "Zoom rectangle must fit within the page",
+    ),
+  ),
 );
 const DrawingEntries = {
   page: v.pipe(v.number(), v.integer(), v.minValue(1)),
@@ -43,6 +62,7 @@ const SlideStateSchema = v.object({
   drawings: v.array(DrawingSchema),
   drawingsHidden: v.boolean(),
   pointer: PointerSchema,
+  zoom: ZoomSchema,
 });
 const ChannelMessageSchema = v.variant("type", [
   v.object({ type: v.literal("request-state") }),
@@ -57,6 +77,16 @@ const samePointer = (left: SlidePointer | null, right: SlidePointer | null) =>
     left.page === right.page &&
     left.x === right.x &&
     left.y === right.y);
+
+const sameZoom = (left: SlideZoom | null, right: SlideZoom | null) =>
+  left === right ||
+  (left !== null &&
+    right !== null &&
+    left.page === right.page &&
+    left.x === right.x &&
+    left.y === right.y &&
+    left.width === right.width &&
+    left.height === right.height);
 
 const sameDrawing = (left: DrawingStroke | null, right: DrawingStroke | null) =>
   left === right ||
@@ -90,7 +120,8 @@ export const shouldBroadcastState = (
   received.currentPage !== current.currentPage ||
   !sameDrawings(received.drawings, current.drawings) ||
   received.drawingsHidden !== current.drawingsHidden ||
-  !samePointer(received.pointer, current.pointer);
+  !samePointer(received.pointer, current.pointer) ||
+  !sameZoom(received.zoom, current.zoom);
 
 export const createPresentationSync = (
   initialPage: number,
@@ -110,6 +141,9 @@ export const createPresentationSync = (
   const [pointer, setPointer] = createSignal<SlidePointer | null>(null, {
     equals: samePointer,
   });
+  const [zoom, setZoom] = createSignal<SlideZoom | null>(null, {
+    equals: sameZoom,
+  });
   const channel = new BroadcastChannel(`typdeck:${location.pathname}`);
   let receivedState: SlideState | undefined;
 
@@ -120,6 +154,7 @@ export const createPresentationSync = (
     drawings: drawings(),
     drawingsHidden: drawingsHidden(),
     pointer: pointer(),
+    zoom: zoom(),
   });
   const postState = () =>
     channel.postMessage({ type: "state", state: currentState() });
@@ -138,7 +173,8 @@ export const createPresentationSync = (
       state.currentPage > pages ||
       (state.activeDrawing !== null && state.activeDrawing.page > pages) ||
       state.drawings.some(({ page }) => page > pages) ||
-      (state.pointer !== null && state.pointer.page > pages)
+      (state.pointer !== null && state.pointer.page > pages) ||
+      (state.zoom !== null && state.zoom.page > pages)
     ) {
       return;
     }
@@ -150,6 +186,7 @@ export const createPresentationSync = (
       setDrawings(state.drawings);
       setDrawingsHidden(state.drawingsHidden);
       setPointer(state.pointer);
+      setZoom(state.zoom);
     });
   };
 
@@ -162,6 +199,7 @@ export const createPresentationSync = (
         drawings,
         drawingsHidden,
         pointer,
+        zoom,
       ],
       () => {
         const state = currentState();
@@ -197,5 +235,7 @@ export const createPresentationSync = (
     setDrawingsHidden,
     pointer,
     setPointer,
+    zoom,
+    setZoom,
   };
 };

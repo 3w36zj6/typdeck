@@ -19,7 +19,18 @@ import {
   previousPresentationPage,
   remainingSeconds,
   savedSlidePage,
+  slideRectFromPoints,
 } from "./presentation";
+
+describe("slideRectFromPoints", () => {
+  it("normalizes a drag in either direction", () => {
+    const rect = slideRectFromPoints({ x: 0.8, y: 0.7 }, { x: 0.2, y: 0.3 });
+    expect(rect.x).toBe(0.2);
+    expect(rect.y).toBe(0.3);
+    expect(rect.width).toBeCloseTo(0.6);
+    expect(rect.height).toBeCloseTo(0.4);
+  });
+});
 
 const metadata: Metadata = {
   pageCount: 3,

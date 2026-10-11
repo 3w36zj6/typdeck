@@ -123,6 +123,20 @@ button {
   pointer-events: none;
 }
 
+.zoom-selection-layer {
+  position: absolute;
+  z-index: 3;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.zoom-selection-layer > div {
+  position: absolute;
+  box-sizing: border-box;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 100vmax rgb(0 0 0 / 45%);
+}
+
 .drawing-layer {
   position: absolute;
   z-index: 1;

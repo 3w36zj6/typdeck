@@ -3,6 +3,7 @@ import {
   createSignal,
   createUniqueId,
   For,
+  on,
   onCleanup,
   Show,
   untrack,
@@ -17,9 +18,12 @@ import {
 import "pdfjs-dist/web/pdf_viewer.css";
 import {
   drawingLayers,
+  slideRectFromPoints,
   type DrawingStroke,
+  type SlideRect,
   type SlidePoint,
   type SlidePointer,
+  type SlideZoom,
 } from "./presentation";
 
 type PdfSlideProps = {
@@ -28,15 +32,19 @@ type PdfSlideProps = {
   label: string;
   opacity?: number;
   pointer?: SlidePointer;
+  zoom?: SlideZoom;
   drawings?: DrawingStroke[];
   onNavigate?: (page: number) => void;
   onPointerMove?: (point: SlidePoint | undefined) => void;
   onDrawStart?: (point: SlidePoint) => void;
   onDrawMove?: (points: SlidePoint[]) => void;
   onDrawEnd?: (commit: boolean) => void;
+  onSelectZoom?: (rect: SlideRect) => void;
 };
 
 const PDF_TO_CSS_UNITS = 96 / 72;
+// ponytail: Keep PDF canvases bounded; tiled rendering is required before deeper zoom.
+const MAX_ZOOM = 4;
 
 export const PdfSlide = (props: PdfSlideProps) => {
   const drawingMask = createUniqueId();
@@ -45,18 +53,18 @@ export const PdfSlide = (props: PdfSlideProps) => {
   let pointerDot!: HTMLSpanElement;
   let spotlightLayer!: HTMLDivElement;
   let drawingLayer!: SVGSVGElement;
+  let selectionLayer!: HTMLDivElement;
   let displayedView: PDFPageView | undefined;
   let displayedPage: number | undefined;
+  let requestedPage = 0;
+  let requestRender = () => {};
   const [error, setError] = createSignal<string>();
+  const [selectionStart, setSelectionStart] = createSignal<SlidePoint>();
+  const [selection, setSelection] = createSignal<SlideRect>();
 
-  const currentPageElement = (page: number) =>
-    displayedPage === page ? displayedView?.div : undefined;
-
-  const positionPageOverlay = (
-    element: HTMLElement | SVGSVGElement,
-    pageNumber: number,
-  ) => {
-    const page = currentPageElement(pageNumber);
+  const positionPageOverlay = (element: HTMLElement | SVGSVGElement) => {
+    const page =
+      displayedPage === requestedPage ? displayedView?.div : undefined;
     if (!page) return false;
     const hostRect = host.getBoundingClientRect();
     const pageRect = page.getBoundingClientRect();
@@ -67,16 +75,14 @@ export const PdfSlide = (props: PdfSlideProps) => {
     return true;
   };
 
-  const positionPointer = (
-    pointer: SlidePointer | undefined,
-    pageNumber: number,
-  ) => {
-    const page = currentPageElement(pageNumber);
+  const positionPointer = (pointer: SlidePointer | undefined) => {
+    const page =
+      displayedPage === requestedPage ? displayedView?.div : undefined;
     pointerDot.hidden = !pointer || pointer.kind !== "laser" || !page;
     spotlightLayer.hidden =
       !pointer ||
       pointer.kind !== "spotlight" ||
-      !positionPageOverlay(spotlightLayer, pageNumber);
+      !positionPageOverlay(spotlightLayer);
     if (!pointer || !page) return;
 
     const hostRect = host.getBoundingClientRect();
@@ -91,14 +97,20 @@ export const PdfSlide = (props: PdfSlideProps) => {
     spotlightLayer.style.background = `radial-gradient(circle ${radius}px at ${pointer.x * 100}% ${pointer.y * 100}%, transparent 70%, rgb(0 0 0 / 78%) 100%)`;
   };
 
-  const positionDrawingLayer = (pageNumber: number) => {
-    drawingLayer.style.display = positionPageOverlay(drawingLayer, pageNumber)
+  const positionDrawingLayer = () => {
+    drawingLayer.style.display = positionPageOverlay(drawingLayer)
       ? ""
       : "none";
   };
 
+  const positionSelectionLayer = (rect: SlideRect | undefined) => {
+    selectionLayer.style.display =
+      rect && positionPageOverlay(selectionLayer) ? "" : "none";
+  };
+
   const pointFromEvent = (event: PointerEvent): SlidePoint | undefined => {
-    const page = currentPageElement(props.page);
+    const page =
+      displayedPage === requestedPage ? displayedView?.div : undefined;
     if (!page) return;
     const rect = page.getBoundingClientRect();
     const x = (event.clientX - rect.left) / rect.width;
@@ -107,6 +119,13 @@ export const PdfSlide = (props: PdfSlideProps) => {
   };
 
   const handlePointerMove = (event: PointerEvent) => {
+    const point = pointFromEvent(event);
+    const start = selectionStart();
+    if (start && host.hasPointerCapture(event.pointerId)) {
+      event.preventDefault();
+      if (point) setSelection(slideRectFromPoints(start, point));
+      return;
+    }
     if (props.onDrawMove && host.hasPointerCapture(event.pointerId)) {
       event.preventDefault();
       const events = event.getCoalescedEvents?.() ?? [];
@@ -117,13 +136,20 @@ export const PdfSlide = (props: PdfSlideProps) => {
       if (points.length) props.onDrawMove(points);
       return;
     }
-    props.onPointerMove?.(pointFromEvent(event));
+    props.onPointerMove?.(point);
   };
 
   const handlePointerDown = (event: PointerEvent) => {
     const point = pointFromEvent(event);
-    if (!props.onDrawStart || !event.isPrimary || event.button !== 0 || !point)
+    if (!event.isPrimary || event.button !== 0 || !point) return;
+    if (props.onSelectZoom) {
+      event.preventDefault();
+      host.setPointerCapture(event.pointerId);
+      setSelectionStart(point);
+      setSelection({ ...point, width: 0, height: 0 });
       return;
+    }
+    if (!props.onDrawStart) return;
     event.preventDefault();
     host.setPointerCapture(event.pointerId);
     props.onDrawStart(point);
@@ -132,12 +158,48 @@ export const PdfSlide = (props: PdfSlideProps) => {
   const handlePointerEnd = (event: PointerEvent, commit = true) => {
     if (!host.hasPointerCapture(event.pointerId)) return;
     host.releasePointerCapture(event.pointerId);
-    props.onDrawEnd?.(commit);
+    const rect = selection();
+    if (selectionStart()) {
+      setSelectionStart(undefined);
+      setSelection(undefined);
+      if (commit && rect && rect.width >= 0.05 && rect.height >= 0.05) {
+        props.onSelectZoom?.(rect);
+      }
+    } else {
+      props.onDrawEnd?.(commit);
+    }
   };
 
   createEffect(() => {
-    positionPointer(props.pointer, props.page);
-    positionDrawingLayer(props.page);
+    requestedPage = props.page;
+    viewer.inert = displayedPage !== requestedPage;
+    positionPointer(props.pointer);
+    positionDrawingLayer();
+    positionSelectionLayer(selection());
+  });
+
+  createEffect(
+    on(
+      () => props.zoom,
+      () => requestRender(),
+    ),
+  );
+
+  createEffect(
+    on(
+      () => props.page,
+      () => {
+        setSelectionStart(undefined);
+        setSelection(undefined);
+      },
+      { defer: true },
+    ),
+  );
+
+  createEffect(() => {
+    if (props.onSelectZoom) return;
+    setSelectionStart(undefined);
+    setSelection(undefined);
   });
 
   createEffect(() => {
@@ -180,15 +242,30 @@ export const PdfSlide = (props: PdfSlideProps) => {
           frame = window.requestAnimationFrame(() => {
             if (disposed || host.clientWidth === 0 || host.clientHeight === 0)
               return;
-            positionPointer(
-              untrack(() => props.pointer),
-              pageNumber,
-            );
-            positionDrawingLayer(pageNumber);
-            const scale = Math.min(
+            positionPointer(untrack(() => props.pointer));
+            positionDrawingLayer();
+            positionSelectionLayer(untrack(selection));
+            const fitScale = Math.min(
               host.clientWidth / baseViewport.width / PDF_TO_CSS_UNITS,
               host.clientHeight / baseViewport.height / PDF_TO_CSS_UNITS,
             );
+            const zoom = untrack(() => props.zoom);
+            const scale = zoom
+              ? Math.min(
+                  fitScale * MAX_ZOOM,
+                  host.clientWidth /
+                    baseViewport.width /
+                    zoom.width /
+                    PDF_TO_CSS_UNITS,
+                  host.clientHeight /
+                    baseViewport.height /
+                    zoom.height /
+                    PDF_TO_CSS_UNITS,
+                )
+              : fitScale;
+            viewer.style.transform = zoom
+              ? `translate(${(0.5 - zoom.x - zoom.width / 2) * baseViewport.width * scale * PDF_TO_CSS_UNITS}px, ${(0.5 - zoom.y - zoom.height / 2) * baseViewport.height * scale * PDF_TO_CSS_UNITS}px)`
+              : "";
             if (Math.abs(scale - renderedScale) < 0.001) return;
             renderedScale = scale;
 
@@ -215,14 +292,13 @@ export const PdfSlide = (props: PdfSlideProps) => {
                   const previousView = displayedView;
                   displayedView = nextView;
                   displayedPage = pageNumber;
+                  viewer.inert = false;
                   pendingView = undefined;
                   viewer.replaceChildren(nextView.div);
                   previousView?.destroy();
-                  positionPointer(
-                    untrack(() => props.pointer),
-                    pageNumber,
-                  );
-                  positionDrawingLayer(pageNumber);
+                  positionPointer(untrack(() => props.pointer));
+                  positionDrawingLayer();
+                  positionSelectionLayer(untrack(selection));
                 }
               },
               (cause: unknown) => {
@@ -246,6 +322,7 @@ export const PdfSlide = (props: PdfSlideProps) => {
 
         observer = new ResizeObserver(render);
         observer.observe(host);
+        requestRender = render;
         render();
       })
       .catch(() => {
@@ -255,6 +332,7 @@ export const PdfSlide = (props: PdfSlideProps) => {
     onCleanup(() => {
       disposed = true;
       observer?.disconnect();
+      requestRender = () => {};
       window.cancelAnimationFrame(frame);
       pendingView?.destroy();
       pendingView?.div.remove();
@@ -278,9 +356,13 @@ export const PdfSlide = (props: PdfSlideProps) => {
         opacity: props.opacity ?? 1,
         position: "relative",
         cursor:
-          props.onPointerMove || props.onDrawStart ? "crosshair" : undefined,
+          props.onPointerMove || props.onDrawStart || props.onSelectZoom
+            ? "crosshair"
+            : undefined,
         "touch-action":
-          props.onPointerMove || props.onDrawStart ? "none" : "auto",
+          props.onPointerMove || props.onDrawStart || props.onSelectZoom
+            ? "none"
+            : "auto",
       }}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
@@ -314,6 +396,25 @@ export const PdfSlide = (props: PdfSlideProps) => {
         aria-hidden="true"
         hidden
       />
+      <div
+        ref={selectionLayer}
+        class="zoom-selection-layer"
+        aria-hidden="true"
+        style={{ display: "none" }}
+      >
+        <Show when={selection()}>
+          {(rect) => (
+            <div
+              style={{
+                left: `${rect().x * 100}%`,
+                top: `${rect().y * 100}%`,
+                width: `${rect().width * 100}%`,
+                height: `${rect().height * 100}%`,
+              }}
+            />
+          )}
+        </Show>
+      </div>
       <svg
         ref={drawingLayer}
         class="drawing-layer"

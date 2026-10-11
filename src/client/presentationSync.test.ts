@@ -50,6 +50,7 @@ const syncedState = {
   ],
   drawingsHidden: true,
   pointer: { kind: "laser" as const, page: 2, x: 0.25, y: 0.75 },
+  zoom: { page: 2, x: 0.1, y: 0.2, width: 0.5, height: 0.6 },
 };
 
 describe("createPresentationSync", () => {
@@ -74,6 +75,7 @@ describe("createPresentationSync", () => {
     expect(sync.drawings()).toEqual([]);
     expect(sync.drawingsHidden()).toBe(false);
     expect(sync.pointer()).toBeNull();
+    expect(sync.zoom()).toBeNull();
 
     channel.postMessage.mockClear();
     channel.dispatch({
@@ -91,6 +93,7 @@ describe("createPresentationSync", () => {
       x: 0.25,
       y: 0.75,
     });
+    expect(sync.zoom()).toEqual(syncedState.zoom);
     await Promise.resolve();
     expect(channel.postMessage).not.toHaveBeenCalled();
 
@@ -107,6 +110,13 @@ describe("createPresentationSync", () => {
       state: {
         ...syncedState,
         pointer: { kind: "spotlight", page: 3, x: 0.5, y: 0.5 },
+      },
+    });
+    channel.dispatch({
+      type: "state",
+      state: {
+        ...syncedState,
+        zoom: { page: 2, x: 0.8, y: 0.8, width: 0.5, height: 0.5 },
       },
     });
     channel.dispatch({
@@ -146,6 +156,7 @@ describe("shouldBroadcastState", () => {
     drawings: [],
     drawingsHidden: false,
     pointer: { kind: "laser" as const, page: 1, x: 0.5, y: 0.5 },
+    zoom: null,
   };
 
   it("suppresses received state and broadcasts local changes", () => {
@@ -172,6 +183,12 @@ describe("shouldBroadcastState", () => {
             ],
           },
         ],
+      }),
+    ).toBe(true);
+    expect(
+      shouldBroadcastState(state, {
+        ...state,
+        zoom: { page: 1, x: 0.1, y: 0.1, width: 0.5, height: 0.5 },
       }),
     ).toBe(true);
   });

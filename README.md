@@ -77,6 +77,10 @@ typdeck preview
 
 Presenter View provides a laser pointer and spotlight that follow pointer input on the current slide and appear on the Stage.
 
+### Zoom
+
+Presenter View can select a region to enlarge on both displays while preserving the PDF text, links, and document structure.
+
 ### Drawing
 
 Presenter View synchronizes temporary pen and eraser strokes with the Stage. Drawings are shared across overlay steps and are never written to the source.
