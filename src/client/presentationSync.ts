@@ -20,11 +20,13 @@ const PointSchema = v.object({
   x: v.pipe(v.number(), v.minValue(0), v.maxValue(1)),
   y: v.pipe(v.number(), v.minValue(0), v.maxValue(1)),
 });
+const ToolSizeSchema = v.pipe(v.number(), v.minValue(0.5), v.maxValue(3));
 
 const PointerSchema = v.nullable(
   v.object({
     kind: v.picklist(["laser", "spotlight"]),
     page: v.pipe(v.number(), v.integer(), v.minValue(1)),
+    size: ToolSizeSchema,
     x: v.pipe(v.number(), v.minValue(0), v.maxValue(1)),
     y: v.pipe(v.number(), v.minValue(0), v.maxValue(1)),
   }),
@@ -51,6 +53,7 @@ const ZoomSchema = v.nullable(
 const DrawingEntries = {
   page: v.pipe(v.number(), v.integer(), v.minValue(1)),
   points: v.pipe(v.array(PointSchema), v.minLength(2)),
+  size: ToolSizeSchema,
 };
 const DrawingSchema = v.variant("kind", [
   v.object({
@@ -94,6 +97,7 @@ const samePointer = (left: SlidePointer | null, right: SlidePointer | null) =>
     right !== null &&
     left.kind === right.kind &&
     left.page === right.page &&
+    left.size === right.size &&
     left.x === right.x &&
     left.y === right.y);
 
@@ -115,6 +119,7 @@ const sameDrawing = (left: DrawingStroke | null, right: DrawingStroke | null) =>
     (left.kind === "eraser" ||
       (right.kind === "pen" && left.color === right.color)) &&
     left.page === right.page &&
+    left.size === right.size &&
     left.points.length === right.points.length &&
     left.points.every(
       (point, index) =>

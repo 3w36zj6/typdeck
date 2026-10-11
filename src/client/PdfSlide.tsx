@@ -88,12 +88,15 @@ export const PdfSlide = (props: PdfSlideProps) => {
     const hostRect = host.getBoundingClientRect();
     const pageRect = page.getBoundingClientRect();
     if (pointer.kind === "laser") {
+      pointerDot.style.width = `${16 * pointer.size}px`;
+      pointerDot.style.height = `${16 * pointer.size}px`;
       pointerDot.style.left = `${pageRect.left - hostRect.left + pointer.x * pageRect.width}px`;
       pointerDot.style.top = `${pageRect.top - hostRect.top + pointer.y * pageRect.height}px`;
       return;
     }
 
-    const radius = Math.min(pageRect.width, pageRect.height) * 0.1;
+    const radius =
+      Math.min(pageRect.width, pageRect.height) * 0.1 * pointer.size;
     spotlightLayer.style.background = `radial-gradient(circle ${radius}px at ${pointer.x * 100}% ${pointer.y * 100}%, transparent 70%, rgb(0 0 0 / 78%) 100%)`;
   };
 
@@ -446,7 +449,7 @@ export const PdfSlide = (props: PdfSlideProps) => {
                             .join(" ")}
                           fill="none"
                           stroke="black"
-                          stroke-width="24"
+                          stroke-width={24 * eraser.size}
                           stroke-linecap="round"
                           stroke-linejoin="round"
                           vector-effect="non-scaling-stroke"
@@ -462,7 +465,7 @@ export const PdfSlide = (props: PdfSlideProps) => {
                       .join(" ")}
                     fill="none"
                     stroke={stroke.color}
-                    stroke-width="4"
+                    stroke-width={4 * stroke.size}
                     stroke-linecap="round"
                     stroke-linejoin="round"
                     vector-effect="non-scaling-stroke"

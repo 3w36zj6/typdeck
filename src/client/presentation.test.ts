@@ -310,11 +310,13 @@ describe("presentation controls", () => {
       kind: "pen" as const,
       color: "#f00",
       page: 1,
+      size: 1,
       points: [{ x: 0, y: 0 }],
     };
     const eraser = {
       kind: "eraser" as const,
       page: 1,
+      size: 1.5,
       points: [{ x: 0.5, y: 0.5 }],
     };
     const second = { ...first, color: "#0f0" };
@@ -379,6 +381,11 @@ describe("presentation controls", () => {
     ["Escape", false, "reset-view"],
     ["KeyO", false, "overview"],
     ["KeyO", true, undefined],
+    ["Equal", false, "input-larger"],
+    ["Equal", true, "input-larger"],
+    ["NumpadAdd", false, "input-larger"],
+    ["Minus", false, "input-smaller"],
+    ["NumpadSubtract", false, "input-smaller"],
     ["Slash", true, "shortcuts"],
     ["Slash", false, "search"],
   ] as const)("maps %s (shift: %s)", (code, shiftKey, expected) => {

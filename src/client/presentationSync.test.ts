@@ -48,6 +48,7 @@ const syncedState = {
     kind: "pen" as const,
     color: "#ff0000",
     page: 2,
+    size: 1,
     points: [
       { x: 0.25, y: 0.25 },
       { x: 0.5, y: 0.5 },
@@ -60,6 +61,7 @@ const syncedState = {
     {
       kind: "eraser" as const,
       page: 2,
+      size: 1.5,
       points: [
         { x: 0.1, y: 0.1 },
         { x: 0.2, y: 0.2 },
@@ -68,7 +70,13 @@ const syncedState = {
   ],
   drawingsHidden: true,
   frozenPage: 1,
-  pointer: { kind: "laser" as const, page: 2, x: 0.25, y: 0.75 },
+  pointer: {
+    kind: "laser" as const,
+    page: 2,
+    size: 1.25,
+    x: 0.25,
+    y: 0.75,
+  },
   zoom: { page: 2, x: 0.1, y: 0.2, width: 0.5, height: 0.6 },
 };
 
@@ -113,6 +121,7 @@ describe("createPresentationSync", () => {
     expect(sync.pointer()).toEqual({
       kind: "laser",
       page: 2,
+      size: 1.25,
       x: 0.25,
       y: 0.75,
     });
@@ -140,7 +149,13 @@ describe("createPresentationSync", () => {
       type: "state",
       state: {
         ...syncedState,
-        pointer: { kind: "spotlight", page: 3, x: 0.5, y: 0.5 },
+        pointer: {
+          kind: "spotlight",
+          page: 2,
+          size: 4,
+          x: 0.5,
+          y: 0.5,
+        },
       },
     });
     channel.dispatch({
@@ -334,7 +349,13 @@ describe("shouldBroadcastState", () => {
     drawings: [],
     drawingsHidden: false,
     frozenPage: null,
-    pointer: { kind: "laser" as const, page: 1, x: 0.5, y: 0.5 },
+    pointer: {
+      kind: "laser" as const,
+      page: 1,
+      size: 1,
+      x: 0.5,
+      y: 0.5,
+    },
     zoom: null,
   };
 
@@ -346,6 +367,12 @@ describe("shouldBroadcastState", () => {
       shouldBroadcastState(state, {
         ...state,
         pointer: { ...state.pointer, x: 0.75 },
+      }),
+    ).toBe(true);
+    expect(
+      shouldBroadcastState(state, {
+        ...state,
+        pointer: { ...state.pointer, size: 1.25 },
       }),
     ).toBe(true);
     expect(
@@ -374,6 +401,7 @@ describe("shouldBroadcastState", () => {
             kind: "pen",
             color: "#ff0000",
             page: 1,
+            size: 1,
             points: [
               { x: 0, y: 0 },
               { x: 1, y: 1 },

@@ -8,10 +8,12 @@ export type SlideZoom = SlideRect & { page: number };
 export type SlidePointer = SlidePoint & {
   kind: "laser" | "spotlight";
   page: number;
+  size: number;
 };
 type DrawingStrokeBase = {
   page: number;
   points: SlidePoint[];
+  size: number;
 };
 export type DrawingStroke = DrawingStrokeBase &
   ({ kind: "pen"; color: string } | { kind: "eraser" });
@@ -121,6 +123,12 @@ export const actionForKey = ({
       return "reset-view";
     case "KeyO":
       return shiftKey ? undefined : "overview";
+    case "Equal":
+    case "NumpadAdd":
+      return "input-larger";
+    case "Minus":
+    case "NumpadSubtract":
+      return "input-smaller";
     case "Slash":
       return shiftKey ? "shortcuts" : "search";
   }

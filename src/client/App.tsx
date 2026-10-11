@@ -190,6 +190,10 @@ const ShortcutDialog = (props: {
         </dt>
         <dd>Normal / laser / pen / eraser / spotlight mode (Presenter View)</dd>
         <dt>
+          <kbd>+ / −</kbd>
+        </dt>
+        <dd>Resize the active input tool (Presenter View)</dd>
+        <dt>
           <kbd>D / C</kbd>
         </dt>
         <dd>Hide / clear drawings (Presenter View)</dd>
@@ -357,6 +361,9 @@ const App = () => {
   >("none");
   const [isSelectingZoom, setIsSelectingZoom] = createSignal(false);
   const [penColor, setPenColor] = createSignal("#ff2222");
+  const [inputScales, setInputScales] = createSignal<
+    Record<SlidePointer["kind"] | DrawingStroke["kind"], number>
+  >({ laser: 1, spotlight: 1, pen: 1, eraser: 1 });
   const [redoStrokes, setRedoStrokes] = createSignal<DrawingStroke[]>([]);
   const [currentTime, setCurrentTime] = createSignal(Date.now());
   const [timerTime, setTimerTime] = createSignal(performance.now());
@@ -436,6 +443,27 @@ const App = () => {
     createSignal(false);
   const toggleCurrentSlideSize = () =>
     setIsCurrentSlideMaximized((maximized) => !maximized);
+  const currentInput = createMemo(() => {
+    const pointerKind = pointerMode();
+    const drawingKind = drawingTool();
+    const kind =
+      pointerKind !== "none"
+        ? pointerKind
+        : drawingKind !== "none"
+          ? drawingKind
+          : undefined;
+    return kind ? { kind, size: inputScales()[kind] } : undefined;
+  });
+  const resizeCurrentMode = (change: -0.25 | 0.25) => {
+    const input = currentInput();
+    if (!input) return;
+    const size = Math.min(3, Math.max(0.5, input.size + change));
+    if (size === input.size) return;
+    setInputScales((sizes) => ({ ...sizes, [input.kind]: size }));
+    setPointer((pointer) =>
+      pointer?.kind === input.kind ? { ...pointer, size } : pointer,
+    );
+  };
   const setShortcutDialog = (dialog: HTMLDialogElement) => {
     shortcutDialog = dialog;
   };
@@ -578,7 +606,12 @@ const App = () => {
       setPointer(null);
       return;
     }
-    setPointer({ ...point, kind, page: currentPage() });
+    setPointer({
+      ...point,
+      kind,
+      page: currentPage(),
+      size: inputScales()[kind],
+    });
     pointerHideTimeout = window.setTimeout(() => setPointer(null), 3000);
   };
 
@@ -632,6 +665,7 @@ const App = () => {
     const stroke: DrawingStroke = {
       page: drawingPage(currentPage()),
       points: [point, point],
+      size: inputScales()[kind],
       ...(kind === "pen" ? { kind, color: penColor() } : { kind }),
     };
     setRedoStrokes([]);
@@ -787,6 +821,8 @@ const App = () => {
           action === "toggle-timer" ||
           action === "toggle-freeze" ||
           action === "toggle-current-slide-size" ||
+          action === "input-larger" ||
+          action === "input-smaller" ||
           action === "toggle-drawings" ||
           action === "clear-drawings" ||
           action === "undo-drawing" ||
@@ -837,6 +873,12 @@ const App = () => {
         break;
       case "toggle-current-slide-size":
         toggleCurrentSlideSize();
+        break;
+      case "input-larger":
+        resizeCurrentMode(0.25);
+        break;
+      case "input-smaller":
+        resizeCurrentMode(-0.25);
         break;
       case "start-timer":
         if (typeof timerStartedAt() !== "number") startTimer();
@@ -1823,6 +1865,43 @@ const App = () => {
               >
                 <MenuIcon icon="lucide:eraser" />
               </button>
+              <div
+                role="group"
+                aria-label="Input tool size"
+                style={{
+                  display: "flex",
+                  gap: "4px",
+                  "align-items": "center",
+                }}
+              >
+                <button
+                  class="icon-button"
+                  onClick={() => resizeCurrentMode(-0.25)}
+                  aria-label="Decrease input tool size"
+                  data-tooltip="Decrease input tool size"
+                  disabled={(currentInput()?.size ?? 0.5) <= 0.5}
+                  style={{ height: "32px" }}
+                >
+                  <MenuIcon icon="lucide:minus" />
+                </button>
+                <output
+                  aria-live="polite"
+                  style={{ "min-width": "4ch", "text-align": "center" }}
+                >
+                  {currentInput()?.size ?? "—"}
+                  {currentInput() && "×"}
+                </output>
+                <button
+                  class="icon-button"
+                  onClick={() => resizeCurrentMode(0.25)}
+                  aria-label="Increase input tool size"
+                  data-tooltip="Increase input tool size"
+                  disabled={(currentInput()?.size ?? 3) >= 3}
+                  style={{ height: "32px" }}
+                >
+                  <MenuIcon icon="lucide:plus" />
+                </button>
+              </div>
               <button
                 class="icon-button"
                 onClick={toggleDrawingsVisibility}
