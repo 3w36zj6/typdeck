@@ -80,11 +80,11 @@ const ShortcutDialog = (props: {
       <h2>Keyboard shortcuts</h2>
       <dl>
         <dt>
-          <kbd>← / ↑</kbd>
+          <kbd>← / ↑ / Backspace</kbd>
         </dt>
         <dd>Previous slide</dd>
         <dt>
-          <kbd>→ / ↓</kbd>
+          <kbd>→ / ↓ / Enter</kbd>
         </dt>
         <dd>Next slide</dd>
         <dt>
@@ -329,11 +329,14 @@ const App = () => {
   };
 
   const handleKeyDown = (event: KeyboardEvent) => {
-    if (
-      event.target instanceof HTMLElement &&
-      event.target.closest("input, select, textarea, [contenteditable]")
-    ) {
-      return;
+    if (event.target instanceof Element) {
+      if (
+        event.target.closest("input, select, textarea, [contenteditable]") ||
+        (["Enter", "NumpadEnter"].includes(event.code) &&
+          event.target.closest("a, button, summary"))
+      ) {
+        return;
+      }
     }
     if (shortcutDialog.open || !metadata()) return;
 
