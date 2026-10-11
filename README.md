@@ -77,6 +77,10 @@ typdeck preview
 
 Presenter View provides a laser pointer and spotlight that follow pointer input on the current slide and appear on the Stage.
 
+### Drawing
+
+Presenter View synchronizes temporary pen and eraser strokes with the Stage. Drawings are shared across overlay steps and are never written to the source.
+
 ### Hidden slides
 
 `HiddenSlide` marks a page to be skipped during normal navigation while keeping

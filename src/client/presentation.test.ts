@@ -3,6 +3,7 @@ import type { Metadata } from "./types/metadata";
 import {
   actionForKey,
   completedSlidePage,
+  drawingLayers,
   endSlidePage,
   formatElapsedTime,
   formatRemainingTime,
@@ -228,6 +229,26 @@ describe("scheduled presentation time", () => {
 });
 
 describe("presentation controls", () => {
+  it("applies erasers only to earlier pen strokes", () => {
+    const first = {
+      kind: "pen" as const,
+      color: "#f00",
+      page: 1,
+      points: [{ x: 0, y: 0 }],
+    };
+    const eraser = {
+      kind: "eraser" as const,
+      page: 1,
+      points: [{ x: 0.5, y: 0.5 }],
+    };
+    const second = { ...first, color: "#0f0" };
+
+    expect(drawingLayers([first, eraser, second])).toEqual([
+      { index: 0, stroke: first, erasers: [eraser] },
+      { index: 2, stroke: second, erasers: [] },
+    ]);
+  });
+
   it("formats elapsed time", () => {
     expect(formatElapsedTime(0)).toBe("00:00:00");
     expect(formatElapsedTime(3661)).toBe("01:01:01");
@@ -267,6 +288,14 @@ describe("presentation controls", () => {
     ["KeyS", false, "start-timer"],
     ["KeyS", true, undefined],
     ["KeyB", false, "blackout"],
+    ["KeyD", false, "toggle-drawings"],
+    ["KeyC", false, "clear-drawings"],
+    ["Digit1", false, "normal-mode"],
+    ["Digit2", false, "laser-mode"],
+    ["Digit3", false, "pen-mode"],
+    ["Digit4", false, "eraser-mode"],
+    ["Digit5", false, "spotlight-mode"],
+    ["Escape", false, "normal-mode"],
     ["KeyO", false, "overview"],
     ["KeyO", true, undefined],
     ["Slash", true, "shortcuts"],
@@ -283,6 +312,11 @@ describe("presentation controls", () => {
     expect(actionForKey({ code: "KeyK", metaKey: true })).toBe("search");
     expect(actionForKey({ code: "ArrowRight", ctrlKey: true })).toBeUndefined();
     expect(actionForKey({ code: "ArrowRight", altKey: true })).toBeUndefined();
+    expect(actionForKey({ code: "KeyZ", ctrlKey: true })).toBe("undo-drawing");
+    expect(actionForKey({ code: "KeyZ", metaKey: true, shiftKey: true })).toBe(
+      "redo-drawing",
+    );
+    expect(actionForKey({ code: "KeyY", ctrlKey: true })).toBe("redo-drawing");
   });
 
   it("ignores repeated and composing keys", () => {

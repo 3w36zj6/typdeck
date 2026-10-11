@@ -6,6 +6,27 @@ export type SlidePointer = SlidePoint & {
   kind: "laser" | "spotlight";
   page: number;
 };
+type DrawingStrokeBase = {
+  page: number;
+  points: SlidePoint[];
+};
+export type DrawingStroke = DrawingStrokeBase &
+  ({ kind: "pen"; color: string } | { kind: "eraser" });
+
+export const drawingLayers = (strokes: DrawingStroke[]) =>
+  strokes.flatMap((stroke, index) =>
+    stroke.kind === "pen"
+      ? [
+          {
+            index,
+            stroke,
+            erasers: strokes
+              .slice(index + 1)
+              .filter(({ kind }) => kind === "eraser"),
+          },
+        ]
+      : [],
+  );
 
 export const actionForKey = ({
   code,
@@ -24,6 +45,8 @@ export const actionForKey = ({
   >) => {
   if (repeat || isComposing || altKey) return;
   if (ctrlKey || metaKey) {
+    if (code === "KeyZ") return shiftKey ? "redo-drawing" : "undo-drawing";
+    if (code === "KeyY" && !shiftKey) return "redo-drawing";
     return code === "KeyK" && !shiftKey ? "search" : undefined;
   }
   switch (code) {
@@ -55,6 +78,27 @@ export const actionForKey = ({
       return shiftKey ? undefined : "start-timer";
     case "KeyB":
       return "blackout";
+    case "KeyD":
+      return shiftKey ? undefined : "toggle-drawings";
+    case "KeyC":
+      return shiftKey ? undefined : "clear-drawings";
+    case "Digit1":
+    case "Numpad1":
+      return shiftKey ? undefined : "normal-mode";
+    case "Digit2":
+    case "Numpad2":
+      return shiftKey ? undefined : "laser-mode";
+    case "Digit3":
+    case "Numpad3":
+      return shiftKey ? undefined : "pen-mode";
+    case "Digit4":
+    case "Numpad4":
+      return shiftKey ? undefined : "eraser-mode";
+    case "Digit5":
+    case "Numpad5":
+      return shiftKey ? undefined : "spotlight-mode";
+    case "Escape":
+      return "normal-mode";
     case "KeyO":
       return shiftKey ? undefined : "overview";
     case "Slash":

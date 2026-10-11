@@ -26,6 +26,32 @@ afterEach(() => {
   MockBroadcastChannel.latest = undefined;
 });
 
+const syncedState = {
+  activeDrawing: {
+    kind: "pen" as const,
+    color: "#ff0000",
+    page: 2,
+    points: [
+      { x: 0.25, y: 0.25 },
+      { x: 0.5, y: 0.5 },
+    ],
+  },
+  blackout: true,
+  currentPage: 2,
+  drawings: [
+    {
+      kind: "eraser" as const,
+      page: 2,
+      points: [
+        { x: 0.1, y: 0.1 },
+        { x: 0.2, y: 0.2 },
+      ],
+    },
+  ],
+  drawingsHidden: true,
+  pointer: { kind: "laser" as const, page: 2, x: 0.25, y: 0.75 },
+};
+
 describe("createPresentationSync", () => {
   it("requests, accepts, and serves valid presentation state", async () => {
     vi.stubGlobal("BroadcastChannel", MockBroadcastChannel);
@@ -44,19 +70,21 @@ describe("createPresentationSync", () => {
     await Promise.resolve();
     expect(sync.currentPage()).toBe(1);
     expect(sync.isBlackout()).toBe(false);
+    expect(sync.activeDrawing()).toBeNull();
+    expect(sync.drawings()).toEqual([]);
+    expect(sync.drawingsHidden()).toBe(false);
     expect(sync.pointer()).toBeNull();
 
     channel.postMessage.mockClear();
     channel.dispatch({
       type: "state",
-      state: {
-        blackout: true,
-        currentPage: 2,
-        pointer: { kind: "laser", page: 2, x: 0.25, y: 0.75 },
-      },
+      state: syncedState,
     });
     expect(sync.currentPage()).toBe(2);
     expect(sync.isBlackout()).toBe(true);
+    expect(sync.activeDrawing()?.kind).toBe("pen");
+    expect(sync.drawings()).toHaveLength(1);
+    expect(sync.drawingsHidden()).toBe(true);
     expect(sync.pointer()).toEqual({
       kind: "laser",
       page: 2,
@@ -68,18 +96,32 @@ describe("createPresentationSync", () => {
 
     channel.dispatch({
       type: "state",
-      state: { blackout: false, currentPage: 3, pointer: null },
+      state: { ...syncedState, currentPage: 3 },
     });
     channel.dispatch({
       type: "state",
-      state: { blackout: "false", currentPage: 1, pointer: null },
+      state: { ...syncedState, blackout: "false" },
     });
     channel.dispatch({
       type: "state",
       state: {
-        blackout: false,
-        currentPage: 1,
+        ...syncedState,
         pointer: { kind: "spotlight", page: 3, x: 0.5, y: 0.5 },
+      },
+    });
+    channel.dispatch({
+      type: "state",
+      state: {
+        ...syncedState,
+        drawings: [
+          {
+            ...syncedState.drawings[0],
+            points: [
+              { x: 0.1, y: 0.1 },
+              { x: 2, y: 0.2 },
+            ],
+          },
+        ],
       },
     });
     expect(sync.currentPage()).toBe(2);
@@ -88,11 +130,7 @@ describe("createPresentationSync", () => {
     channel.dispatch({ type: "request-state" });
     expect(channel.postMessage).toHaveBeenCalledWith({
       type: "state",
-      state: {
-        blackout: true,
-        currentPage: 2,
-        pointer: { kind: "laser", page: 2, x: 0.25, y: 0.75 },
-      },
+      state: syncedState,
     });
 
     dispose();
@@ -102,8 +140,11 @@ describe("createPresentationSync", () => {
 
 describe("shouldBroadcastState", () => {
   const state = {
+    activeDrawing: null,
     blackout: false,
     currentPage: 1,
+    drawings: [],
+    drawingsHidden: false,
     pointer: { kind: "laser" as const, page: 1, x: 0.5, y: 0.5 },
   };
 
@@ -115,6 +156,22 @@ describe("shouldBroadcastState", () => {
       shouldBroadcastState(state, {
         ...state,
         pointer: { ...state.pointer, x: 0.75 },
+      }),
+    ).toBe(true);
+    expect(
+      shouldBroadcastState(state, {
+        ...state,
+        drawings: [
+          {
+            kind: "pen",
+            color: "#ff0000",
+            page: 1,
+            points: [
+              { x: 0, y: 0 },
+              { x: 1, y: 1 },
+            ],
+          },
+        ],
       }),
     ).toBe(true);
   });

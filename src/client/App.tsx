@@ -19,6 +19,7 @@ import {
   endSlidePage,
   formatElapsedTime,
   formatRemainingTime,
+  logicalSlideStartPage,
   nextPreviewPage,
   pageLabel,
   presentationDurationMinutes,
@@ -28,6 +29,7 @@ import {
   previousPresentationPage,
   remainingSeconds,
   savedSlidePage,
+  type DrawingStroke,
   type SlidePoint,
   type SlidePointer,
 } from "./presentation";
@@ -121,13 +123,25 @@ const ShortcutDialog = (props: {
         </dt>
         <dd>Toggle blackout</dd>
         <dt>
+          <kbd>1 / 2 / 3 / 4 / 5</kbd>
+        </dt>
+        <dd>Normal / laser / pen / eraser / spotlight mode (Presenter View)</dd>
+        <dt>
+          <kbd>D / C</kbd>
+        </dt>
+        <dd>Hide / clear drawings (Presenter View)</dd>
+        <dt>
+          <kbd>Ctrl/Cmd+Z / Ctrl/Cmd+Y</kbd>
+        </dt>
+        <dd>Undo / redo drawings (Presenter View)</dd>
+        <dt>
           <kbd>?</kbd>
         </dt>
         <dd>Open this list</dd>
         <dt>
           <kbd>Esc</kbd>
         </dt>
-        <dd>Close this list</dd>
+        <dd>Close dialogs or leave the active tool</dd>
       </dl>
       <form method="dialog">
         <button>Close</button>
@@ -190,10 +204,16 @@ const App = () => {
   const urlParams = new URLSearchParams(window.location.search);
   const isPresenterMode = urlParams.get("mode") === "presenter";
   const {
+    activeDrawing,
+    setActiveDrawing,
     currentPage,
     setCurrentPage,
     isBlackout,
     setIsBlackout,
+    drawings,
+    setDrawings,
+    drawingsHidden,
+    setDrawingsHidden,
     pointer,
     setPointer,
   } = createPresentationSync(
@@ -204,6 +224,11 @@ const App = () => {
   const [pointerMode, setPointerMode] = createSignal<
     "none" | SlidePointer["kind"]
   >("none");
+  const [drawingTool, setDrawingTool] = createSignal<
+    "none" | DrawingStroke["kind"]
+  >("none");
+  const [penColor, setPenColor] = createSignal("#ff2222");
+  const [redoStrokes, setRedoStrokes] = createSignal<DrawingStroke[]>([]);
   const [currentTime, setCurrentTime] = createSignal(Date.now());
   const [timerTime, setTimerTime] = createSignal(performance.now());
   const [elapsedMilliseconds, setElapsedMilliseconds] = createSignal(0);
@@ -350,9 +375,98 @@ const App = () => {
     pointerHideTimeout = window.setTimeout(() => setPointer(null), 3000);
   };
 
-  const togglePointer = (kind: SlidePointer["kind"]) => {
+  const endDrawing = (commit: boolean) => {
+    const active = activeDrawing();
+    if (!active) return;
+    batch(() => {
+      if (commit) setDrawings((strokes) => [...strokes, active]);
+      setActiveDrawing(null);
+    });
+  };
+
+  const selectInputMode = (
+    mode: "normal" | SlidePointer["kind"] | DrawingStroke["kind"],
+  ) => {
+    endDrawing(false);
     setPointer(null);
-    setPointerMode((mode) => (mode === kind ? "none" : kind));
+    setPointerMode(mode === "laser" || mode === "spotlight" ? mode : "none");
+    setDrawingTool(mode === "pen" || mode === "eraser" ? mode : "none");
+  };
+
+  const togglePointer = (kind: SlidePointer["kind"]) => {
+    selectInputMode(pointerMode() === kind ? "normal" : kind);
+  };
+
+  const drawingPage = (page: number) => {
+    const deck = metadata();
+    return deck ? logicalSlideStartPage(deck, page) : page;
+  };
+
+  const drawingsForPage = (page: number) => {
+    const drawing = drawingPage(page);
+    return drawings().filter((stroke) => stroke.page === drawing);
+  };
+
+  const visibleDrawingsForPage = (page: number) => {
+    if (drawingsHidden()) return [];
+    const drawing = drawingPage(page);
+    const active = activeDrawing();
+    return [
+      ...drawingsForPage(page),
+      ...(active?.page === drawing ? [active] : []),
+    ];
+  };
+
+  const startDrawing = (point: SlidePoint) => {
+    const kind = drawingTool();
+    if (kind === "none") return;
+    const stroke: DrawingStroke = {
+      page: drawingPage(currentPage()),
+      points: [point, point],
+      ...(kind === "pen" ? { kind, color: penColor() } : { kind }),
+    };
+    setRedoStrokes([]);
+    setActiveDrawing(stroke);
+  };
+
+  const continueDrawing = (points: SlidePoint[]) => {
+    setActiveDrawing((active) =>
+      active ? { ...active, points: [...active.points, ...points] } : active,
+    );
+  };
+
+  const undoDrawing = () => {
+    const strokes = drawings();
+    const page = drawingPage(currentPage());
+    const index = strokes.findLastIndex((stroke) => stroke.page === page);
+    const stroke = strokes[index];
+    if (!stroke) return;
+    setDrawings([...strokes.slice(0, index), ...strokes.slice(index + 1)]);
+    setRedoStrokes((redo) => [...redo, stroke]);
+  };
+
+  const redoDrawing = () => {
+    const redo = redoStrokes();
+    const stroke = redo.at(-1);
+    if (!stroke || stroke.page !== drawingPage(currentPage())) return;
+    setDrawings((strokes) => [...strokes, stroke]);
+    setRedoStrokes(redo.slice(0, -1));
+  };
+
+  const clearDrawings = () => {
+    endDrawing(false);
+    const page = drawingPage(currentPage());
+    setDrawings((strokes) => strokes.filter((stroke) => stroke.page !== page));
+    setRedoStrokes([]);
+  };
+
+  const toggleDrawingsVisibility = () => {
+    setDrawingsHidden((hidden) => !hidden);
+    if (drawingTool() !== "none") selectInputMode("normal");
+  };
+
+  const toggleDrawing = (tool: DrawingStroke["kind"]) => {
+    selectInputMode(drawingTool() === tool ? "normal" : tool);
   };
 
   const showMenu = () => {
@@ -441,7 +555,17 @@ const App = () => {
     if (
       !action ||
       (!isPresenterMode &&
-        (action === "start-timer" || action === "toggle-timer"))
+        (action === "start-timer" ||
+          action === "toggle-timer" ||
+          action === "toggle-drawings" ||
+          action === "clear-drawings" ||
+          action === "undo-drawing" ||
+          action === "redo-drawing" ||
+          action === "normal-mode" ||
+          action === "laser-mode" ||
+          action === "pen-mode" ||
+          action === "eraser-mode" ||
+          action === "spotlight-mode"))
     ) {
       return;
     }
@@ -483,6 +607,33 @@ const App = () => {
       case "overview":
         openOverview();
         break;
+      case "toggle-drawings":
+        toggleDrawingsVisibility();
+        break;
+      case "clear-drawings":
+        clearDrawings();
+        break;
+      case "undo-drawing":
+        undoDrawing();
+        break;
+      case "redo-drawing":
+        redoDrawing();
+        break;
+      case "normal-mode":
+        selectInputMode("normal");
+        break;
+      case "laser-mode":
+        selectInputMode("laser");
+        break;
+      case "pen-mode":
+        selectInputMode("pen");
+        break;
+      case "eraser-mode":
+        selectInputMode("eraser");
+        break;
+      case "spotlight-mode":
+        selectInputMode("spotlight");
+        break;
     }
   };
 
@@ -499,6 +650,16 @@ const App = () => {
       window.location.hash = hashForPage(page, metadata());
     }
   });
+
+  createEffect(
+    on(
+      currentPage,
+      () => {
+        if (isPresenterMode) endDrawing(false);
+      },
+      { defer: true },
+    ),
+  );
 
   createEffect(() => {
     const deck = metadata();
@@ -651,6 +812,7 @@ const App = () => {
                       page={currentPage()}
                       label={pageLabel(metadata()!, currentPage())}
                       pointer={pointerForPage(currentPage())}
+                      drawings={visibleDrawingsForPage(currentPage())}
                       onNavigate={setCurrentPage}
                     />
                   </div>
@@ -894,10 +1056,18 @@ const App = () => {
                         currentPage(),
                       )}`}
                       pointer={pointerForPage(currentPage())}
+                      drawings={visibleDrawingsForPage(currentPage())}
                       onNavigate={setCurrentPage}
                       onPointerMove={
                         pointerMode() === "none" ? undefined : updatePointer
                       }
+                      onDrawStart={
+                        drawingTool() === "none" ? undefined : startDrawing
+                      }
+                      onDrawMove={
+                        drawingTool() === "none" ? undefined : continueDrawing
+                      }
+                      onDrawEnd={endDrawing}
                     />
                   </div>
                   <div
@@ -919,6 +1089,7 @@ const App = () => {
                         previewPage(),
                       )}`}
                       opacity={0.5}
+                      drawings={visibleDrawingsForPage(previewPage())}
                       onNavigate={setCurrentPage}
                     />
                   </div>
@@ -1223,6 +1394,90 @@ const App = () => {
                 style={{ height: "32px" }}
               >
                 <MenuIcon icon="lucide:scan" />
+              </button>
+              <button
+                class="icon-button"
+                onClick={() => toggleDrawing("pen")}
+                aria-label="Draw"
+                aria-pressed={drawingTool() === "pen"}
+                data-tooltip={
+                  drawingTool() === "pen"
+                    ? "Turn drawing off"
+                    : "Turn drawing on"
+                }
+                style={{ height: "32px" }}
+              >
+                <MenuIcon icon="lucide:pencil" />
+              </button>
+              <input
+                aria-label="Pen color"
+                title="Pen color"
+                type="color"
+                value={penColor()}
+                onInput={(event) => setPenColor(event.currentTarget.value)}
+                style={{ width: "32px", height: "32px", padding: "0" }}
+              />
+              <button
+                class="icon-button"
+                onClick={() => toggleDrawing("eraser")}
+                aria-label="Erase"
+                aria-pressed={drawingTool() === "eraser"}
+                data-tooltip={
+                  drawingTool() === "eraser"
+                    ? "Turn eraser off"
+                    : "Turn eraser on"
+                }
+                style={{ height: "32px" }}
+              >
+                <MenuIcon icon="lucide:eraser" />
+              </button>
+              <button
+                class="icon-button"
+                onClick={toggleDrawingsVisibility}
+                aria-label={
+                  drawingsHidden() ? "Show drawings" : "Hide drawings"
+                }
+                aria-pressed={drawingsHidden()}
+                data-tooltip={
+                  drawingsHidden() ? "Show drawings" : "Hide drawings"
+                }
+                style={{ height: "32px" }}
+              >
+                <MenuIcon
+                  icon={drawingsHidden() ? "lucide:eye" : "lucide:eye-off"}
+                />
+              </button>
+              <button
+                class="icon-button"
+                onClick={undoDrawing}
+                aria-label="Undo drawing"
+                data-tooltip="Undo drawing"
+                disabled={drawingsForPage(currentPage()).length === 0}
+                style={{ height: "32px" }}
+              >
+                <MenuIcon icon="lucide:undo-2" />
+              </button>
+              <button
+                class="icon-button"
+                onClick={redoDrawing}
+                aria-label="Redo drawing"
+                data-tooltip="Redo drawing"
+                disabled={
+                  redoStrokes().at(-1)?.page !== drawingPage(currentPage())
+                }
+                style={{ height: "32px" }}
+              >
+                <MenuIcon icon="lucide:redo-2" />
+              </button>
+              <button
+                class="icon-button"
+                onClick={clearDrawings}
+                aria-label="Clear drawings"
+                data-tooltip="Clear drawings"
+                disabled={drawingsForPage(currentPage()).length === 0}
+                style={{ height: "32px" }}
+              >
+                <MenuIcon icon="lucide:trash-2" />
               </button>
               <button
                 class="icon-button"

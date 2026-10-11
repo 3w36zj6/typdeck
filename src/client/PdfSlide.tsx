@@ -1,4 +1,12 @@
-import { createEffect, createSignal, onCleanup, Show, untrack } from "solid-js";
+import {
+  createEffect,
+  createSignal,
+  createUniqueId,
+  For,
+  onCleanup,
+  Show,
+  untrack,
+} from "solid-js";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import {
   EventBus,
@@ -7,7 +15,12 @@ import {
   PDFPageView,
 } from "pdfjs-dist/web/pdf_viewer.mjs";
 import "pdfjs-dist/web/pdf_viewer.css";
-import type { SlidePoint, SlidePointer } from "./presentation";
+import {
+  drawingLayers,
+  type DrawingStroke,
+  type SlidePoint,
+  type SlidePointer,
+} from "./presentation";
 
 type PdfSlideProps = {
   document: PDFDocumentProxy;
@@ -15,17 +28,23 @@ type PdfSlideProps = {
   label: string;
   opacity?: number;
   pointer?: SlidePointer;
+  drawings?: DrawingStroke[];
   onNavigate?: (page: number) => void;
   onPointerMove?: (point: SlidePoint | undefined) => void;
+  onDrawStart?: (point: SlidePoint) => void;
+  onDrawMove?: (points: SlidePoint[]) => void;
+  onDrawEnd?: (commit: boolean) => void;
 };
 
 const PDF_TO_CSS_UNITS = 96 / 72;
 
 export const PdfSlide = (props: PdfSlideProps) => {
+  const drawingMask = createUniqueId();
   let host!: HTMLDivElement;
   let viewer!: HTMLDivElement;
   let pointerDot!: HTMLSpanElement;
   let spotlightLayer!: HTMLDivElement;
+  let drawingLayer!: SVGSVGElement;
   let displayedView: PDFPageView | undefined;
   let displayedPage: number | undefined;
   const [error, setError] = createSignal<string>();
@@ -33,13 +52,31 @@ export const PdfSlide = (props: PdfSlideProps) => {
   const currentPageElement = (page: number) =>
     displayedPage === page ? displayedView?.div : undefined;
 
+  const positionPageOverlay = (
+    element: HTMLElement | SVGSVGElement,
+    pageNumber: number,
+  ) => {
+    const page = currentPageElement(pageNumber);
+    if (!page) return false;
+    const hostRect = host.getBoundingClientRect();
+    const pageRect = page.getBoundingClientRect();
+    element.style.left = `${pageRect.left - hostRect.left}px`;
+    element.style.top = `${pageRect.top - hostRect.top}px`;
+    element.style.width = `${pageRect.width}px`;
+    element.style.height = `${pageRect.height}px`;
+    return true;
+  };
+
   const positionPointer = (
     pointer: SlidePointer | undefined,
     pageNumber: number,
   ) => {
     const page = currentPageElement(pageNumber);
     pointerDot.hidden = !pointer || pointer.kind !== "laser" || !page;
-    spotlightLayer.hidden = !pointer || pointer.kind !== "spotlight" || !page;
+    spotlightLayer.hidden =
+      !pointer ||
+      pointer.kind !== "spotlight" ||
+      !positionPageOverlay(spotlightLayer, pageNumber);
     if (!pointer || !page) return;
 
     const hostRect = host.getBoundingClientRect();
@@ -51,11 +88,13 @@ export const PdfSlide = (props: PdfSlideProps) => {
     }
 
     const radius = Math.min(pageRect.width, pageRect.height) * 0.1;
-    spotlightLayer.style.left = `${pageRect.left - hostRect.left}px`;
-    spotlightLayer.style.top = `${pageRect.top - hostRect.top}px`;
-    spotlightLayer.style.width = `${pageRect.width}px`;
-    spotlightLayer.style.height = `${pageRect.height}px`;
     spotlightLayer.style.background = `radial-gradient(circle ${radius}px at ${pointer.x * 100}% ${pointer.y * 100}%, transparent 70%, rgb(0 0 0 / 78%) 100%)`;
+  };
+
+  const positionDrawingLayer = (pageNumber: number) => {
+    drawingLayer.style.display = positionPageOverlay(drawingLayer, pageNumber)
+      ? ""
+      : "none";
   };
 
   const pointFromEvent = (event: PointerEvent): SlidePoint | undefined => {
@@ -67,7 +106,39 @@ export const PdfSlide = (props: PdfSlideProps) => {
     return x >= 0 && x <= 1 && y >= 0 && y <= 1 ? { x, y } : undefined;
   };
 
-  createEffect(() => positionPointer(props.pointer, props.page));
+  const handlePointerMove = (event: PointerEvent) => {
+    if (props.onDrawMove && host.hasPointerCapture(event.pointerId)) {
+      event.preventDefault();
+      const events = event.getCoalescedEvents?.() ?? [];
+      const points = (events.length ? events : [event]).flatMap((event) => {
+        const point = pointFromEvent(event);
+        return point ? [point] : [];
+      });
+      if (points.length) props.onDrawMove(points);
+      return;
+    }
+    props.onPointerMove?.(pointFromEvent(event));
+  };
+
+  const handlePointerDown = (event: PointerEvent) => {
+    const point = pointFromEvent(event);
+    if (!props.onDrawStart || !event.isPrimary || event.button !== 0 || !point)
+      return;
+    event.preventDefault();
+    host.setPointerCapture(event.pointerId);
+    props.onDrawStart(point);
+  };
+
+  const handlePointerEnd = (event: PointerEvent, commit = true) => {
+    if (!host.hasPointerCapture(event.pointerId)) return;
+    host.releasePointerCapture(event.pointerId);
+    props.onDrawEnd?.(commit);
+  };
+
+  createEffect(() => {
+    positionPointer(props.pointer, props.page);
+    positionDrawingLayer(props.page);
+  });
 
   createEffect(() => {
     const document = props.document;
@@ -113,6 +184,7 @@ export const PdfSlide = (props: PdfSlideProps) => {
               untrack(() => props.pointer),
               pageNumber,
             );
+            positionDrawingLayer(pageNumber);
             const scale = Math.min(
               host.clientWidth / baseViewport.width / PDF_TO_CSS_UNITS,
               host.clientHeight / baseViewport.height / PDF_TO_CSS_UNITS,
@@ -150,6 +222,7 @@ export const PdfSlide = (props: PdfSlideProps) => {
                     untrack(() => props.pointer),
                     pageNumber,
                   );
+                  positionDrawingLayer(pageNumber);
                 }
               },
               (cause: unknown) => {
@@ -204,12 +277,23 @@ export const PdfSlide = (props: PdfSlideProps) => {
         overflow: "hidden",
         opacity: props.opacity ?? 1,
         position: "relative",
-        cursor: props.onPointerMove ? "crosshair" : undefined,
-        "touch-action": props.onPointerMove ? "none" : "auto",
+        cursor:
+          props.onPointerMove || props.onDrawStart ? "crosshair" : undefined,
+        "touch-action":
+          props.onPointerMove || props.onDrawStart ? "none" : "auto",
       }}
-      onPointerMove={(event) => props.onPointerMove?.(pointFromEvent(event))}
-      onPointerLeave={() => props.onPointerMove?.(undefined)}
-      onPointerCancel={() => props.onPointerMove?.(undefined)}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerEnd}
+      onPointerLeave={(event) => {
+        if (!host.hasPointerCapture(event.pointerId)) {
+          props.onPointerMove?.(undefined);
+        }
+      }}
+      onPointerCancel={(event) => {
+        handlePointerEnd(event, false);
+        props.onPointerMove?.(undefined);
+      }}
     >
       <div
         ref={viewer}
@@ -230,6 +314,64 @@ export const PdfSlide = (props: PdfSlideProps) => {
         aria-hidden="true"
         hidden
       />
+      <svg
+        ref={drawingLayer}
+        class="drawing-layer"
+        viewBox="0 0 1 1"
+        preserveAspectRatio="none"
+        aria-hidden="true"
+        style={{ display: "none" }}
+      >
+        <For each={drawingLayers(props.drawings ?? [])}>
+          {({ index, stroke, erasers }) => {
+            const mask = `${drawingMask}-${index}`;
+            return (
+              <>
+                <defs>
+                  <mask
+                    id={mask}
+                    x="0"
+                    y="0"
+                    width="1"
+                    height="1"
+                    maskUnits="userSpaceOnUse"
+                  >
+                    <rect width="1" height="1" fill="white" />
+                    <For each={erasers}>
+                      {(eraser) => (
+                        <polyline
+                          points={eraser.points
+                            .map(({ x, y }) => `${x},${y}`)
+                            .join(" ")}
+                          fill="none"
+                          stroke="black"
+                          stroke-width="24"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          vector-effect="non-scaling-stroke"
+                        />
+                      )}
+                    </For>
+                  </mask>
+                </defs>
+                <g mask={`url(#${mask})`}>
+                  <polyline
+                    points={stroke.points
+                      .map(({ x, y }) => `${x},${y}`)
+                      .join(" ")}
+                    fill="none"
+                    stroke={stroke.color}
+                    stroke-width="4"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    vector-effect="non-scaling-stroke"
+                  />
+                </g>
+              </>
+            );
+          }}
+        </For>
+      </svg>
       <Show when={error()}>{(message) => <p role="alert">{message()}</p>}</Show>
     </div>
   );
