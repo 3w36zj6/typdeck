@@ -107,6 +107,7 @@ export const compileTypst = async (
   let pageCount: number;
   let pageLabels: string[] | undefined;
   let title: string | undefined;
+  let language: string | undefined;
   try {
     const document = await pdfTask.promise;
     pageCount = document.numPages;
@@ -118,6 +119,10 @@ export const compileTypst = async (
     title =
       "Title" in info && typeof info.Title === "string"
         ? info.Title.trim() || undefined
+        : undefined;
+    language =
+      "Language" in info && typeof info.Language === "string"
+        ? info.Language.trim() || undefined
         : undefined;
   } finally {
     await pdfTask.destroy();
@@ -134,6 +139,7 @@ export const compileTypst = async (
     pageCount,
     ...(pageLabels === undefined ? {} : { pageLabels }),
     ...(title === undefined ? {} : { title }),
+    ...(language === undefined ? {} : { language }),
     outline,
     ...(Object.keys(slides).length > 0 ? { slides } : {}),
   };

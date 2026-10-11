@@ -34,6 +34,7 @@ describe("compileTypst", () => {
       pageCount: 1,
       pageLabels: ["i"],
       title: "Result deck",
+      language: "en-GB",
     });
   });
 

@@ -271,6 +271,7 @@ const App = () => {
           <>
             <div
               class="slide-container"
+              lang={metadata()?.language}
               style={{
                 width: "100vw",
                 height: "100vh",
@@ -457,6 +458,7 @@ const App = () => {
                 <>
                   <div
                     class="current-slide"
+                    lang={metadata()?.language}
                     style={{
                       width: "49%",
                       display: "flex",
@@ -477,6 +479,7 @@ const App = () => {
                   </div>
                   <div
                     class="next-slide"
+                    lang={metadata()?.language}
                     style={{
                       width: "49%",
                       display: "flex",
@@ -513,6 +516,7 @@ const App = () => {
           >
             {metadata()?.slides?.[`${currentPage()}`]?.speakerNotes ? (
               <p
+                lang={metadata()?.language}
                 style={{
                   margin: "0",
                   "white-space": "pre-wrap",

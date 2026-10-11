@@ -4,11 +4,25 @@ const PageKeySchema = v.custom<`${number}`>(
   (page) => typeof page === "string" && /^[1-9]\d*$/.test(page),
 );
 
+const LanguageSchema = v.pipe(
+  v.string(),
+  v.trim(),
+  v.minLength(1),
+  v.check((language) => {
+    try {
+      return Intl.getCanonicalLocales(language).length === 1;
+    } catch {
+      return false;
+    }
+  }, "Language must be a valid BCP 47 tag"),
+);
+
 const MetadataSchema = v.pipe(
   v.object({
     pageCount: v.pipe(v.number(), v.integer(), v.minValue(1)),
     pageLabels: v.optional(v.array(v.string())),
     title: v.optional(v.pipe(v.string(), v.trim(), v.minLength(1))),
+    language: v.optional(LanguageSchema),
     outline: v.array(
       v.object({
         text: v.string(),
