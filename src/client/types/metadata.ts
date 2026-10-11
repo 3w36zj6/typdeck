@@ -8,6 +8,7 @@ const MetadataSchema = v.pipe(
   v.object({
     pageCount: v.pipe(v.number(), v.integer(), v.minValue(1)),
     pageLabels: v.optional(v.array(v.string())),
+    title: v.optional(v.pipe(v.string(), v.trim(), v.minLength(1))),
     outline: v.array(
       v.object({
         text: v.string(),

@@ -1,4 +1,5 @@
 #set page(width: 16cm, height: 9cm, numbering: "i")
+#set document(title: [Result deck])
 
 = Result
 

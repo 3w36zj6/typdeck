@@ -11,12 +11,14 @@ describe("parseMetadata", () => {
       parseMetadata({
         pageCount: 2,
         pageLabels: ["i", "ii"],
+        title: "Example deck",
         outline: [{ text: "Introduction", label: "intro", level: 1, page: 1 }],
         slides: { 2: { speakerNotes: "Remember this" } },
       }),
     ).toEqual({
       pageCount: 2,
       pageLabels: ["i", "ii"],
+      title: "Example deck",
       outline: [{ text: "Introduction", label: "intro", level: 1, page: 1 }],
       slides: { 2: { speakerNotes: "Remember this" } },
     });
@@ -27,6 +29,9 @@ describe("parseMetadata", () => {
     expect(() => parseMetadata({ pageCount: 0, outline: [] })).toThrow();
     expect(() =>
       parseMetadata({ pageCount: 2, pageLabels: ["1"], outline: [] }),
+    ).toThrow();
+    expect(() =>
+      parseMetadata({ pageCount: 1, title: " ", outline: [] }),
     ).toThrow();
     expect(() =>
       parseMetadata({ pageCount: 2, outline: [], slides: { foo: {} } }),

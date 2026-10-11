@@ -212,6 +212,13 @@ const App = () => {
     }
   });
 
+  createEffect(() => {
+    const deck = metadata();
+    document.title = deck
+      ? `${pageLabel(deck, currentPage())}${deck.title ? ` — ${deck.title}` : ""} — typdeck ${isPresenterMode ? "Presenter" : "Stage"}`
+      : "typdeck";
+  });
+
   onMount(() => {
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("mousemove", showMenu);

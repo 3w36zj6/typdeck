@@ -33,6 +33,7 @@ describe("compileTypst", () => {
     ).toMatchObject({
       pageCount: 1,
       pageLabels: ["i"],
+      title: "Result deck",
     });
   });
 

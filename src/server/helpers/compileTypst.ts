@@ -106,10 +106,19 @@ export const compileTypst = async (
   });
   let pageCount: number;
   let pageLabels: string[] | undefined;
+  let title: string | undefined;
   try {
     const document = await pdfTask.promise;
     pageCount = document.numPages;
-    pageLabels = (await document.getPageLabels()) ?? undefined;
+    const [labels, { info }] = await Promise.all([
+      document.getPageLabels(),
+      document.getMetadata(),
+    ]);
+    pageLabels = labels ?? undefined;
+    title =
+      "Title" in info && typeof info.Title === "string"
+        ? info.Title.trim() || undefined
+        : undefined;
   } finally {
     await pdfTask.destroy();
   }
@@ -124,6 +133,7 @@ export const compileTypst = async (
   const metadata: Metadata = {
     pageCount,
     ...(pageLabels === undefined ? {} : { pageLabels }),
+    ...(title === undefined ? {} : { title }),
     outline,
     ...(Object.keys(slides).length > 0 ? { slides } : {}),
   };
