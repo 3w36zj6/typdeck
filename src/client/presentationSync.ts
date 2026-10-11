@@ -25,7 +25,7 @@ export const createPresentationSync = (
 ) => {
   const [currentPage, setCurrentPage] = createSignal(initialPage);
   const [isBlackout, setIsBlackout] = createSignal(initialBlackout);
-  const channel = new BroadcastChannel("slide-sync");
+  const channel = new BroadcastChannel(`typdeck:${location.pathname}`);
 
   const currentState = () => ({
     blackout: isBlackout(),

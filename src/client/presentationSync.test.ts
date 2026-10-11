@@ -26,6 +26,7 @@ afterEach(() => {
 describe("createPresentationSync", () => {
   it("requests, accepts, and serves valid presentation state", () => {
     vi.stubGlobal("BroadcastChannel", MockBroadcastChannel);
+    vi.stubGlobal("location", { pathname: "/talk" });
     const { sync, dispose } = createRoot((dispose) => ({
       sync: createPresentationSync(1, false, () => 2),
       dispose,
@@ -33,7 +34,7 @@ describe("createPresentationSync", () => {
     const channel = MockBroadcastChannel.latest;
     if (!channel) throw new Error("BroadcastChannel was not created");
 
-    expect(channel.name).toBe("slide-sync");
+    expect(channel.name).toBe("typdeck:/talk");
     expect(channel.postMessage).toHaveBeenCalledWith({
       type: "request-state",
     });
