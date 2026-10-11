@@ -14,6 +14,8 @@ describe("parseMetadata", () => {
         title: "Example deck",
         language: "en-GB",
         durationMinutes: 30,
+        startTime: "14:10",
+        endTime: "14:40",
         lastMinutes: 0,
         outline: [{ text: "Introduction", label: "intro", level: 1, page: 1 }],
         slides: {
@@ -33,6 +35,8 @@ describe("parseMetadata", () => {
       title: "Example deck",
       language: "en-GB",
       durationMinutes: 30,
+      startTime: "14:10",
+      endTime: "14:40",
       lastMinutes: 0,
       outline: [{ text: "Introduction", label: "intro", level: 1, page: 1 }],
       slides: {
@@ -62,6 +66,9 @@ describe("parseMetadata", () => {
     ).toThrow();
     expect(() =>
       parseMetadata({ pageCount: 1, durationMinutes: 0, outline: [] }),
+    ).toThrow();
+    expect(() =>
+      parseMetadata({ pageCount: 1, startTime: "24:00", outline: [] }),
     ).toThrow();
     expect(() =>
       parseMetadata({ pageCount: 1, lastMinutes: -1, outline: [] }),

@@ -12,6 +12,8 @@ describe("queryPdfpcMetadata", () => {
       ),
     ).resolves.toEqual({
       durationMinutes: 30,
+      startTime: "14:10",
+      endTime: "14:40",
       lastMinutes: 5,
       slides: [{ page: 1, speakerNotes: "Explain this result." }],
     });

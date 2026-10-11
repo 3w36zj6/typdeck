@@ -14,6 +14,8 @@ type PdfpcSlide = {
 type PdfpcMetadata = {
   slides: PdfpcSlide[];
   durationMinutes?: number;
+  startTime?: string;
+  endTime?: string;
   lastMinutes?: number;
 };
 
@@ -21,7 +23,7 @@ const expression = `query(<pdfpc>)
   .filter(item => type(item.value) == dictionary)
   .filter(item => item.value.at("t", default: none) in (
     "Note", "HiddenSlide", "EndSlide", "SaveSlide", "LogicalSlide", "Overlay",
-    "Duration", "LastMinutes"
+    "Duration", "StartTime", "EndTime", "LastMinutes"
   ))
   .map(item => (
     page: item.location().page(),
@@ -69,6 +71,11 @@ const PdfpcEventSchema = v.array(
     }),
     v.object({
       page: PageSchema,
+      type: v.union([v.literal("StartTime"), v.literal("EndTime")]),
+      value: v.pipe(v.string(), v.regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/)),
+    }),
+    v.object({
+      page: PageSchema,
       type: v.literal("LastMinutes"),
       value: v.pipe(v.number(), v.minValue(0)),
     }),
@@ -88,10 +95,20 @@ export const queryPdfpcMetadata = async (
 
   const slides = new Map<number, PdfpcSlide>();
   let durationMinutes: number | undefined;
+  let startTime: string | undefined;
+  let endTime: string | undefined;
   let lastMinutes: number | undefined;
   for (const event of v.parse(PdfpcEventSchema, JSON.parse(stdout))) {
     if (event.type === "Duration") {
       durationMinutes = event.value > 0 ? event.value : undefined;
+      continue;
+    }
+    if (event.type === "StartTime") {
+      startTime = event.value;
+      continue;
+    }
+    if (event.type === "EndTime") {
+      endTime = event.value;
       continue;
     }
     if (event.type === "LastMinutes") {
@@ -124,6 +141,8 @@ export const queryPdfpcMetadata = async (
         : slide,
     ),
     ...(durationMinutes === undefined ? {} : { durationMinutes }),
+    ...(startTime === undefined ? {} : { startTime }),
+    ...(endTime === undefined ? {} : { endTime }),
     ...(lastMinutes === undefined ? {} : { lastMinutes }),
   };
 };

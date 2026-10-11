@@ -4,6 +4,8 @@ const PageKeySchema = v.custom<`${number}`>(
   (page) => typeof page === "string" && /^[1-9]\d*$/.test(page),
 );
 
+const TimeSchema = v.pipe(v.string(), v.regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/));
+
 const LanguageSchema = v.pipe(
   v.string(),
   v.trim(),
@@ -40,6 +42,8 @@ const MetadataSchema = v.pipe(
     title: v.optional(v.pipe(v.string(), v.trim(), v.minLength(1))),
     language: v.optional(LanguageSchema),
     durationMinutes: v.optional(v.pipe(v.number(), v.gtValue(0))),
+    startTime: v.optional(TimeSchema),
+    endTime: v.optional(TimeSchema),
     lastMinutes: v.optional(v.pipe(v.number(), v.minValue(0))),
     outline: v.array(
       v.object({

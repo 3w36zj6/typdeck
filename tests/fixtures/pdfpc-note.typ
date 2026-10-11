@@ -6,5 +6,7 @@
 
 #metadata("not a note") <pdfpc>
 #metadata((t: "Duration", v: 30)) <pdfpc>
+#metadata((t: "StartTime", v: "14:10")) <pdfpc>
+#metadata((t: "EndTime", v: "14:40")) <pdfpc>
 #metadata((t: "LastMinutes", v: 5)) <pdfpc>
 #metadata((t: "Note", v: "Explain this result.")) <pdfpc>
