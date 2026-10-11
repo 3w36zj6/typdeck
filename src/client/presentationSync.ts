@@ -14,6 +14,7 @@ import type {
   SlidePointer,
   SlideZoom,
 } from "./presentation";
+import { metadataIdentity, type Metadata } from "./types/metadata";
 
 const PointSchema = v.object({
   x: v.pipe(v.number(), v.minValue(0), v.maxValue(1)),
@@ -70,6 +71,16 @@ const SlideStateSchema = v.object({
   pointer: PointerSchema,
   zoom: ZoomSchema,
 });
+const PersistentStateSchema = v.object({
+  blankScreen: v.picklist(["none", "black", "white"]),
+  drawings: v.array(DrawingSchema),
+  drawingsHidden: v.boolean(),
+  frozenPage: v.nullable(v.pipe(v.number(), v.integer(), v.minValue(1))),
+});
+const StoredStateSchema = v.object({
+  deck: v.string(),
+  state: PersistentStateSchema,
+});
 const ChannelMessageSchema = v.variant("type", [
   v.object({ type: v.literal("request-state") }),
   v.object({ type: v.literal("state"), state: SlideStateSchema }),
@@ -115,6 +126,11 @@ const sameDrawings = (left: DrawingStroke[], right: DrawingStroke[]) =>
     left.every((stroke, index) => sameDrawing(stroke, right[index] ?? null)));
 
 type SlideState = v.InferOutput<typeof SlideStateSchema>;
+type PersistentState = v.InferOutput<typeof PersistentStateSchema>;
+
+const fitsDeck = (state: PersistentState, pageCount: number) =>
+  state.drawings.every(({ page }) => page <= pageCount) &&
+  (state.frozenPage === null || state.frozenPage <= pageCount);
 
 export const shouldBroadcastState = (
   received: SlideState | undefined,
@@ -133,7 +149,7 @@ export const shouldBroadcastState = (
 export const createPresentationSync = (
   initialPage: number,
   initialBlankScreen: BlankScreen,
-  pageCount: Accessor<number | undefined>,
+  metadata: Accessor<Metadata | undefined>,
 ) => {
   const [currentPage, setCurrentPage] = createSignal(initialPage);
   const [blankScreen, setBlankScreen] =
@@ -153,7 +169,8 @@ export const createPresentationSync = (
   const [zoom, setZoom] = createSignal<SlideZoom | null>(null, {
     equals: sameZoom,
   });
-  const channel = new BroadcastChannel(`typdeck:${location.pathname}`);
+  const storageKey = `typdeck:${location.pathname}`;
+  const channel = new BroadcastChannel(storageKey);
   let receivedState: SlideState | undefined;
 
   const currentState = () => ({
@@ -168,6 +185,26 @@ export const createPresentationSync = (
   });
   const postState = () =>
     channel.postMessage({ type: "state", state: currentState() });
+  const savePersistentState = () => {
+    const deck = metadata();
+    if (!deck) return;
+    try {
+      sessionStorage.setItem(
+        storageKey,
+        JSON.stringify({
+          deck: metadataIdentity(deck),
+          state: {
+            blankScreen: blankScreen(),
+            drawings: drawings(),
+            drawingsHidden: drawingsHidden(),
+            frozenPage: frozenPage(),
+          },
+        }),
+      );
+    } catch {
+      // Storage is optional; presentation controls must keep working without it.
+    }
+  };
 
   channel.onmessage = (event) => {
     const message = v.safeParse(ChannelMessageSchema, event.data);
@@ -178,7 +215,7 @@ export const createPresentationSync = (
     }
 
     const state = message.output.state;
-    const pages = pageCount() ?? 0;
+    const pages = metadata()?.pageCount ?? 0;
     if (
       state.currentPage > pages ||
       (state.frozenPage !== null && state.frozenPage > pages) ||
@@ -227,11 +264,40 @@ export const createPresentationSync = (
     ),
   );
   createRenderEffect(
-    on(pageCount, (pages, previousPages) => {
-      if (pages !== undefined && previousPages === undefined) {
+    on(metadata, (deck, previousDeck) => {
+      if (deck && previousDeck === undefined) {
+        try {
+          const value = sessionStorage.getItem(storageKey);
+          if (value) {
+            const stored = v.safeParse(StoredStateSchema, JSON.parse(value));
+            if (
+              stored.success &&
+              stored.output.deck === metadataIdentity(deck) &&
+              fitsDeck(stored.output.state, deck.pageCount)
+            ) {
+              batch(() => {
+                if (initialBlankScreen === "none") {
+                  setBlankScreen(stored.output.state.blankScreen);
+                }
+                setDrawings(stored.output.state.drawings);
+                setDrawingsHidden(stored.output.state.drawingsHidden);
+                setFrozenPage(stored.output.state.frozenPage);
+              });
+            }
+          }
+        } catch {
+          // Storage is optional; presentation controls must keep working without it.
+        }
         channel.postMessage({ type: "request-state" });
       }
     }),
+  );
+  createEffect(
+    on(
+      [blankScreen, drawings, drawingsHidden, frozenPage],
+      savePersistentState,
+      { defer: true },
+    ),
   );
   onCleanup(() => channel.close());
 
@@ -252,5 +318,6 @@ export const createPresentationSync = (
     setPointer,
     zoom,
     setZoom,
+    savePersistentState,
   };
 };

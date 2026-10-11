@@ -4,6 +4,23 @@ import {
   createPresentationSync,
   shouldBroadcastState,
 } from "./presentationSync";
+import { metadataIdentity, type Metadata } from "./types/metadata";
+
+const metadata: Metadata = {
+  pageCount: 2,
+  outline: [{ page: 1, text: "Opening", level: 1 }],
+};
+const deck = metadataIdentity(metadata);
+
+const stubStorage = (value?: string) => {
+  const entries = new Map<string, string>();
+  if (value) entries.set("typdeck:/talk", value);
+  vi.stubGlobal("location", { pathname: "/talk" });
+  vi.stubGlobal("sessionStorage", {
+    getItem: vi.fn((key: string) => entries.get(key) ?? null),
+    setItem: vi.fn((key: string, next: string) => entries.set(key, next)),
+  });
+};
 
 class MockBroadcastChannel {
   static latest: MockBroadcastChannel | undefined;
@@ -57,9 +74,9 @@ const syncedState = {
 describe("createPresentationSync", () => {
   it("requests, accepts, and serves valid presentation state", async () => {
     vi.stubGlobal("BroadcastChannel", MockBroadcastChannel);
-    vi.stubGlobal("location", { pathname: "/talk" });
+    stubStorage();
     const { sync, dispose } = createRoot((dispose) => ({
-      sync: createPresentationSync(1, "none", () => 2),
+      sync: createPresentationSync(1, "none", () => metadata),
       dispose,
     }));
     const channel = MockBroadcastChannel.latest;
@@ -152,6 +169,144 @@ describe("createPresentationSync", () => {
 
     dispose();
     expect(channel.close).toHaveBeenCalledOnce();
+  });
+
+  it("restores matching session state without overriding the URL page", () => {
+    vi.stubGlobal("BroadcastChannel", MockBroadcastChannel);
+    stubStorage(
+      JSON.stringify({
+        deck,
+        state: {
+          blankScreen: "black",
+          drawings: syncedState.drawings,
+          drawingsHidden: true,
+          frozenPage: 1,
+        },
+      }),
+    );
+
+    const { sync, dispose } = createRoot((dispose) => ({
+      sync: createPresentationSync(2, "none", () => metadata),
+      dispose,
+    }));
+
+    expect(sync.currentPage()).toBe(2);
+    expect(sync.blankScreen()).toBe("black");
+    expect(sync.drawings()).toEqual(syncedState.drawings);
+    expect(sync.drawingsHidden()).toBe(true);
+    expect(sync.frozenPage()).toBe(1);
+    expect(sync.activeDrawing()).toBeNull();
+    expect(sync.pointer()).toBeNull();
+    expect(sync.zoom()).toBeNull();
+    dispose();
+  });
+
+  it("ignores state from another deck and keeps an explicit blank screen", () => {
+    vi.stubGlobal("BroadcastChannel", MockBroadcastChannel);
+    stubStorage(
+      JSON.stringify({
+        deck: "another deck",
+        state: {
+          blankScreen: "white",
+          drawings: syncedState.drawings,
+          drawingsHidden: true,
+          frozenPage: 1,
+        },
+      }),
+    );
+    const first = createRoot((dispose) => ({
+      sync: createPresentationSync(1, "black", () => metadata),
+      dispose,
+    }));
+    expect(first.sync.blankScreen()).toBe("black");
+    expect(first.sync.drawings()).toEqual([]);
+    first.dispose();
+
+    stubStorage(
+      JSON.stringify({
+        deck,
+        state: {
+          blankScreen: "white",
+          drawings: [],
+          drawingsHidden: false,
+          frozenPage: null,
+        },
+      }),
+    );
+    const second = createRoot((dispose) => ({
+      sync: createPresentationSync(1, "black", () => metadata),
+      dispose,
+    }));
+    expect(second.sync.blankScreen()).toBe("black");
+    second.dispose();
+  });
+
+  it("rejects stored pages outside the deck", () => {
+    vi.stubGlobal("BroadcastChannel", MockBroadcastChannel);
+    stubStorage(
+      JSON.stringify({
+        deck,
+        state: {
+          blankScreen: "black",
+          drawings: [{ ...syncedState.drawings[0], page: 3 }],
+          drawingsHidden: true,
+          frozenPage: null,
+        },
+      }),
+    );
+    const { sync, dispose } = createRoot((dispose) => ({
+      sync: createPresentationSync(1, "none", () => metadata),
+      dispose,
+    }));
+
+    expect(sync.blankScreen()).toBe("none");
+    expect(sync.drawings()).toEqual([]);
+    dispose();
+  });
+
+  it("persists completed drawings but not transient state", () => {
+    vi.stubGlobal("BroadcastChannel", MockBroadcastChannel);
+    stubStorage();
+    const { sync, dispose } = createRoot((dispose) => ({
+      sync: createPresentationSync(1, "none", () => metadata),
+      dispose,
+    }));
+    sync.setActiveDrawing(syncedState.activeDrawing);
+    sync.setPointer(syncedState.pointer);
+    sync.setZoom(syncedState.zoom);
+    sync.setDrawings(syncedState.drawings);
+    sync.savePersistentState();
+
+    const stored = JSON.parse(
+      vi.mocked(sessionStorage.setItem).mock.lastCall?.[1] ?? "null",
+    );
+    expect(stored.state.drawings).toEqual(syncedState.drawings);
+    expect(stored.state).not.toHaveProperty("activeDrawing");
+    expect(stored.state).not.toHaveProperty("pointer");
+    expect(stored.state).not.toHaveProperty("zoom");
+    dispose();
+  });
+
+  it("works when session storage is unavailable", () => {
+    vi.stubGlobal("BroadcastChannel", MockBroadcastChannel);
+    vi.stubGlobal("location", { pathname: "/talk" });
+    vi.stubGlobal("sessionStorage", {
+      getItem: vi.fn(() => {
+        throw new DOMException("Denied", "SecurityError");
+      }),
+      setItem: vi.fn(() => {
+        throw new DOMException("Full", "QuotaExceededError");
+      }),
+    });
+
+    const { sync, dispose } = createRoot((dispose) => ({
+      sync: createPresentationSync(1, "none", () => metadata),
+      dispose,
+    }));
+    expect(() => sync.savePersistentState()).not.toThrow();
+    sync.setBlankScreen("white");
+    expect(sync.blankScreen()).toBe("white");
+    dispose();
   });
 });
 

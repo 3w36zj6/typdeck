@@ -269,10 +269,11 @@ const App = () => {
     setPointer,
     zoom,
     setZoom,
+    savePersistentState,
   } = createPresentationSync(
     pageFromHash(window.location.hash),
     urlParams.has("blackout") ? "black" : "none",
-    () => metadata()?.pageCount,
+    () => metadata(),
   );
   const [pointerMode, setPointerMode] = createSignal<
     "none" | SlidePointer["kind"]
@@ -832,7 +833,12 @@ const App = () => {
   });
 
   onMount(() => {
+    const saveBeforeUnload = () => {
+      endDrawing(false);
+      savePersistentState();
+    };
     window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("pagehide", saveBeforeUnload);
     window.addEventListener("mousemove", showMenu);
     window.addEventListener("touchstart", showMenu);
 
@@ -850,6 +856,7 @@ const App = () => {
 
     onCleanup(() => {
       window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("pagehide", saveBeforeUnload);
       window.removeEventListener("mousemove", showMenu);
       window.removeEventListener("touchstart", showMenu);
       window.clearTimeout(hideMenuTimeout);

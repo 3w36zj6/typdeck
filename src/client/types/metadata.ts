@@ -71,5 +71,28 @@ const MetadataSchema = v.pipe(
 
 export type Metadata = v.InferOutput<typeof MetadataSchema>;
 
+export const metadataIdentity = ({ pageCount, outline, slides }: Metadata) =>
+  JSON.stringify({
+    pageCount,
+    outline,
+    slides: Object.fromEntries(
+      Object.entries(slides ?? {})
+        .filter(
+          ([, slide]) =>
+            slide?.hidden ||
+            slide?.logicalSlide !== undefined ||
+            slide?.overlay !== undefined,
+        )
+        .map(([page, slide]) => [
+          page,
+          {
+            hidden: slide?.hidden,
+            logicalSlide: slide?.logicalSlide,
+            overlay: slide?.overlay,
+          },
+        ]),
+    ),
+  });
+
 export const parseMetadata = (value: unknown): Metadata =>
   v.parse(MetadataSchema, value);
