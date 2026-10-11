@@ -24,7 +24,7 @@ afterEach(() => {
 });
 
 describe("createPresentationSync", () => {
-  it("accepts valid state, rejects invalid state, and closes its channel", () => {
+  it("requests, accepts, and serves valid presentation state", () => {
     vi.stubGlobal("BroadcastChannel", MockBroadcastChannel);
     const { sync, dispose } = createRoot((dispose) => ({
       sync: createPresentationSync(1, false, () => 2),
@@ -34,17 +34,36 @@ describe("createPresentationSync", () => {
     if (!channel) throw new Error("BroadcastChannel was not created");
 
     expect(channel.name).toBe("slide-sync");
+    expect(channel.postMessage).toHaveBeenCalledWith({
+      type: "request-state",
+    });
     expect(sync.currentPage()).toBe(1);
     expect(sync.isBlackout()).toBe(false);
 
-    channel.dispatch({ blackout: true, currentPage: 2 });
+    channel.postMessage.mockClear();
+    channel.dispatch({
+      type: "state",
+      state: { blackout: true, currentPage: 2 },
+    });
     expect(sync.currentPage()).toBe(2);
     expect(sync.isBlackout()).toBe(true);
 
-    channel.dispatch({ blackout: false, currentPage: 3 });
-    channel.dispatch({ blackout: "false", currentPage: 1 });
+    channel.dispatch({
+      type: "state",
+      state: { blackout: false, currentPage: 3 },
+    });
+    channel.dispatch({
+      type: "state",
+      state: { blackout: "false", currentPage: 1 },
+    });
     expect(sync.currentPage()).toBe(2);
     expect(sync.isBlackout()).toBe(true);
+
+    channel.dispatch({ type: "request-state" });
+    expect(channel.postMessage).toHaveBeenCalledWith({
+      type: "state",
+      state: { blackout: true, currentPage: 2 },
+    });
 
     dispose();
     expect(channel.close).toHaveBeenCalledOnce();

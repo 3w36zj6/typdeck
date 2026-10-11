@@ -2,6 +2,7 @@ import {
   type Accessor,
   batch,
   createEffect,
+  createRenderEffect,
   createSignal,
   on,
   onCleanup,
@@ -12,6 +13,10 @@ const SlideStateSchema = v.object({
   blackout: v.boolean(),
   currentPage: v.pipe(v.number(), v.integer(), v.minValue(1)),
 });
+const ChannelMessageSchema = v.variant("type", [
+  v.object({ type: v.literal("request-state") }),
+  v.object({ type: v.literal("state"), state: SlideStateSchema }),
+]);
 
 export const createPresentationSync = (
   initialPage: number,
@@ -22,23 +27,36 @@ export const createPresentationSync = (
   const [isBlackout, setIsBlackout] = createSignal(initialBlackout);
   const channel = new BroadcastChannel("slide-sync");
 
-  channel.onmessage = (event) => {
-    const state = v.safeParse(SlideStateSchema, event.data);
-    if (!state.success || state.output.currentPage > (pageCount() ?? 0)) return;
+  const currentState = () => ({
+    blackout: isBlackout(),
+    currentPage: currentPage(),
+  });
+  const postState = () =>
+    channel.postMessage({ type: "state", state: currentState() });
 
+  channel.onmessage = (event) => {
+    const message = v.safeParse(ChannelMessageSchema, event.data);
+    if (!message.success) return;
+    if (message.output.type === "request-state") {
+      postState();
+      return;
+    }
+
+    const state = message.output.state;
+    if (state.currentPage > (pageCount() ?? 0)) return;
     batch(() => {
-      setCurrentPage(state.output.currentPage);
-      setIsBlackout(state.output.blackout);
+      setCurrentPage(state.currentPage);
+      setIsBlackout(state.blackout);
     });
   };
 
-  createEffect(
-    on(
-      [currentPage, isBlackout],
-      ([currentPage, blackout]) =>
-        channel.postMessage({ blackout, currentPage }),
-      { defer: true },
-    ),
+  createEffect(on([currentPage, isBlackout], postState, { defer: true }));
+  createRenderEffect(
+    on(pageCount, (pages, previousPages) => {
+      if (pages !== undefined && previousPages === undefined) {
+        channel.postMessage({ type: "request-state" });
+      }
+    }),
   );
   onCleanup(() => channel.close());
 
