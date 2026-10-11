@@ -175,6 +175,7 @@ dist
 .DS_Store
 
 bin/
+/.typdeck/
 
 public/pages
 public/metadata.json
