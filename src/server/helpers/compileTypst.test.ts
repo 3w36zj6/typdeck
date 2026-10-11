@@ -33,6 +33,29 @@ describe("compileTypst", () => {
     ).toMatchObject({ pageCount: 1 });
   });
 
+  it("compiles Slydst 0.1.5 slides", async () => {
+    using output = fs.mkdtempDisposableSync(
+      path.join(os.tmpdir(), "typdeck-slydst-"),
+    );
+
+    await compileTypst(
+      path.join(process.cwd(), "tests/fixtures/slydst.typ"),
+      output.path,
+    );
+
+    expect(
+      JSON.parse(
+        fs.readFileSync(path.join(output.path, "metadata.json"), "utf8"),
+      ),
+    ).toMatchObject({
+      pageCount: 3,
+      outline: [
+        { text: "First slide", level: 2, page: 2 },
+        { text: "Second slide", level: 2, page: 3 },
+      ],
+    });
+  });
+
   it("keeps the last good output when compilation fails", async () => {
     const root = process.cwd();
     using output = fs.mkdtempDisposableSync(
