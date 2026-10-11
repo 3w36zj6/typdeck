@@ -41,7 +41,7 @@
     "@fastify/send": "^4.1.1",
     "chalk": "^5.4.1",
     "chokidar": "^5.0.0",
-    "pdfjs-dist": "6.3.289",
+    "pdfjs-dist": "6.4.299",
     "valibot": "^1.5.0",
     "yargs": "^17.7.2"
   },

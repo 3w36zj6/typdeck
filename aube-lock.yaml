@@ -17,8 +17,8 @@ importers:
         specifier: ^5.0.0
         version: 5.0.0
       pdfjs-dist:
-        specifier: 6.3.289
-        version: 6.3.289
+        specifier: 6.4.299
+        version: 6.4.299
       valibot:
         specifier: ^1.5.0
         version: 1.5.0(typescript@5.7.3)
@@ -2083,10 +2083,10 @@ packages:
         integrity: sha512-vE7JKRyES09KiunauX7nd2Q9/L7lhok4smP9RZTDeD4MVs72Dp2qNFVz39Nz5a0FVEW0BJR6C0DYrq6unoziZA==,
       }
 
-  pdfjs-dist@6.3.289:
+  pdfjs-dist@6.4.299:
     resolution:
       {
-        integrity: sha512-ZHjSVpDa3D6izMq8/04lvkhkATUmL9px6ChPaXc1k6nU2Mrhlg1/7F0bdUqCwUjw3NsPTfPZsMDUU6ZIcRaeQw==,
+        integrity: sha512-AVl138zALtfaAPvADulE0PZThbYzCBS79nL4pOSL/6Sm/4AH5A21BD9VHt97OlCuzJuCpmeZtAtkinisF4Vb1g==,
       }
 
   picocolors@1.1.1:
@@ -3648,7 +3648,7 @@ snapshots:
 
   pathval@2.0.0: {}
 
-  pdfjs-dist@6.3.289:
+  pdfjs-dist@6.4.299:
     optionalDependencies:
       "@napi-rs/canvas": 1.0.10
 
