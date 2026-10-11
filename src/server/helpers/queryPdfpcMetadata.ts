@@ -11,10 +11,17 @@ type PdfpcSlide = {
   overlay?: number;
 };
 
+type PdfpcMetadata = {
+  slides: PdfpcSlide[];
+  durationMinutes?: number;
+  lastMinutes?: number;
+};
+
 const expression = `query(<pdfpc>)
   .filter(item => type(item.value) == dictionary)
   .filter(item => item.value.at("t", default: none) in (
-    "Note", "HiddenSlide", "EndSlide", "SaveSlide", "LogicalSlide", "Overlay"
+    "Note", "HiddenSlide", "EndSlide", "SaveSlide", "LogicalSlide", "Overlay",
+    "Duration", "LastMinutes"
   ))
   .map(item => (
     page: item.location().page(),
@@ -55,6 +62,16 @@ const PdfpcEventSchema = v.array(
       type: v.literal("Overlay"),
       value: v.pipe(v.number(), v.integer(), v.minValue(0)),
     }),
+    v.object({
+      page: PageSchema,
+      type: v.literal("Duration"),
+      value: v.pipe(v.number(), v.minValue(0)),
+    }),
+    v.object({
+      page: PageSchema,
+      type: v.literal("LastMinutes"),
+      value: v.pipe(v.number(), v.minValue(0)),
+    }),
   ]),
 );
 
@@ -62,7 +79,7 @@ export const queryPdfpcMetadata = async (
   typstFile: string,
   root: string,
   signal?: AbortSignal,
-): Promise<PdfpcSlide[]> => {
+): Promise<PdfpcMetadata> => {
   const { stdout } = await runProcess(
     "typst",
     ["eval", "--root", root, expression, "--in", typstFile, "--format", "json"],
@@ -70,7 +87,17 @@ export const queryPdfpcMetadata = async (
   );
 
   const slides = new Map<number, PdfpcSlide>();
+  let durationMinutes: number | undefined;
+  let lastMinutes: number | undefined;
   for (const event of v.parse(PdfpcEventSchema, JSON.parse(stdout))) {
+    if (event.type === "Duration") {
+      durationMinutes = event.value > 0 ? event.value : undefined;
+      continue;
+    }
+    if (event.type === "LastMinutes") {
+      lastMinutes = event.value;
+      continue;
+    }
     const slide = slides.get(event.page) ?? { page: event.page };
     if (event.type === "Note") {
       slide.speakerNotes =
@@ -85,14 +112,18 @@ export const queryPdfpcMetadata = async (
       slide.savedSlide = true;
     } else if (event.type === "LogicalSlide") {
       slide.logicalSlide = event.value;
-    } else {
+    } else if (event.type === "Overlay") {
       slide.overlay = event.value;
     }
     slides.set(event.page, slide);
   }
-  return [...slides.values()].map(({ logicalSlide, overlay, ...slide }) =>
-    logicalSlide !== undefined && overlay !== undefined
-      ? { ...slide, logicalSlide, overlay }
-      : slide,
-  );
+  return {
+    slides: [...slides.values()].map(({ logicalSlide, overlay, ...slide }) =>
+      logicalSlide !== undefined && overlay !== undefined
+        ? { ...slide, logicalSlide, overlay }
+        : slide,
+    ),
+    ...(durationMinutes === undefined ? {} : { durationMinutes }),
+    ...(lastMinutes === undefined ? {} : { lastMinutes }),
+  };
 };

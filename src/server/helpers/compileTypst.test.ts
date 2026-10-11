@@ -35,6 +35,8 @@ describe("compileTypst", () => {
       pageLabels: ["i"],
       title: "Result deck",
       language: "en-GB",
+      durationMinutes: 30,
+      lastMinutes: 5,
     });
   });
 

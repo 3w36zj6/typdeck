@@ -39,6 +39,8 @@ const MetadataSchema = v.pipe(
     pageLabels: v.optional(v.array(v.string())),
     title: v.optional(v.pipe(v.string(), v.trim(), v.minLength(1))),
     language: v.optional(LanguageSchema),
+    durationMinutes: v.optional(v.pipe(v.number(), v.gtValue(0))),
+    lastMinutes: v.optional(v.pipe(v.number(), v.minValue(0))),
     outline: v.array(
       v.object({
         text: v.string(),

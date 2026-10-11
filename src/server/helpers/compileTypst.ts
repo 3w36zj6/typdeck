@@ -125,12 +125,13 @@ export const compileTypst = async (
     };
   });
 
-  const [{ pageCount, pageLabels, title, language }, outline, pdfpcSlides] =
+  const [{ pageCount, pageLabels, title, language }, outline, pdfpc] =
     await Promise.all([
       pdfMetadata.finally(() => pdfTask.destroy()),
       queryTypstHeadings(typstFile, process.cwd(), signal),
       queryPdfpcMetadata(typstFile, process.cwd(), signal),
     ]);
+  const { slides: pdfpcSlides, ...presentation } = pdfpc;
   const slides: NonNullable<Metadata["slides"]> = Object.fromEntries(
     pdfpcSlides
       .filter(({ page }) => page <= pageCount)
@@ -141,6 +142,7 @@ export const compileTypst = async (
     ...(pageLabels === undefined ? {} : { pageLabels }),
     ...(title === undefined ? {} : { title }),
     ...(language === undefined ? {} : { language }),
+    ...presentation,
     outline,
     ...(Object.keys(slides).length > 0 ? { slides } : {}),
   };

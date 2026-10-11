@@ -10,16 +10,20 @@ describe("queryPdfpcMetadata", () => {
         path.join(root, "tests/fixtures/pdfpc-note.typ"),
         root,
       ),
-    ).resolves.toEqual([{ page: 1, speakerNotes: "Explain this result." }]);
+    ).resolves.toEqual({
+      durationMinutes: 30,
+      lastMinutes: 5,
+      slides: [{ page: 1, speakerNotes: "Explain this result." }],
+    });
   });
 
   it("joins multiple Touying speaker notes", async () => {
     const root = process.cwd();
-    const slides = await queryPdfpcMetadata(
+    const metadata = await queryPdfpcMetadata(
       path.join(root, "tests/fixtures/touying.typ"),
       root,
     );
-    expect(slides).toContainEqual({
+    expect(metadata.slides).toContainEqual({
       page: 2,
       logicalSlide: 1,
       overlay: 0,
@@ -34,7 +38,7 @@ describe("queryPdfpcMetadata", () => {
       queryPdfpcMetadata(
         path.join(root, "tests/fixtures/touying-overlay.typ"),
         root,
-      ),
+      ).then(({ slides }) => slides),
     ).resolves.toEqual([
       {
         page: 1,
@@ -67,7 +71,7 @@ describe("queryPdfpcMetadata", () => {
       queryPdfpcMetadata(
         path.join(root, "tests/fixtures/polylux-overlay.typ"),
         root,
-      ),
+      ).then(({ slides }) => slides),
     ).resolves.toEqual([
       {
         page: 1,
@@ -94,13 +98,13 @@ describe("queryPdfpcMetadata", () => {
     ]);
   });
 
-  it("reads shared pdfpc hidden-slide metadata", async () => {
+  it("reads hidden slides and ignores a zero duration", async () => {
     const root = process.cwd();
     await expect(
       queryPdfpcMetadata(
         path.join(root, "tests/fixtures/pdfpc-hidden.typ"),
         root,
       ),
-    ).resolves.toEqual([{ page: 2, hidden: true }]);
+    ).resolves.toEqual({ slides: [{ page: 2, hidden: true }] });
   });
 });
