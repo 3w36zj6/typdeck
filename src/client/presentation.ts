@@ -1,6 +1,12 @@
 import { adjacentVisiblePage } from "./navigation";
 import type { Metadata } from "./types/metadata";
 
+export type SlidePoint = { x: number; y: number };
+export type SlidePointer = SlidePoint & {
+  kind: "laser" | "spotlight";
+  page: number;
+};
+
 export const actionForKey = ({
   code,
   shiftKey = false,

@@ -73,6 +73,10 @@ typdeck preview
 
 ## Features
 
+### Pointer tools
+
+Presenter View provides a laser pointer and spotlight that follow pointer input on the current slide and appear on the Stage.
+
 ### Hidden slides
 
 `HiddenSlide` marks a page to be skipped during normal navigation while keeping

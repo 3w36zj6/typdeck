@@ -28,6 +28,8 @@ import {
   previousPresentationPage,
   remainingSeconds,
   savedSlidePage,
+  type SlidePoint,
+  type SlidePointer,
 } from "./presentation";
 import { createPresentationSync } from "./presentationSync";
 import {
@@ -187,12 +189,21 @@ const App = () => {
   const getPageFromHash = () => pageFromHash(window.location.hash, metadata());
   const urlParams = new URLSearchParams(window.location.search);
   const isPresenterMode = urlParams.get("mode") === "presenter";
-  const { currentPage, setCurrentPage, isBlackout, setIsBlackout } =
-    createPresentationSync(
-      pageFromHash(window.location.hash),
-      urlParams.has("blackout"),
-      () => metadata()?.pageCount,
-    );
+  const {
+    currentPage,
+    setCurrentPage,
+    isBlackout,
+    setIsBlackout,
+    pointer,
+    setPointer,
+  } = createPresentationSync(
+    pageFromHash(window.location.hash),
+    urlParams.has("blackout"),
+    () => metadata()?.pageCount,
+  );
+  const [pointerMode, setPointerMode] = createSignal<
+    "none" | SlidePointer["kind"]
+  >("none");
   const [currentTime, setCurrentTime] = createSignal(Date.now());
   const [timerTime, setTimerTime] = createSignal(performance.now());
   const [elapsedMilliseconds, setElapsedMilliseconds] = createSignal(0);
@@ -319,8 +330,30 @@ const App = () => {
   };
   const [isMenuVisible, setIsMenuVisible] = createSignal(true);
   let hideMenuTimeout: number;
+  let pointerHideTimeout: number;
 
   const toggleBlackout = () => setIsBlackout((value) => !value);
+
+  const pointerForPage = (page: number) => {
+    const value = pointer();
+    return value?.page === page ? value : undefined;
+  };
+
+  const updatePointer = (point: SlidePoint | undefined) => {
+    window.clearTimeout(pointerHideTimeout);
+    const kind = pointerMode();
+    if (!point || kind === "none") {
+      setPointer(null);
+      return;
+    }
+    setPointer({ ...point, kind, page: currentPage() });
+    pointerHideTimeout = window.setTimeout(() => setPointer(null), 3000);
+  };
+
+  const togglePointer = (kind: SlidePointer["kind"]) => {
+    setPointer(null);
+    setPointerMode((mode) => (mode === kind ? "none" : kind));
+  };
 
   const showMenu = () => {
     setIsMenuVisible(true);
@@ -560,6 +593,7 @@ const App = () => {
       window.removeEventListener("mousemove", showMenu);
       window.removeEventListener("touchstart", showMenu);
       window.clearTimeout(hideMenuTimeout);
+      window.clearTimeout(pointerHideTimeout);
     });
   });
 
@@ -616,6 +650,7 @@ const App = () => {
                       document={document()}
                       page={currentPage()}
                       label={pageLabel(metadata()!, currentPage())}
+                      pointer={pointerForPage(currentPage())}
                       onNavigate={setCurrentPage}
                     />
                   </div>
@@ -858,7 +893,11 @@ const App = () => {
                         metadata()!,
                         currentPage(),
                       )}`}
+                      pointer={pointerForPage(currentPage())}
                       onNavigate={setCurrentPage}
+                      onPointerMove={
+                        pointerMode() === "none" ? undefined : updatePointer
+                      }
                     />
                   </div>
                   <div
@@ -1156,6 +1195,34 @@ const App = () => {
                 <MenuIcon
                   icon={isBlackout() ? "lucide:monitor" : "lucide:monitor-x"}
                 />
+              </button>
+              <button
+                class="icon-button"
+                onClick={() => togglePointer("laser")}
+                aria-label="Laser pointer"
+                aria-pressed={pointerMode() === "laser"}
+                data-tooltip={
+                  pointerMode() === "laser"
+                    ? "Turn laser pointer off"
+                    : "Turn laser pointer on"
+                }
+                style={{ height: "32px" }}
+              >
+                <MenuIcon icon="lucide:crosshair" />
+              </button>
+              <button
+                class="icon-button"
+                onClick={() => togglePointer("spotlight")}
+                aria-label="Spotlight"
+                aria-pressed={pointerMode() === "spotlight"}
+                data-tooltip={
+                  pointerMode() === "spotlight"
+                    ? "Turn spotlight off"
+                    : "Turn spotlight on"
+                }
+                style={{ height: "32px" }}
+              >
+                <MenuIcon icon="lucide:scan" />
               </button>
               <button
                 class="icon-button"

@@ -103,6 +103,26 @@ button {
   outline: 2px solid #fff;
   outline-offset: 3px;
 }
+
+.laser-pointer {
+  position: absolute;
+  z-index: 2;
+  width: 16px;
+  height: 16px;
+  transform: translate(-50%, -50%);
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #f00;
+  box-shadow: 0 0 8px #f00;
+  pointer-events: none;
+}
+
+.spotlight-layer {
+  position: absolute;
+  z-index: 2;
+  pointer-events: none;
+}
+
 .shortcut-dialog {
   padding: 0;
   border: 0;
