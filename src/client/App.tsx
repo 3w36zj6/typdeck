@@ -12,7 +12,8 @@ import {
   untrack,
 } from "solid-js";
 import { parseMetadata } from "./types/metadata";
-import { Icon } from "@iconify-icon/solid";
+import { addCollection, Icon } from "@iconify-icon/solid";
+import { icons as lucideIcons } from "@iconify-json/lucide";
 import { adjacentVisiblePage, hashForPage, pageFromHash } from "./navigation";
 import {
   actionForKey,
@@ -53,6 +54,7 @@ import DOMPurify from "dompurify";
 import { marked } from "marked";
 
 GlobalWorkerOptions.workerSrc = pdfWorker;
+addCollection(lucideIcons);
 
 type MenuIconProps = {
   icon: string;

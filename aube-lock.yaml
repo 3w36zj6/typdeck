@@ -32,6 +32,9 @@ importers:
       "@iconify-icon/solid":
         specifier: ^2.3.0
         version: 2.3.0(solid-js@1.9.4)
+      "@iconify-json/lucide":
+        specifier: ^1.2.142
+        version: 1.2.142
       "@types/bun":
         specifier: latest
         version: 1.2.0
@@ -2607,6 +2610,12 @@ packages:
         integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==,
       }
 
+  "@iconify-json/lucide@1.2.142":
+    resolution:
+      {
+        integrity: sha512-vEGX5X52/l77jRMcmxXk3PiEebldDUs8WFdM8X3Evq1S9p5F+o0VZhx8sqaQsmFEB9Ukp5ND5Q/0g2kQ/LF+rQ==,
+      }
+
 snapshots:
   "@ampproject/remapping@2.3.0":
     dependencies:
@@ -3967,3 +3976,7 @@ snapshots:
       yargs-parser: 21.1.1
 
   yocto-queue@0.1.0: {}
+
+  "@iconify-json/lucide@1.2.142":
+    dependencies:
+      "@iconify/types": 2.0.0

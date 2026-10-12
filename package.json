@@ -48,6 +48,7 @@
   "devDependencies": {
     "@eslint/js": "^9.19.0",
     "@iconify-icon/solid": "^2.3.0",
+    "@iconify-json/lucide": "^1.2.142",
     "@types/bun": "latest",
     "@types/node": "26.6.4",
     "@types/yargs": "^17.0.33",
