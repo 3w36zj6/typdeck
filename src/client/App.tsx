@@ -950,11 +950,17 @@ const App = () => {
   createEffect(
     on(
       currentPage,
-      (page) => {
+      (page, previousPage) => {
         if (isPresenterMode) endDrawing(false);
         setZoom(null);
         setIsSelectingZoom(false);
         const deck = metadata();
+        if (
+          previousPage !== undefined &&
+          drawingPage(page) !== drawingPage(previousPage)
+        ) {
+          setRedoStrokes([]);
+        }
         if (deck) {
           setSlideTiming((state) =>
             updateSlideTiming(
