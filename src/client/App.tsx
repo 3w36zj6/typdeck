@@ -1486,8 +1486,9 @@ const App = () => {
               )}
             </Show>
           </div>
-          <div
+          <section
             class="speaker-notes"
+            aria-label="Speaker notes"
             style={{
               display: isCurrentSlideMaximized() ? "none" : undefined,
               padding: "10px",
@@ -1520,11 +1521,11 @@ const App = () => {
                 </div>
               )
             ) : (
-              <p style={{ margin: "0", color: "#666", "font-style": "italic" }}>
+              <p style={{ margin: "0", color: "#aaa", "font-style": "italic" }}>
                 No speaker notes for this slide.
               </p>
             )}
-          </div>
+          </section>
           <div
             class="presenter-footer"
             style={{
