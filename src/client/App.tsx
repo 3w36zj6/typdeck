@@ -22,6 +22,12 @@ import {
   pageFromHash,
 } from "./navigation";
 import { actionForKey, isCharacterShortcut } from "./keyboard";
+import type {
+  DrawingStroke,
+  SlidePoint,
+  SlidePointer,
+  SlideRect,
+} from "./drawing";
 import {
   adjacentLogicalSlidePage,
   completedSlidePage,
@@ -42,10 +48,6 @@ import {
   timingBreakdownRows,
   updateSlideTiming,
   type BlankScreen,
-  type DrawingStroke,
-  type SlidePoint,
-  type SlidePointer,
-  type SlideRect,
 } from "./presentation";
 import { createPresentationSync } from "./presentationSync";
 import {
@@ -462,8 +464,7 @@ const App = () => {
   let wheelEndTimeout: number;
   let wheelHandled = false;
   let stageSwipeStart:
-    | { pointerId: number; clientX: number; clientY: number }
-    | undefined;
+    { pointerId: number; clientX: number; clientY: number } | undefined;
 
   const toggleBlankScreen = (color: Exclude<BlankScreen, "none">) =>
     setBlankScreen((value) => (value === color ? "none" : color));

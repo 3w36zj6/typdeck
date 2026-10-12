@@ -9,12 +9,8 @@ import {
   onCleanup,
 } from "solid-js";
 import * as v from "valibot";
-import type {
-  BlankScreen,
-  DrawingStroke,
-  SlidePointer,
-  SlideZoom,
-} from "./presentation";
+import type { DrawingStroke, SlidePointer, SlideZoom } from "./drawing";
+import type { BlankScreen } from "./presentation";
 import { metadataIdentity, type Metadata } from "./types/metadata";
 
 const PointSchema = v.object({

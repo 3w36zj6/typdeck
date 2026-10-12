@@ -24,7 +24,7 @@ import {
   type SlidePoint,
   type SlidePointer,
   type SlideZoom,
-} from "./presentation";
+} from "./drawing";
 
 type PdfSlideProps = {
   document: PDFDocumentProxy;
