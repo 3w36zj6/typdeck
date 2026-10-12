@@ -28,64 +28,38 @@ const expression = `query(<pdfpc>)
   ))
   .map(item => (
     page: item.location().page(),
-    type: item.value.t,
-    value: item.value.at("v", default: none),
+    speaker-notes: if item.value.t == "Note" { item.value.at("v", default: none) },
+    hidden: item.value.t == "HiddenSlide",
+    end-slide: item.value.t == "EndSlide",
+    saved-slide: item.value.t == "SaveSlide",
+    logical-slide: if item.value.t == "LogicalSlide" { item.value.at("v", default: none) },
+    overlay: if item.value.t == "Overlay" { item.value.at("v", default: none) },
+    duration-minutes: if item.value.t == "Duration" { item.value.at("v", default: none) },
+    start-time: if item.value.t == "StartTime" { item.value.at("v", default: none) },
+    end-time: if item.value.t == "EndTime" { item.value.at("v", default: none) },
+    last-minutes: if item.value.t == "LastMinutes" { item.value.at("v", default: none) },
+    disable-markdown: if item.value.t == "DisableMarkdown" { item.value.at("v", default: none) },
   ))`;
 
-const PageSchema = v.pipe(v.number(), v.integer(), v.minValue(1));
-const PdfpcEventSchema = v.array(
-  v.variant("type", [
-    v.object({
-      page: PageSchema,
-      type: v.literal("Note"),
-      value: v.string(),
-    }),
-    v.object({
-      page: PageSchema,
-      type: v.literal("HiddenSlide"),
-      value: v.null(),
-    }),
-    v.object({
-      page: PageSchema,
-      type: v.literal("EndSlide"),
-      value: v.null(),
-    }),
-    v.object({
-      page: PageSchema,
-      type: v.literal("SaveSlide"),
-      value: v.null(),
-    }),
-    v.object({
-      page: PageSchema,
-      type: v.literal("LogicalSlide"),
-      value: v.pipe(v.number(), v.integer(), v.minValue(0)),
-    }),
-    v.object({
-      page: PageSchema,
-      type: v.literal("Overlay"),
-      value: v.pipe(v.number(), v.integer(), v.minValue(0)),
-    }),
-    v.object({
-      page: PageSchema,
-      type: v.literal("Duration"),
-      value: v.pipe(v.number(), v.minValue(0)),
-    }),
-    v.object({
-      page: PageSchema,
-      type: v.union([v.literal("StartTime"), v.literal("EndTime")]),
-      value: v.pipe(v.string(), v.regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/)),
-    }),
-    v.object({
-      page: PageSchema,
-      type: v.literal("LastMinutes"),
-      value: v.pipe(v.number(), v.minValue(0)),
-    }),
-    v.object({
-      page: PageSchema,
-      type: v.literal("DisableMarkdown"),
-      value: v.boolean(),
-    }),
-  ]),
+const PdfpcMetadataEventSchema = v.array(
+  v.object({
+    page: v.pipe(v.number(), v.integer(), v.minValue(1)),
+    "speaker-notes": v.nullable(v.string()),
+    hidden: v.boolean(),
+    "end-slide": v.boolean(),
+    "saved-slide": v.boolean(),
+    "logical-slide": v.nullable(v.pipe(v.number(), v.integer(), v.minValue(0))),
+    overlay: v.nullable(v.pipe(v.number(), v.integer(), v.minValue(0))),
+    "duration-minutes": v.nullable(v.pipe(v.number(), v.minValue(0))),
+    "start-time": v.nullable(
+      v.pipe(v.string(), v.regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/)),
+    ),
+    "end-time": v.nullable(
+      v.pipe(v.string(), v.regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/)),
+    ),
+    "last-minutes": v.nullable(v.pipe(v.number(), v.minValue(0))),
+    "disable-markdown": v.nullable(v.boolean()),
+  }),
 );
 
 export const queryPdfpcMetadata = async (
@@ -98,51 +72,47 @@ export const queryPdfpcMetadata = async (
     ["eval", "--root", root, expression, "--in", typstFile, "--format", "json"],
     signal,
   );
-
-  const events = v.parse(PdfpcEventSchema, JSON.parse(stdout));
-  const disableMarkdown = events
-    .flatMap((event) => (event.type === "DisableMarkdown" ? [event.value] : []))
-    .at(-1);
   const slides = new Map<number, PdfpcSlide>();
   let durationMinutes: number | undefined;
   let startTime: string | undefined;
   let endTime: string | undefined;
   let lastMinutes: number | undefined;
-  for (const event of events) {
-    if (event.type === "Duration") {
-      durationMinutes = event.value > 0 ? event.value : undefined;
+  let disableMarkdown: boolean | undefined;
+  for (const event of v.parse(PdfpcMetadataEventSchema, JSON.parse(stdout))) {
+    if (event["duration-minutes"] !== null) {
+      durationMinutes = event["duration-minutes"] || undefined;
       continue;
     }
-    if (event.type === "StartTime") {
-      startTime = event.value;
+    if (event["start-time"] !== null) {
+      startTime = event["start-time"];
       continue;
     }
-    if (event.type === "EndTime") {
-      endTime = event.value;
+    if (event["end-time"] !== null) {
+      endTime = event["end-time"];
       continue;
     }
-    if (event.type === "LastMinutes") {
-      lastMinutes = event.value;
+    if (event["last-minutes"] !== null) {
+      lastMinutes = event["last-minutes"];
       continue;
     }
-    if (event.type === "DisableMarkdown") continue;
+    if (event["disable-markdown"] !== null) {
+      disableMarkdown = event["disable-markdown"];
+      continue;
+    }
     const slide = slides.get(event.page) ?? { page: event.page };
-    if (event.type === "Note") {
+    if (event["speaker-notes"] !== null) {
       slide.speakerNotes =
-        slide.speakerNotes === undefined
-          ? event.value
-          : `${slide.speakerNotes}\n\n${event.value}`;
-    } else if (event.type === "HiddenSlide") {
-      slide.hidden = true;
-    } else if (event.type === "EndSlide") {
-      slide.endSlide = true;
-    } else if (event.type === "SaveSlide") {
-      slide.savedSlide = true;
-    } else if (event.type === "LogicalSlide") {
-      slide.logicalSlide = event.value;
-    } else if (event.type === "Overlay") {
-      slide.overlay = event.value;
+        slide.speakerNotes !== undefined
+          ? `${slide.speakerNotes}\n\n${event["speaker-notes"]}`
+          : event["speaker-notes"];
     }
+    if (event.hidden) slide.hidden = true;
+    if (event["end-slide"]) slide.endSlide = true;
+    if (event["saved-slide"]) slide.savedSlide = true;
+    if (event["logical-slide"] !== null) {
+      slide.logicalSlide = event["logical-slide"];
+    }
+    if (event.overlay !== null) slide.overlay = event.overlay;
     slides.set(event.page, slide);
   }
   return {
