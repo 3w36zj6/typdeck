@@ -2,6 +2,7 @@ import {
   type Accessor,
   batch,
   createEffect,
+  createMemo,
   createRenderEffect,
   createSignal,
   on,
@@ -87,8 +88,12 @@ const StoredStateSchema = v.object({
   state: PersistentStateSchema,
 });
 const ChannelMessageSchema = v.variant("type", [
-  v.object({ type: v.literal("request-state") }),
-  v.object({ type: v.literal("state"), state: SlideStateSchema }),
+  v.object({ deck: v.string(), type: v.literal("request-state") }),
+  v.object({
+    deck: v.string(),
+    type: v.literal("state"),
+    state: SlideStateSchema,
+  }),
 ]);
 
 const samePointer = (left: SlidePointer | null, right: SlidePointer | null) =>
@@ -181,6 +186,10 @@ export const createPresentationSync = (
   });
   const storageKey = `typdeck:${location.pathname}`;
   const channel = new BroadcastChannel(storageKey);
+  const deckId = createMemo(() => {
+    const deck = metadata();
+    return deck && metadataIdentity(deck);
+  });
   let receivedState: SlideState | undefined;
 
   const currentState = () => ({
@@ -194,16 +203,23 @@ export const createPresentationSync = (
     pointer: pointer(),
     zoom: zoom(),
   });
-  const postState = () =>
-    channel.postMessage({ type: "state", state: currentState() });
+  const postState = () => {
+    const id = deckId();
+    if (!id) return;
+    channel.postMessage({
+      deck: id,
+      type: "state",
+      state: currentState(),
+    });
+  };
   const savePersistentState = () => {
-    const deck = metadata();
-    if (!deck) return;
+    const id = deckId();
+    if (!id) return;
     try {
       sessionStorage.setItem(
         storageKey,
         JSON.stringify({
-          deck: metadataIdentity(deck),
+          deck: id,
           state: {
             blankScreen: blankScreen(),
             bookmarkPage: bookmarkPage(),
@@ -221,24 +237,25 @@ export const createPresentationSync = (
   channel.onmessage = (event) => {
     const message = v.safeParse(ChannelMessageSchema, event.data);
     if (!message.success) return;
+    const deck = metadata();
+    if (!deck || message.output.deck !== deckId()) return;
     if (message.output.type === "request-state") {
       postState();
       return;
     }
 
     const state = message.output.state;
-    const pages = metadata()?.pageCount ?? 0;
+    const pages = deck.pageCount;
     if (
       state.currentPage > pages ||
-      (state.bookmarkPage !== null && state.bookmarkPage > pages) ||
-      (state.frozenPage !== null && state.frozenPage > pages) ||
+      !fitsDeck(state, pages) ||
       (state.activeDrawing !== null && state.activeDrawing.page > pages) ||
-      state.drawings.some(({ page }) => page > pages) ||
       (state.pointer !== null && state.pointer.page > pages) ||
       (state.zoom !== null && state.zoom.page > pages)
     ) {
       return;
     }
+
     receivedState = state;
     batch(() => {
       setActiveDrawing(state.activeDrawing);
@@ -304,7 +321,10 @@ export const createPresentationSync = (
         } catch {
           // Storage is optional; presentation controls must keep working without it.
         }
-        channel.postMessage({ type: "request-state" });
+        channel.postMessage({
+          deck: deckId(),
+          type: "request-state",
+        });
       }
     }),
   );
