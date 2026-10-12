@@ -1074,7 +1074,7 @@ const App = () => {
         listener,
       );
     }
-    const saveBeforeUnload = () => {
+    const cancelActiveDrawing = () => {
       endDrawing(false);
       savePersistentState();
     };
@@ -1104,7 +1104,11 @@ const App = () => {
     };
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("hashchange", syncPageFromHash);
-    window.addEventListener("pagehide", saveBeforeUnload);
+    if (isPresenterMode) {
+      window.addEventListener("pagehide", cancelActiveDrawing, {
+        signal: lifecycle.signal,
+      });
+    }
     document.addEventListener("fullscreenchange", syncFullscreen);
     document.addEventListener("visibilitychange", keepScreenAwake);
     if (!isPresenterMode) {
@@ -1131,7 +1135,6 @@ const App = () => {
       lifecycle.abort();
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("hashchange", syncPageFromHash);
-      window.removeEventListener("pagehide", saveBeforeUnload);
       if (!isPresenterMode) {
         window.removeEventListener("mousemove", showCursor);
       }
