@@ -878,6 +878,7 @@ const App = () => {
           setFrozenPage(null);
           setZoom(null);
           selectInputMode("normal");
+          setIsCurrentSlideMaximized(false);
         });
         break;
     }
