@@ -460,6 +460,8 @@ const App = () => {
   const [isFullscreen, setIsFullscreen] = createSignal(
     document.fullscreenElement !== null,
   );
+  const [isCursorVisible, setIsCursorVisible] = createSignal(true);
+  let cursorHideTimeout: number;
   let pointerHideTimeout: number;
   let wheelEndTimeout: number;
   let wheelHandled = false;
@@ -633,6 +635,15 @@ const App = () => {
       setZoom({ ...rect, page: currentPage() });
       setIsSelectingZoom(false);
     });
+  };
+
+  const showCursor = () => {
+    setIsCursorVisible(true);
+    window.clearTimeout(cursorHideTimeout);
+    cursorHideTimeout = window.setTimeout(
+      () => setIsCursorVisible(false),
+      3000,
+    );
   };
 
   const syncFullscreen = () =>
@@ -1099,6 +1110,10 @@ const App = () => {
     window.addEventListener("pagehide", saveBeforeUnload);
     document.addEventListener("fullscreenchange", syncFullscreen);
     document.addEventListener("visibilitychange", keepScreenAwake);
+    if (!isPresenterMode) {
+      window.addEventListener("mousemove", showCursor);
+      showCursor();
+    }
     createEffect(() => {
       if (metadata() && pdfDocument()) untrack(keepScreenAwake);
     });
@@ -1120,9 +1135,13 @@ const App = () => {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("hashchange", syncPageFromHash);
       window.removeEventListener("pagehide", saveBeforeUnload);
+      if (!isPresenterMode) {
+        window.removeEventListener("mousemove", showCursor);
+      }
       document.removeEventListener("fullscreenchange", syncFullscreen);
       document.removeEventListener("visibilitychange", keepScreenAwake);
       releaseWakeLock(wakeLock());
+      window.clearTimeout(cursorHideTimeout);
       window.clearTimeout(pointerHideTimeout);
       window.clearTimeout(wheelEndTimeout);
     });
@@ -1158,6 +1177,7 @@ const App = () => {
           <>
             <div
               class="slide-container"
+              classList={{ "cursor-hidden": !isCursorVisible() }}
               inert={blankScreen() !== "none"}
               lang={metadata()?.language}
               style={{

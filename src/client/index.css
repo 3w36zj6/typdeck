@@ -66,6 +66,11 @@ button {
   touch-action: pan-y pinch-zoom;
 }
 
+.slide-container.cursor-hidden,
+.slide-container.cursor-hidden * {
+  cursor: none !important;
+}
+
 .icon-button {
   position: relative;
 }
