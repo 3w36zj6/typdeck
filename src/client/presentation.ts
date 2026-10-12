@@ -246,16 +246,15 @@ const slideKey = (metadata: Metadata, page: number): string => {
     : `logical:${logicalSlide}`;
 };
 
-const presentationSections = (metadata: Metadata) => {
+const presentationSlides = (metadata: Metadata) => {
   const endPage = endSlidePage(metadata);
   const slides = new Set<string>();
-  const appendices = new Set<string>();
   for (let page = 1; page <= metadata.pageCount; page += 1) {
     if (metadata.slides?.[`${page}`]?.hidden) continue;
     const key = slideKey(metadata, page);
-    (page <= endPage || slides.has(key) ? slides : appendices).add(key);
+    if (page <= endPage || slides.has(key)) slides.add(key);
   }
-  return { slides: [...slides], appendices: [...appendices] };
+  return [...slides];
 };
 
 export const previousPresentationPage = (
@@ -301,31 +300,26 @@ export const nextPreviewPage = (
   return completedVisibleSlidePage(metadata, next);
 };
 
+const presentationProgress = (metadata: Metadata, page: number) => {
+  if (metadata.slides?.[`${page}`]?.hidden) return;
+  const slides = presentationSlides(metadata);
+  const position = slides.indexOf(slideKey(metadata, page)) + 1;
+  return position > 0 ? { position, total: slides.length } : undefined;
+};
+
 export const presentationPositionLabel = (
   metadata: Metadata,
   page: number,
 ): string => {
   if (metadata.slides?.[`${page}`]?.hidden) {
-    return "Hidden slide";
+    return `Page ${page} of ${metadata.pageCount} (hidden)`;
   }
-
-  const { slides, appendices } = presentationSections(metadata);
-  const slide = metadata.slides?.[`${page}`];
-  const key = slideKey(metadata, page);
-  const position = slides.indexOf(key) + 1;
-  const appendixPosition = appendices.indexOf(key) + 1;
-  if (position === 0 && appendixPosition === 0) {
-    return "Slide";
-  }
-  const label =
-    position > 0
-      ? `Slide ${position} of ${slides.length}`
-      : `Appendix ${appendixPosition} of ${appendices.length}`;
-
-  if (slide?.logicalSlide === undefined) {
-    return label;
-  }
-  const overlays = overlayPages(metadata, slide.logicalSlide);
+  const progress = presentationProgress(metadata, page);
+  if (!progress) return `Page ${page} of ${metadata.pageCount}`;
+  const label = `Slide ${progress.position} of ${progress.total}`;
+  const logicalSlide = metadata.slides?.[`${page}`]?.logicalSlide;
+  if (logicalSlide === undefined) return label;
+  const overlays = overlayPages(metadata, logicalSlide);
   const step = overlays.indexOf(page) + 1;
   return overlays.length > 1 && step > 0
     ? `${label}\nStep ${step} of ${overlays.length}`
@@ -338,15 +332,11 @@ export const presentationPace = (
   elapsedSeconds: number,
 ) => {
   const durationMinutes = presentationDurationMinutes(metadata);
-  if (durationMinutes === undefined || metadata.slides?.[`${page}`]?.hidden) {
-    return;
-  }
-  const slides = presentationSections(metadata).slides;
-  const position = slides.indexOf(slideKey(metadata, page)) + 1;
-  if (position === 0) return;
-
+  if (durationMinutes === undefined) return;
+  const progress = presentationProgress(metadata, page);
+  if (!progress) return;
   const expectedSeconds =
-    (durationMinutes * 60 * (position - 0.5)) / slides.length;
+    (durationMinutes * 60 * (progress.position - 0.5)) / progress.total;
   const differenceSeconds = Math.round(elapsedSeconds - expectedSeconds);
   return {
     status:

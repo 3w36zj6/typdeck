@@ -177,7 +177,9 @@ describe("overlay presentation", () => {
     expect(presentationPositionLabel(hiddenOverlay, 2)).toBe(
       "Slide 1 of 3\nStep 2 of 2",
     );
-    expect(presentationPositionLabel(hiddenOverlay, 3)).toBe("Hidden slide");
+    expect(presentationPositionLabel(hiddenOverlay, 3)).toBe(
+      "Page 3 of 5 (hidden)",
+    );
   });
 
   it("returns to the first overlay across slide boundaries", () => {
@@ -193,7 +195,7 @@ describe("overlay presentation", () => {
     expect(presentationPositionLabel(deck, 5)).toBe("Slide 3 of 3");
   });
 
-  it("labels logical slides after the end slide as appendices", () => {
+  it("excludes pages after the end slide from presentation progress", () => {
     const deckWithAppendix: Metadata = {
       ...deck,
       pageCount: 6,
@@ -206,12 +208,8 @@ describe("overlay presentation", () => {
     };
 
     expect(presentationPositionLabel(deckWithAppendix, 4)).toBe("Slide 2 of 2");
-    expect(presentationPositionLabel(deckWithAppendix, 5)).toBe(
-      "Appendix 1 of 1\nStep 1 of 2",
-    );
-    expect(presentationPositionLabel(deckWithAppendix, 6)).toBe(
-      "Appendix 1 of 1\nStep 2 of 2",
-    );
+    expect(presentationPositionLabel(deckWithAppendix, 5)).toBe("Page 5 of 6");
+    expect(presentationPositionLabel(deckWithAppendix, 6)).toBe("Page 6 of 6");
     expect(nextPreviewPage(deckWithAppendix, 4)).toBe(6);
     expect(
       presentationPace({ ...deckWithAppendix, durationMinutes: 30 }, 6, 0),
