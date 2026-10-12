@@ -991,17 +991,16 @@ const App = () => {
     return content;
   });
 
-  let timerInitialized = !isPresenterMode;
-  createEffect(() => {
-    const deck = metadata();
-    if (!deck || timerInitialized) return;
-    timerInitialized = true;
-    const now = Date.now();
-    const startAt = presentationStartAt(deck, now);
-    setCurrentTime(now);
-    setScheduledStartAt(startAt);
-    if (startAt !== undefined && startAt <= now) startTimer(now - startAt);
-  });
+  createEffect(
+    on(metadata, (deck) => {
+      if (!isPresenterMode || !deck || timerStartedAt() !== undefined) return;
+      const now = Date.now();
+      const startAt = presentationStartAt(deck, now);
+      setCurrentTime(now);
+      setScheduledStartAt(startAt);
+      if (startAt !== undefined && startAt <= now) startTimer(now - startAt);
+    }),
+  );
 
   createEffect(() => {
     const startAt = scheduledStartAt();
@@ -1016,7 +1015,7 @@ const App = () => {
 
   createEffect(() => {
     const deck = metadata();
-    if (!deck || timerStartedAt() !== undefined) return;
+    if (!isPresenterMode || !deck || timerStartedAt() !== undefined) return;
     if (currentPage() !== adjacentVisiblePage(deck, 0, 1)) startTimer();
   });
 
