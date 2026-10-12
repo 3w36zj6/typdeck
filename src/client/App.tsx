@@ -1293,7 +1293,7 @@ const App = () => {
                 >
                   {metadata()
                     ? presentationPositionLabel(metadata()!, stagePage())
-                    : ""}
+                    : "Loading slides"}
                   {frozenPage() === null ? "" : " (frozen)"}
                 </span>
                 <button
@@ -2156,7 +2156,7 @@ const App = () => {
                     >
                       {metadata()
                         ? presentationPositionLabel(metadata()!, currentPage())
-                        : ""}
+                        : "Loading slides"}
                     </span>
                     <button
                       class="icon-button"
