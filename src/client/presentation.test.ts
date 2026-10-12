@@ -158,6 +158,11 @@ describe("overlay presentation", () => {
     expect(nextPreviewPage(deck, 3)).toBe(4);
   });
 
+  it("returns no preview after the final page", () => {
+    expect(nextPreviewPage(deck, 4)).toBe(5);
+    expect(nextPreviewPage(deck, 5)).toBeUndefined();
+  });
+
   it("excludes hidden overlays from previews and progress", () => {
     const hiddenOverlay: Metadata = {
       ...deck,

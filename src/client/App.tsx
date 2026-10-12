@@ -1464,17 +1464,25 @@ const App = () => {
                       overflow: "hidden",
                     }}
                   >
-                    <PdfSlide
-                      document={document()}
-                      page={previewPage()}
-                      label={`Next slide: ${pageLabel(
-                        metadata()!,
-                        previewPage(),
-                      )}`}
-                      opacity={0.5}
-                      drawings={visibleDrawingsForPage(previewPage())}
-                      onNavigate={setCurrentPage}
-                    />
+                    <Show
+                      when={previewPage()}
+                      fallback={
+                        <p role="status" lang="en">
+                          End of presentation
+                        </p>
+                      }
+                    >
+                      {(page) => (
+                        <PdfSlide
+                          document={document()}
+                          page={page()}
+                          label={`Next slide: ${pageLabel(metadata()!, page())}`}
+                          opacity={0.5}
+                          drawings={visibleDrawingsForPage(page())}
+                          onNavigate={setCurrentPage}
+                        />
+                      )}
+                    </Show>
                   </div>
                 </>
               )}

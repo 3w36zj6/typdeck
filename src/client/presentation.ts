@@ -282,7 +282,10 @@ const completedVisibleSlidePage = (
   return pages[pages.length - 1] ?? page;
 };
 
-export const nextPreviewPage = (metadata: Metadata, page: number): number => {
+export const nextPreviewPage = (
+  metadata: Metadata,
+  page: number,
+): number | undefined => {
   const current = metadata.slides?.[`${page}`];
   const completed = completedVisibleSlidePage(metadata, page);
   const completedOverlay = metadata.slides?.[`${completed}`]?.overlay;
@@ -294,6 +297,7 @@ export const nextPreviewPage = (metadata: Metadata, page: number): number => {
     return completed;
   }
   const next = adjacentVisiblePage(metadata, page, 1);
+  if (next === page) return;
   return completedVisibleSlidePage(metadata, next);
 };
 
