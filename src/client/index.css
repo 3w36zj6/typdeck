@@ -54,6 +54,11 @@ button {
   margin-bottom: 0;
 }
 
+.speaker-notes {
+  box-sizing: border-box;
+  max-height: 30vh;
+}
+
 .slide-container {
   touch-action: pan-y pinch-zoom;
 }
