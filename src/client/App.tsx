@@ -664,9 +664,6 @@ const App = () => {
     }
   };
 
-  const [isTransitioning, setIsTransitioning] = createSignal(false);
-  const TRANSITION_DURATION_MS = 150;
-
   const previousPage = () => {
     const deck = metadata();
     return deck ? previousPresentationPage(deck, currentPage()) : currentPage();
@@ -681,18 +678,12 @@ const App = () => {
   };
 
   const goPreviousPage = () => {
-    if (isTransitioning()) return;
-    setIsTransitioning(true);
     setCurrentPage(previousPage());
-    window.setTimeout(() => setIsTransitioning(false), TRANSITION_DURATION_MS);
   };
 
   const goNextPage = () => {
-    if (isTransitioning()) return;
     if (!metadata()) return;
-    setIsTransitioning(true);
     setCurrentPage(nextPage());
-    window.setTimeout(() => setIsTransitioning(false), TRANSITION_DURATION_MS);
   };
   const openPageJump = () => {
     pageJumpInput.valueAsNumber = currentPage();
