@@ -382,3 +382,67 @@ button {
     grid-template-rows: minmax(100px, 1fr) minmax(0, 2fr);
   }
 }
+
+.presenter-footer {
+  box-sizing: border-box;
+  max-height: 40vh;
+  overflow: auto;
+}
+
+.presenter-control-scope {
+  display: flex;
+  min-width: 0;
+  flex: 1 0 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.presenter-control-scope + .presenter-control-scope {
+  padding-top: 8px;
+  border-top: 1px solid #555;
+}
+
+.presenter-control-scope > h2 {
+  flex: 1 0 100%;
+  margin: 0;
+  color: #fff;
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.presenter-control-group {
+  min-width: 0;
+  margin: 0;
+  padding: 4px 8px 8px;
+  border: 1px solid #555;
+  border-radius: 6px;
+}
+
+.presenter-control-group legend {
+  padding: 0 4px;
+  color: #bbb;
+  font-size: 12px;
+}
+
+.presenter-control-row {
+  display: flex;
+  min-height: 32px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.presenter-navigation-group {
+  position: sticky;
+  z-index: 1;
+  inset-block-end: 0;
+  box-sizing: border-box;
+  flex: 1 0 100%;
+  background: #222;
+}
+
+.presenter-page-navigation {
+  flex: 0 0 auto;
+  margin-inline-start: auto;
+}

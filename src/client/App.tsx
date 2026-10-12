@@ -72,16 +72,6 @@ const MenuIcon = (props: MenuIconProps) => {
   );
 };
 
-const IconSeparator = () => (
-  <div
-    class="icon-separator"
-    style={{
-      "border-left": "1px solid #444",
-      height: "32px",
-    }}
-  />
-);
-
 const BlankScreenButtons = (props: {
   blankScreen: BlankScreen;
   height: string;
@@ -98,11 +88,7 @@ const BlankScreenButtons = (props: {
       }
       style={{ height: props.height }}
     >
-      <MenuIcon
-        icon={
-          props.blankScreen === "black" ? "lucide:monitor" : "lucide:monitor-x"
-        }
-      />
+      <MenuIcon icon="lucide:monitor-x" />
     </button>
     <button
       class="icon-button"
@@ -114,9 +100,7 @@ const BlankScreenButtons = (props: {
       }
       style={{ height: props.height }}
     >
-      <MenuIcon
-        icon={props.blankScreen === "white" ? "lucide:monitor" : "lucide:sun"}
-      />
+      <MenuIcon icon="lucide:sun" />
     </button>
   </>
 );
@@ -556,8 +540,9 @@ const App = () => {
       setAutoAdvanceDeadline(performance.now() + duration);
     }
   };
-  const [isMenuVisible, setIsMenuVisible] = createSignal(true);
-  let hideMenuTimeout: number;
+  const [isFullscreen, setIsFullscreen] = createSignal(
+    document.fullscreenElement !== null,
+  );
   let pointerHideTimeout: number;
 
   const toggleBlankScreen = (color: Exclude<BlankScreen, "none">) =>
@@ -729,13 +714,8 @@ const App = () => {
     });
   };
 
-  const showMenu = () => {
-    setIsMenuVisible(true);
-    window.clearTimeout(hideMenuTimeout);
-    hideMenuTimeout = window.setTimeout(() => {
-      setIsMenuVisible(false);
-    }, 3000);
-  };
+  const syncFullscreen = () =>
+    setIsFullscreen(document.fullscreenElement !== null);
 
   const toggleFullScreen = async () => {
     if (!document.fullscreenElement) {
@@ -1093,8 +1073,7 @@ const App = () => {
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("hashchange", syncPageFromHash);
     window.addEventListener("pagehide", saveBeforeUnload);
-    window.addEventListener("mousemove", showMenu);
-    window.addEventListener("touchstart", showMenu);
+    document.addEventListener("fullscreenchange", syncFullscreen);
     document.addEventListener("visibilitychange", keepScreenAwake);
     createEffect(() => {
       if (metadata() && pdfDocument()) untrack(keepScreenAwake);
@@ -1117,11 +1096,9 @@ const App = () => {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("hashchange", syncPageFromHash);
       window.removeEventListener("pagehide", saveBeforeUnload);
-      window.removeEventListener("mousemove", showMenu);
-      window.removeEventListener("touchstart", showMenu);
+      document.removeEventListener("fullscreenchange", syncFullscreen);
       document.removeEventListener("visibilitychange", keepScreenAwake);
       releaseWakeLock(wakeLock());
-      window.clearTimeout(hideMenuTimeout);
       window.clearTimeout(pointerHideTimeout);
     });
   });
@@ -1203,12 +1180,14 @@ const App = () => {
             </Show>
             <div
               class="menu"
+              role="group"
+              aria-label="Stage controls"
               style={{
                 position: "fixed",
                 bottom: "20px",
                 left: "50%",
                 transform: "translateX(-50%)",
-                background: "rgba(0, 0, 0, 0.5)",
+                background: "rgba(0, 0, 0, 0.8)",
                 width: "max-content",
                 "max-width": "calc(100vw - 20px)",
                 "box-sizing": "border-box",
@@ -1217,9 +1196,6 @@ const App = () => {
                 display: "flex",
                 "flex-direction": "column",
                 gap: "5px",
-                opacity: isMenuVisible() ? "1" : "0",
-                transition: "opacity 0.3s",
-                "pointer-events": isMenuVisible() ? "auto" : "none",
                 "z-index": "2",
               }}
             >
@@ -1285,10 +1261,18 @@ const App = () => {
                 <button
                   class="icon-button"
                   onClick={toggleFullScreen}
-                  aria-label="Toggle fullscreen"
+                  aria-label={
+                    isFullscreen() ? "Exit fullscreen" : "Enter fullscreen"
+                  }
+                  aria-pressed={isFullscreen()}
+                  disabled={!document.fullscreenEnabled}
                   style={{ height: "100%" }}
                 >
-                  <MenuIcon icon="lucide:fullscreen" />
+                  <MenuIcon
+                    icon={
+                      isFullscreen() ? "lucide:minimize" : "lucide:maximize"
+                    }
+                  />
                 </button>
                 <button
                   class="icon-button"
@@ -1300,31 +1284,6 @@ const App = () => {
                 >
                   <MenuIcon icon="lucide:presentation" />
                 </button>
-                <button
-                  class="icon-button"
-                  onClick={openOverview}
-                  aria-label="Open slide overview"
-                  data-tooltip="Open slide overview"
-                  disabled={!pdfDocument()}
-                  style={{ height: "100%" }}
-                >
-                  <MenuIcon icon="lucide:grid-2x2" />
-                </button>
-                <button
-                  class="icon-button"
-                  onClick={openSearch}
-                  aria-label="Search slides"
-                  data-tooltip="Search slides"
-                  disabled={!pdfDocument()}
-                  style={{ height: "100%" }}
-                >
-                  <MenuIcon icon="lucide:search" />
-                </button>
-                <BlankScreenButtons
-                  blankScreen={blankScreen()}
-                  height="100%"
-                  onToggle={toggleBlankScreen}
-                />
                 <button
                   class="icon-button"
                   onClick={() => shortcutDialog.showModal()}
@@ -1507,572 +1466,621 @@ const App = () => {
               display: "flex",
               "flex-wrap": "wrap",
               "justify-content": "space-between",
-              "align-items": "center",
-              gap: "10px",
+              "align-items": "stretch",
+              gap: "8px",
               padding: "10px",
               "background-color": "#222",
               "min-height": "32px",
               "flex-shrink": "0",
             }}
           >
-            <div
-              style={{
-                display: "flex",
-                "flex-wrap": "wrap",
-                gap: "10px",
-                "align-items": "center",
-              }}
+            <section
+              class="presenter-control-scope"
+              aria-labelledby="presenter-view-controls"
             >
-              <Icon
-                icon="lucide:clock"
-                width="32"
-                height="32"
-                style={{
-                  color: "#fff",
-                }}
-              />
+              <h2 id="presenter-view-controls">Presenter View</h2>
+              <fieldset class="presenter-control-group">
+                <legend>Timing</legend>
+                <div class="presenter-control-row">
+                  <Icon
+                    aria-hidden="true"
+                    icon="lucide:clock"
+                    width="32"
+                    height="32"
+                    style={{
+                      color: "#fff",
+                    }}
+                  />
 
-              <Show
-                when={timerStartedAt() === undefined && scheduledStartAt()}
-                fallback={
-                  <div
-                    role="timer"
-                    aria-label="Elapsed time"
-                    style={{ "font-size": "32px" }}
-                  >
-                    {formatElapsedTime(elapsedSeconds())}
-                  </div>
-                }
-              >
-                {(startAt) => (
-                  <div
-                    role="timer"
-                    aria-label="Time until scheduled start"
-                    style={{ "font-size": "32px" }}
-                  >
-                    Starts in{" "}
-                    {formatElapsedTime(
-                      Math.max(
-                        0,
-                        Math.ceil((startAt() - currentTime()) / 1000),
-                      ),
-                    )}
-                  </div>
-                )}
-              </Show>
-              <Show
-                when={
-                  timerStartedAt() !== undefined ? remainingTime() : undefined
-                }
-              >
-                {(remaining) => (
-                  <div
-                    role="timer"
-                    aria-label={
-                      remaining().seconds < 0
-                        ? "Overtime"
-                        : remaining().warning
-                          ? "Remaining time warning"
-                          : "Remaining time"
+                  <Show
+                    when={timerStartedAt() === undefined && scheduledStartAt()}
+                    fallback={
+                      <div
+                        role="timer"
+                        aria-label="Elapsed time"
+                        style={{ "font-size": "32px" }}
+                      >
+                        {formatElapsedTime(elapsedSeconds())}
+                      </div>
                     }
+                  >
+                    {(startAt) => (
+                      <div
+                        role="timer"
+                        aria-label="Time until scheduled start"
+                        style={{ "font-size": "32px" }}
+                      >
+                        Starts in{" "}
+                        {formatElapsedTime(
+                          Math.max(
+                            0,
+                            Math.ceil((startAt() - currentTime()) / 1000),
+                          ),
+                        )}
+                      </div>
+                    )}
+                  </Show>
+                  <Show
+                    when={
+                      timerStartedAt() !== undefined
+                        ? remainingTime()
+                        : undefined
+                    }
+                  >
+                    {(remaining) => (
+                      <div
+                        role="timer"
+                        aria-label={
+                          remaining().seconds < 0
+                            ? "Overtime"
+                            : remaining().warning
+                              ? "Remaining time warning"
+                              : "Remaining time"
+                        }
+                        style={{
+                          display: "flex",
+                          gap: "4px",
+                          color: remaining().warning ? "#ffb020" : "inherit",
+                        }}
+                      >
+                        <span>
+                          {remaining().seconds < 0
+                            ? "Overtime"
+                            : remaining().warning
+                              ? "Ending soon"
+                              : "Remaining"}
+                        </span>
+                        <span>{formatRemainingTime(remaining().seconds)}</span>
+                      </div>
+                    )}
+                  </Show>
+                  <Show when={timerStartedAt() !== undefined && pace()}>
+                    {(currentPace) => (
+                      <div
+                        aria-label="Presentation pace"
+                        data-status={currentPace().status}
+                        style={{
+                          color:
+                            currentPace().status === "ahead"
+                              ? "#7db7ff"
+                              : currentPace().status === "behind"
+                                ? "#ffb020"
+                                : "inherit",
+                        }}
+                      >
+                        {currentPace().status === "on-pace"
+                          ? "On pace"
+                          : `${currentPace().status === "ahead" ? "Ahead" : "Behind"} ${formatElapsedTime(Math.abs(currentPace().differenceSeconds))}`}
+                      </div>
+                    )}
+                  </Show>
+                  <Show when={timerStartedAt() === undefined}>
+                    <button
+                      class="icon-button"
+                      onClick={() => startTimer()}
+                      aria-label="Start timer"
+                      style={{ height: "32px" }}
+                    >
+                      <MenuIcon icon="lucide:play" />
+                    </button>
+                  </Show>
+                  <Show when={timerStartedAt() !== undefined}>
+                    <button
+                      class="icon-button"
+                      onClick={toggleTimer}
+                      aria-label={
+                        timerStartedAt() === null
+                          ? "Resume timer"
+                          : "Pause timer"
+                      }
+                      style={{ height: "32px" }}
+                    >
+                      <MenuIcon
+                        icon={
+                          timerStartedAt() === null
+                            ? "lucide:play"
+                            : "lucide:pause"
+                        }
+                      />
+                    </button>
+                  </Show>
+                  <button
+                    class="icon-button"
+                    onClick={resetElapsedSeconds}
+                    aria-label="Reset timer"
+                    disabled={timerStartedAt() === undefined}
+                    style={{ height: "32px" }}
+                  >
+                    <MenuIcon icon="lucide:timer-reset" />
+                  </button>
+                  <button
+                    class="icon-button"
+                    onClick={() => timingDialog.showModal()}
+                    aria-label="Show timing breakdown"
+                    data-tooltip="Show timing breakdown"
+                    style={{ height: "32px" }}
+                  >
+                    <MenuIcon icon="lucide:chart-no-axes-column" />
+                  </button>
+                </div>
+              </fieldset>
+              <fieldset class="presenter-control-group">
+                <legend>View</legend>
+                <div class="presenter-control-row">
+                  <button
+                    class="icon-button"
+                    onClick={toggleCurrentSlideSize}
+                    aria-label={
+                      isCurrentSlideMaximized()
+                        ? "Restore current slide size"
+                        : "Maximize current slide"
+                    }
+                    aria-pressed={isCurrentSlideMaximized()}
+                    data-tooltip={
+                      isCurrentSlideMaximized()
+                        ? "Restore current slide size"
+                        : "Maximize current slide"
+                    }
+                    style={{ height: "32px" }}
+                  >
+                    <MenuIcon
+                      icon={
+                        isCurrentSlideMaximized()
+                          ? "lucide:minimize-2"
+                          : "lucide:maximize-2"
+                      }
+                    />
+                  </button>
+                  <button
+                    class="icon-button"
+                    onClick={() => shortcutDialog.showModal()}
+                    aria-label="Show keyboard shortcuts"
+                    data-tooltip="Show keyboard shortcuts"
+                    style={{ height: "32px" }}
+                  >
+                    <MenuIcon icon="lucide:circle-help" />
+                  </button>
+                  <button
+                    class="icon-button"
+                    onClick={openOverview}
+                    aria-label="Open slide overview"
+                    data-tooltip="Open slide overview"
+                    disabled={!pdfDocument()}
+                    style={{ height: "32px" }}
+                  >
+                    <MenuIcon icon="lucide:grid-2x2" />
+                  </button>
+                  <button
+                    class="icon-button"
+                    onClick={openSearch}
+                    aria-label="Search slides"
+                    data-tooltip="Search slides"
+                    disabled={!pdfDocument()}
+                    style={{ height: "32px" }}
+                  >
+                    <MenuIcon icon="lucide:search" />
+                  </button>
+                  <button
+                    class="icon-button"
+                    onClick={bookmarkCurrentSlide}
+                    aria-label="Bookmark current slide"
+                    aria-pressed={isCurrentSlideBookmarked()}
+                    data-tooltip="Bookmark current slide"
+                    disabled={!metadata()}
+                    style={{ height: "32px" }}
+                  >
+                    <MenuIcon icon="lucide:bookmark-plus" />
+                  </button>
+                </div>
+              </fieldset>
+            </section>
+            <section
+              class="presenter-control-scope"
+              aria-labelledby="stage-controls"
+            >
+              <h2 id="stage-controls">Stage</h2>
+              <fieldset class="presenter-control-group">
+                <legend>Auto advance</legend>
+                <div class="presenter-control-row">
+                  <label
+                    style={{
+                      display: "flex",
+                      "align-items": "center",
+                      gap: "4px",
+                    }}
+                  >
+                    Auto
+                    <input
+                      aria-label="Auto advance interval in seconds"
+                      type="number"
+                      min="1"
+                      step="1"
+                      required
+                      value={autoAdvanceSeconds()}
+                      onChange={(event) =>
+                        changeAutoAdvanceSeconds(event.currentTarget)
+                      }
+                      style={{ width: "4em" }}
+                    />
+                    s
+                  </label>
+                  <button
+                    class="icon-button"
+                    onClick={() =>
+                      autoAdvanceState() === "stopped"
+                        ? startAutoAdvance()
+                        : stopAutoAdvance()
+                    }
+                    aria-label={
+                      autoAdvanceState() === "stopped"
+                        ? "Start auto advance"
+                        : "Stop auto advance"
+                    }
+                    data-tooltip={
+                      autoAdvanceState() === "stopped"
+                        ? "Start auto advance"
+                        : "Stop auto advance"
+                    }
+                    disabled={
+                      autoAdvanceState() === "stopped" &&
+                      (!metadata() || nextPage() === currentPage())
+                    }
+                    style={{ height: "32px" }}
+                  >
+                    <MenuIcon
+                      icon={
+                        autoAdvanceState() === "stopped"
+                          ? "lucide:play"
+                          : "lucide:square"
+                      }
+                    />
+                  </button>
+                  <button
+                    class="icon-button"
+                    onClick={() =>
+                      autoAdvanceState() === "paused"
+                        ? resumeAutoAdvance()
+                        : pauseAutoAdvance()
+                    }
+                    aria-label={
+                      autoAdvanceState() === "paused"
+                        ? "Resume auto advance"
+                        : "Pause auto advance"
+                    }
+                    data-tooltip={
+                      autoAdvanceState() === "paused"
+                        ? "Resume auto advance"
+                        : "Pause auto advance"
+                    }
+                    disabled={autoAdvanceState() === "stopped"}
+                    style={{ height: "32px" }}
+                  >
+                    <MenuIcon
+                      icon={
+                        autoAdvanceState() === "paused"
+                          ? "lucide:play"
+                          : "lucide:pause"
+                      }
+                    />
+                  </button>
+                </div>
+              </fieldset>
+              <fieldset class="presenter-control-group">
+                <legend>Screen</legend>
+                <div class="presenter-control-row">
+                  <BlankScreenButtons
+                    blankScreen={blankScreen()}
+                    height="32px"
+                    onToggle={toggleBlankScreen}
+                  />
+                  <button
+                    class="icon-button"
+                    onClick={toggleFreeze}
+                    aria-label="Freeze stage"
+                    aria-pressed={frozenPage() !== null}
+                    data-tooltip={
+                      frozenPage() === null ? "Freeze stage" : "Unfreeze stage"
+                    }
+                    style={{ height: "32px" }}
+                  >
+                    <MenuIcon icon="lucide:panels-top-left" />
+                  </button>
+                </div>
+              </fieldset>
+              <fieldset class="presenter-control-group">
+                <legend>Pointer and zoom</legend>
+                <div class="presenter-control-row">
+                  <button
+                    class="icon-button"
+                    onClick={() => togglePointer("laser")}
+                    aria-label="Laser pointer"
+                    aria-pressed={pointerMode() === "laser"}
+                    data-tooltip={
+                      pointerMode() === "laser"
+                        ? "Turn laser pointer off"
+                        : "Turn laser pointer on"
+                    }
+                    style={{ height: "32px" }}
+                  >
+                    <MenuIcon icon="lucide:crosshair" />
+                  </button>
+                  <button
+                    class="icon-button"
+                    onClick={() => togglePointer("spotlight")}
+                    aria-label="Spotlight"
+                    aria-pressed={pointerMode() === "spotlight"}
+                    data-tooltip={
+                      pointerMode() === "spotlight"
+                        ? "Turn spotlight off"
+                        : "Turn spotlight on"
+                    }
+                    style={{ height: "32px" }}
+                  >
+                    <MenuIcon icon="lucide:scan" />
+                  </button>
+                  <button
+                    class="icon-button"
+                    onClick={toggleZoom}
+                    aria-label={
+                      zoom()
+                        ? "Reset zoom"
+                        : isSelectingZoom()
+                          ? "Cancel zoom selection"
+                          : "Select zoom area"
+                    }
+                    aria-pressed={zoom() !== null || isSelectingZoom()}
+                    data-tooltip={
+                      zoom()
+                        ? "Reset zoom"
+                        : isSelectingZoom()
+                          ? "Cancel zoom selection"
+                          : "Select zoom area"
+                    }
+                    style={{ height: "32px" }}
+                  >
+                    <MenuIcon
+                      icon={zoom() ? "lucide:zoom-out" : "lucide:scan-search"}
+                    />
+                  </button>
+                </div>
+              </fieldset>
+              <fieldset class="presenter-control-group">
+                <legend>Drawings</legend>
+                <div class="presenter-control-row">
+                  <button
+                    class="icon-button"
+                    onClick={() => toggleDrawing("pen")}
+                    aria-label="Draw"
+                    aria-pressed={drawingTool() === "pen"}
+                    data-tooltip={
+                      drawingTool() === "pen"
+                        ? "Turn drawing off"
+                        : "Turn drawing on"
+                    }
+                    style={{ height: "32px" }}
+                  >
+                    <MenuIcon icon="lucide:pencil" />
+                  </button>
+                  <input
+                    aria-label="Pen color"
+                    title="Pen color"
+                    type="color"
+                    value={penColor()}
+                    onInput={(event) => setPenColor(event.currentTarget.value)}
+                    style={{ width: "32px", height: "32px", padding: "0" }}
+                  />
+                  <button
+                    class="icon-button"
+                    onClick={() => toggleDrawing("eraser")}
+                    aria-label="Erase"
+                    aria-pressed={drawingTool() === "eraser"}
+                    data-tooltip={
+                      drawingTool() === "eraser"
+                        ? "Turn eraser off"
+                        : "Turn eraser on"
+                    }
+                    style={{ height: "32px" }}
+                  >
+                    <MenuIcon icon="lucide:eraser" />
+                  </button>
+                  <div
+                    role="group"
+                    aria-label="Input tool size"
                     style={{
                       display: "flex",
                       gap: "4px",
-                      color: remaining().warning ? "#ffb020" : "inherit",
+                      "align-items": "center",
                     }}
                   >
-                    <span>
-                      {remaining().seconds < 0
-                        ? "Overtime"
-                        : remaining().warning
-                          ? "Ending soon"
-                          : "Remaining"}
-                    </span>
-                    <span>{formatRemainingTime(remaining().seconds)}</span>
+                    <button
+                      class="icon-button"
+                      onClick={() => resizeCurrentMode(-0.25)}
+                      aria-label="Decrease input tool size"
+                      data-tooltip="Decrease input tool size"
+                      disabled={(currentInput()?.size ?? 0.5) <= 0.5}
+                      style={{ height: "32px" }}
+                    >
+                      <MenuIcon icon="lucide:minus" />
+                    </button>
+                    <output
+                      aria-live="polite"
+                      style={{ "min-width": "4ch", "text-align": "center" }}
+                    >
+                      {currentInput()?.size ?? "—"}
+                      {currentInput() && "×"}
+                    </output>
+                    <button
+                      class="icon-button"
+                      onClick={() => resizeCurrentMode(0.25)}
+                      aria-label="Increase input tool size"
+                      data-tooltip="Increase input tool size"
+                      disabled={(currentInput()?.size ?? 3) >= 3}
+                      style={{ height: "32px" }}
+                    >
+                      <MenuIcon icon="lucide:plus" />
+                    </button>
                   </div>
-                )}
-              </Show>
-              <Show when={timerStartedAt() !== undefined && pace()}>
-                {(currentPace) => (
-                  <div
-                    aria-label="Presentation pace"
-                    data-status={currentPace().status}
-                    style={{
-                      color:
-                        currentPace().status === "ahead"
-                          ? "#7db7ff"
-                          : currentPace().status === "behind"
-                            ? "#ffb020"
-                            : "inherit",
-                    }}
-                  >
-                    {currentPace().status === "on-pace"
-                      ? "On pace"
-                      : `${currentPace().status === "ahead" ? "Ahead" : "Behind"} ${formatElapsedTime(Math.abs(currentPace().differenceSeconds))}`}
-                  </div>
-                )}
-              </Show>
-              <IconSeparator />
-              <Show when={timerStartedAt() === undefined}>
-                <button
-                  class="icon-button"
-                  onClick={() => startTimer()}
-                  aria-label="Start timer"
-                  style={{ height: "32px" }}
-                >
-                  <MenuIcon icon="lucide:play" />
-                </button>
-              </Show>
-              <Show when={timerStartedAt() !== undefined}>
-                <button
-                  class="icon-button"
-                  onClick={toggleTimer}
-                  aria-label={
-                    timerStartedAt() === null ? "Resume timer" : "Pause timer"
-                  }
-                  style={{ height: "32px" }}
-                >
-                  <MenuIcon
-                    icon={
-                      timerStartedAt() === null ? "lucide:play" : "lucide:pause"
+                  <button
+                    class="icon-button"
+                    onClick={toggleDrawingsVisibility}
+                    aria-label={
+                      drawingsHidden() ? "Show drawings" : "Hide drawings"
                     }
-                  />
-                </button>
-              </Show>
-              <button
-                class="icon-button"
-                onClick={resetElapsedSeconds}
-                aria-label="Reset timer"
-                disabled={timerStartedAt() === undefined}
-                style={{ height: "32px" }}
-              >
-                <MenuIcon icon="lucide:timer-reset" />
-              </button>
-              <button
-                class="icon-button"
-                onClick={() => timingDialog.showModal()}
-                aria-label="Show timing breakdown"
-                data-tooltip="Show timing breakdown"
-                style={{ height: "32px" }}
-              >
-                <MenuIcon icon="lucide:chart-no-axes-column" />
-              </button>
-              <label
-                style={{
-                  display: "flex",
-                  "align-items": "center",
-                  gap: "4px",
-                }}
-              >
-                Auto
-                <input
-                  aria-label="Auto advance interval in seconds"
-                  type="number"
-                  min="1"
-                  step="1"
-                  required
-                  value={autoAdvanceSeconds()}
-                  onChange={(event) =>
-                    changeAutoAdvanceSeconds(event.currentTarget)
-                  }
-                  style={{ width: "4em" }}
-                />
-                s
-              </label>
-              <button
-                class="icon-button"
-                onClick={() =>
-                  autoAdvanceState() === "stopped"
-                    ? startAutoAdvance()
-                    : stopAutoAdvance()
-                }
-                aria-label={
-                  autoAdvanceState() === "stopped"
-                    ? "Start auto advance"
-                    : "Stop auto advance"
-                }
-                data-tooltip={
-                  autoAdvanceState() === "stopped"
-                    ? "Start auto advance"
-                    : "Stop auto advance"
-                }
-                disabled={
-                  autoAdvanceState() === "stopped" &&
-                  (!metadata() || nextPage() === currentPage())
-                }
-                style={{ height: "32px" }}
-              >
-                <MenuIcon
-                  icon={
-                    autoAdvanceState() === "stopped"
-                      ? "lucide:play"
-                      : "lucide:square"
-                  }
-                />
-              </button>
-              <button
-                class="icon-button"
-                onClick={() =>
-                  autoAdvanceState() === "paused"
-                    ? resumeAutoAdvance()
-                    : pauseAutoAdvance()
-                }
-                aria-label={
-                  autoAdvanceState() === "paused"
-                    ? "Resume auto advance"
-                    : "Pause auto advance"
-                }
-                data-tooltip={
-                  autoAdvanceState() === "paused"
-                    ? "Resume auto advance"
-                    : "Pause auto advance"
-                }
-                disabled={autoAdvanceState() === "stopped"}
-                style={{ height: "32px" }}
-              >
-                <MenuIcon
-                  icon={
-                    autoAdvanceState() === "paused"
-                      ? "lucide:play"
-                      : "lucide:pause"
-                  }
-                />
-              </button>
-              <BlankScreenButtons
-                blankScreen={blankScreen()}
-                height="32px"
-                onToggle={toggleBlankScreen}
-              />
-              <button
-                class="icon-button"
-                onClick={toggleFreeze}
-                aria-label="Freeze stage"
-                aria-pressed={frozenPage() !== null}
-                data-tooltip={
-                  frozenPage() === null ? "Freeze stage" : "Unfreeze stage"
-                }
-                style={{ height: "32px" }}
-              >
-                <MenuIcon icon="lucide:panels-top-left" />
-              </button>
-              <button
-                class="icon-button"
-                onClick={toggleCurrentSlideSize}
-                aria-label={
-                  isCurrentSlideMaximized()
-                    ? "Restore current slide size"
-                    : "Maximize current slide"
-                }
-                aria-pressed={isCurrentSlideMaximized()}
-                data-tooltip={
-                  isCurrentSlideMaximized()
-                    ? "Restore current slide size"
-                    : "Maximize current slide"
-                }
-                style={{ height: "32px" }}
-              >
-                <MenuIcon
-                  icon={
-                    isCurrentSlideMaximized()
-                      ? "lucide:minimize-2"
-                      : "lucide:maximize-2"
-                  }
-                />
-              </button>
-              <button
-                class="icon-button"
-                onClick={() => togglePointer("laser")}
-                aria-label="Laser pointer"
-                aria-pressed={pointerMode() === "laser"}
-                data-tooltip={
-                  pointerMode() === "laser"
-                    ? "Turn laser pointer off"
-                    : "Turn laser pointer on"
-                }
-                style={{ height: "32px" }}
-              >
-                <MenuIcon icon="lucide:crosshair" />
-              </button>
-              <button
-                class="icon-button"
-                onClick={() => togglePointer("spotlight")}
-                aria-label="Spotlight"
-                aria-pressed={pointerMode() === "spotlight"}
-                data-tooltip={
-                  pointerMode() === "spotlight"
-                    ? "Turn spotlight off"
-                    : "Turn spotlight on"
-                }
-                style={{ height: "32px" }}
-              >
-                <MenuIcon icon="lucide:scan" />
-              </button>
-              <button
-                class="icon-button"
-                onClick={toggleZoom}
-                aria-label={
-                  zoom()
-                    ? "Reset zoom"
-                    : isSelectingZoom()
-                      ? "Cancel zoom selection"
-                      : "Select zoom area"
-                }
-                aria-pressed={zoom() !== null || isSelectingZoom()}
-                data-tooltip={
-                  zoom()
-                    ? "Reset zoom"
-                    : isSelectingZoom()
-                      ? "Cancel zoom selection"
-                      : "Select zoom area"
-                }
-                style={{ height: "32px" }}
-              >
-                <MenuIcon
-                  icon={zoom() ? "lucide:zoom-out" : "lucide:scan-search"}
-                />
-              </button>
-              <button
-                class="icon-button"
-                onClick={() => toggleDrawing("pen")}
-                aria-label="Draw"
-                aria-pressed={drawingTool() === "pen"}
-                data-tooltip={
-                  drawingTool() === "pen"
-                    ? "Turn drawing off"
-                    : "Turn drawing on"
-                }
-                style={{ height: "32px" }}
-              >
-                <MenuIcon icon="lucide:pencil" />
-              </button>
-              <input
-                aria-label="Pen color"
-                title="Pen color"
-                type="color"
-                value={penColor()}
-                onInput={(event) => setPenColor(event.currentTarget.value)}
-                style={{ width: "32px", height: "32px", padding: "0" }}
-              />
-              <button
-                class="icon-button"
-                onClick={() => toggleDrawing("eraser")}
-                aria-label="Erase"
-                aria-pressed={drawingTool() === "eraser"}
-                data-tooltip={
-                  drawingTool() === "eraser"
-                    ? "Turn eraser off"
-                    : "Turn eraser on"
-                }
-                style={{ height: "32px" }}
-              >
-                <MenuIcon icon="lucide:eraser" />
-              </button>
-              <div
-                role="group"
-                aria-label="Input tool size"
-                style={{
-                  display: "flex",
-                  gap: "4px",
-                  "align-items": "center",
-                }}
-              >
-                <button
-                  class="icon-button"
-                  onClick={() => resizeCurrentMode(-0.25)}
-                  aria-label="Decrease input tool size"
-                  data-tooltip="Decrease input tool size"
-                  disabled={(currentInput()?.size ?? 0.5) <= 0.5}
-                  style={{ height: "32px" }}
-                >
-                  <MenuIcon icon="lucide:minus" />
-                </button>
-                <output
-                  aria-live="polite"
-                  style={{ "min-width": "4ch", "text-align": "center" }}
-                >
-                  {currentInput()?.size ?? "—"}
-                  {currentInput() && "×"}
-                </output>
-                <button
-                  class="icon-button"
-                  onClick={() => resizeCurrentMode(0.25)}
-                  aria-label="Increase input tool size"
-                  data-tooltip="Increase input tool size"
-                  disabled={(currentInput()?.size ?? 3) >= 3}
-                  style={{ height: "32px" }}
-                >
-                  <MenuIcon icon="lucide:plus" />
-                </button>
-              </div>
-              <button
-                class="icon-button"
-                onClick={toggleDrawingsVisibility}
-                aria-label={
-                  drawingsHidden() ? "Show drawings" : "Hide drawings"
-                }
-                aria-pressed={drawingsHidden()}
-                data-tooltip={
-                  drawingsHidden() ? "Show drawings" : "Hide drawings"
-                }
-                style={{ height: "32px" }}
-              >
-                <MenuIcon
-                  icon={drawingsHidden() ? "lucide:eye" : "lucide:eye-off"}
-                />
-              </button>
-              <button
-                class="icon-button"
-                onClick={undoDrawing}
-                aria-label="Undo drawing"
-                data-tooltip="Undo drawing"
-                disabled={drawingsForPage(currentPage()).length === 0}
-                style={{ height: "32px" }}
-              >
-                <MenuIcon icon="lucide:undo-2" />
-              </button>
-              <button
-                class="icon-button"
-                onClick={redoDrawing}
-                aria-label="Redo drawing"
-                data-tooltip="Redo drawing"
-                disabled={
-                  redoStrokes().at(-1)?.page !== drawingPage(currentPage())
-                }
-                style={{ height: "32px" }}
-              >
-                <MenuIcon icon="lucide:redo-2" />
-              </button>
-              <button
-                class="icon-button"
-                onClick={clearDrawings}
-                aria-label="Clear drawings"
-                data-tooltip="Clear drawings"
-                disabled={drawingsForPage(currentPage()).length === 0}
-                style={{ height: "32px" }}
-              >
-                <MenuIcon icon="lucide:trash-2" />
-              </button>
-              <button
-                class="icon-button"
-                onClick={() => shortcutDialog.showModal()}
-                aria-label="Show keyboard shortcuts"
-                data-tooltip="Show keyboard shortcuts"
-                style={{ height: "32px" }}
-              >
-                <MenuIcon icon="lucide:circle-help" />
-              </button>
-              <button
-                class="icon-button"
-                onClick={openOverview}
-                aria-label="Open slide overview"
-                data-tooltip="Open slide overview"
-                disabled={!pdfDocument()}
-                style={{ height: "32px" }}
-              >
-                <MenuIcon icon="lucide:grid-2x2" />
-              </button>
-              <button
-                class="icon-button"
-                onClick={openSearch}
-                aria-label="Search slides"
-                data-tooltip="Search slides"
-                disabled={!pdfDocument()}
-                style={{ height: "32px" }}
-              >
-                <MenuIcon icon="lucide:search" />
-              </button>
-              <button
-                class="icon-button"
-                onClick={bookmarkCurrentSlide}
-                aria-label="Bookmark current slide"
-                aria-pressed={isCurrentSlideBookmarked()}
-                data-tooltip="Bookmark current slide"
-                disabled={!metadata()}
-                style={{ height: "32px" }}
-              >
-                <MenuIcon icon="lucide:bookmark-plus" />
-              </button>
-              <button
-                class="icon-button"
-                onClick={goToBookmark}
-                aria-label="Go to bookmarked or saved slide"
-                data-tooltip="Go to bookmarked or saved slide"
-                disabled={bookmarkDestination() === undefined}
-                style={{ height: "32px" }}
-              >
-                <MenuIcon icon="lucide:bookmark-check" />
-              </button>
-            </div>
-            <Show when={metadata()}>
-              {(deck) => (
-                <select
-                  aria-label="Slide list"
-                  value={currentPage()}
-                  onChange={(event) =>
-                    setCurrentPage(Number(event.currentTarget.value))
-                  }
-                  style={{
-                    color: "#fff",
-                    background: "#222",
-                    border: "1px solid #555",
-                    "border-radius": "4px",
-                    padding: "5px 8px",
-                    "max-width": "32vw",
-                  }}
-                >
-                  <For
-                    each={Array.from(
-                      { length: deck().pageCount },
-                      (_, i) => i + 1,
-                    )}
+                    aria-pressed={drawingsHidden()}
+                    data-tooltip={
+                      drawingsHidden() ? "Show drawings" : "Hide drawings"
+                    }
+                    style={{ height: "32px" }}
                   >
-                    {(pageNumber) => (
-                      <option value={pageNumber}>
-                        {pageLabel(deck(), pageNumber)}
-                      </option>
+                    <MenuIcon
+                      icon={drawingsHidden() ? "lucide:eye" : "lucide:eye-off"}
+                    />
+                  </button>
+                  <button
+                    class="icon-button"
+                    onClick={undoDrawing}
+                    aria-label="Undo drawing"
+                    data-tooltip="Undo drawing"
+                    disabled={drawingsForPage(currentPage()).length === 0}
+                    style={{ height: "32px" }}
+                  >
+                    <MenuIcon icon="lucide:undo-2" />
+                  </button>
+                  <button
+                    class="icon-button"
+                    onClick={redoDrawing}
+                    aria-label="Redo drawing"
+                    data-tooltip="Redo drawing"
+                    disabled={
+                      redoStrokes().at(-1)?.page !== drawingPage(currentPage())
+                    }
+                    style={{ height: "32px" }}
+                  >
+                    <MenuIcon icon="lucide:redo-2" />
+                  </button>
+                  <button
+                    class="icon-button"
+                    onClick={clearDrawings}
+                    aria-label="Clear drawings"
+                    data-tooltip="Clear drawings"
+                    disabled={drawingsForPage(currentPage()).length === 0}
+                    style={{ height: "32px" }}
+                  >
+                    <MenuIcon icon="lucide:trash-2" />
+                  </button>
+                </div>
+              </fieldset>
+              <fieldset class="presenter-control-group presenter-navigation-group">
+                <legend>Navigation</legend>
+                <div class="presenter-control-row">
+                  <button
+                    class="icon-button"
+                    onClick={goToBookmark}
+                    aria-label="Go to bookmarked or saved slide"
+                    data-tooltip="Go to bookmarked or saved slide"
+                    disabled={bookmarkDestination() === undefined}
+                    style={{ height: "32px" }}
+                  >
+                    <MenuIcon icon="lucide:bookmark-check" />
+                  </button>
+                  <Show when={metadata()}>
+                    {(deck) => (
+                      <select
+                        aria-label="Slide list"
+                        value={currentPage()}
+                        onChange={(event) =>
+                          setCurrentPage(Number(event.currentTarget.value))
+                        }
+                        style={{
+                          color: "#fff",
+                          background: "#222",
+                          border: "1px solid #555",
+                          "border-radius": "4px",
+                          padding: "5px 8px",
+                          "max-width": "32vw",
+                        }}
+                      >
+                        <For
+                          each={Array.from(
+                            { length: deck().pageCount },
+                            (_, i) => i + 1,
+                          )}
+                        >
+                          {(pageNumber) => (
+                            <option value={pageNumber}>
+                              {pageLabel(deck(), pageNumber)}
+                            </option>
+                          )}
+                        </For>
+                      </select>
                     )}
-                  </For>
-                </select>
-              )}
-            </Show>
-            <div
-              style={{ display: "flex", gap: "10px", "align-items": "center" }}
-            >
-              <button
-                class="icon-button"
-                onClick={goPreviousPage}
-                aria-label="Previous slide"
-                disabled={previousPage() === currentPage()}
-                style={{ height: "32px" }}
-              >
-                <MenuIcon icon="lucide:chevron-left" />
-              </button>
-              <span
-                role="status"
-                aria-atomic="true"
-                style={{
-                  color: "#fff",
-                  "font-size": "14px",
-                  "line-height": "16px",
-                  "min-width": "120px",
-                  "white-space": "pre-line",
-                  "text-align": "center",
-                }}
-              >
-                {metadata()
-                  ? presentationPositionLabel(metadata()!, currentPage())
-                  : ""}
-              </span>
-              <button
-                class="icon-button"
-                onClick={goNextPage}
-                aria-label="Next slide"
-                disabled={nextPage() === currentPage()}
-                style={{ height: "32px" }}
-              >
-                <MenuIcon icon="lucide:chevron-right" />
-              </button>
-            </div>
+                  </Show>
+                  <div
+                    class="presenter-page-navigation"
+                    style={{
+                      display: "flex",
+                      gap: "10px",
+                      "align-items": "center",
+                    }}
+                  >
+                    <button
+                      class="icon-button"
+                      onClick={goPreviousPage}
+                      aria-label="Previous slide"
+                      disabled={previousPage() === currentPage()}
+                      style={{ height: "32px" }}
+                    >
+                      <MenuIcon icon="lucide:chevron-left" />
+                    </button>
+                    <span
+                      role="status"
+                      aria-atomic="true"
+                      style={{
+                        color: "#fff",
+                        "font-size": "14px",
+                        "line-height": "16px",
+                        "min-width": "120px",
+                        "white-space": "pre-line",
+                        "text-align": "center",
+                      }}
+                    >
+                      {metadata()
+                        ? presentationPositionLabel(metadata()!, currentPage())
+                        : ""}
+                    </span>
+                    <button
+                      class="icon-button"
+                      onClick={goNextPage}
+                      aria-label="Next slide"
+                      disabled={nextPage() === currentPage()}
+                      style={{ height: "32px" }}
+                    >
+                      <MenuIcon icon="lucide:chevron-right" />
+                    </button>
+                  </div>
+                </div>
+              </fieldset>
+            </section>
           </div>
           <ShortcutDialog setDialog={setShortcutDialog} />
           <TimingDialog
