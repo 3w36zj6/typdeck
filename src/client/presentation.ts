@@ -81,7 +81,8 @@ export const headingForPage = (metadata: Metadata, page: number) => {
 export const pageLabel = (metadata: Metadata, page: number): string => {
   const title = headingForPage(metadata, page)?.text;
   const number = metadata.pageLabels?.[page - 1] ?? String(page);
-  return title ? `${number}. ${title}` : `Page ${number}`;
+  const label = title ? `${number}. ${title}` : `Page ${number}`;
+  return metadata.slides?.[`${page}`]?.hidden ? `${label} (hidden)` : label;
 };
 
 export const logicalSlideStartPage = (

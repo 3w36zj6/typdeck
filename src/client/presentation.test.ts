@@ -52,6 +52,12 @@ describe("pageLabel", () => {
       pageLabel({ pageCount: 1, pageLabels: ["A-1"], outline: [] }, 1),
     ).toBe("Page A-1");
   });
+
+  it("identifies hidden pages", () => {
+    expect(pageLabel({ ...metadata, slides: { 2: { hidden: true } } }, 2)).toBe(
+      "2. Details (hidden)",
+    );
+  });
 });
 
 describe("presentation timing", () => {
