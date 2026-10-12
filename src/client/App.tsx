@@ -1231,7 +1231,6 @@ const App = () => {
                 bottom: "20px",
                 left: "50%",
                 transform: "translateX(-50%)",
-                background: "rgba(0, 0, 0, 0.8)",
                 width: "max-content",
                 "max-width": "calc(100vw - 20px)",
                 "box-sizing": "border-box",

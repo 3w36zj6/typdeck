@@ -466,3 +466,39 @@ button {
   flex: 0 0 auto;
   margin-inline-start: auto;
 }
+
+.menu {
+  background: rgba(0, 0, 0, 0.8);
+}
+
+@media (forced-colors: active) {
+  .menu {
+    border: 1px solid ButtonText;
+    background: Canvas;
+  }
+
+  .menu-icon {
+    color: ButtonText;
+  }
+
+  .icon-button[aria-pressed="true"] .menu-icon {
+    color: Highlight;
+  }
+
+  .icon-button:disabled .menu-icon {
+    color: GrayText;
+    opacity: 1;
+  }
+
+  .icon-button:focus-visible {
+    outline-color: Highlight;
+  }
+
+  .presenter-control-group {
+    border-color: ButtonText;
+  }
+
+  .presenter-control-group legend {
+    color: CanvasText;
+  }
+}
