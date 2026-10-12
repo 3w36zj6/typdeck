@@ -972,6 +972,7 @@ const App = () => {
             ),
           );
         }
+        setPointer(null);
       },
       { defer: true },
     ),
