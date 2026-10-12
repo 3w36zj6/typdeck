@@ -502,3 +502,15 @@ button {
     color: CanvasText;
   }
 }
+
+@media (any-pointer: coarse) {
+  .menu .menu-row {
+    min-height: 44px;
+  }
+
+  .menu .icon-button,
+  .presenter-container :is(.icon-button, input[type="color"]) {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
