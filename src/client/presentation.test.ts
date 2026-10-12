@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Metadata } from "./types/metadata";
 import {
+  blankScreenFromParam,
   completedSlidePage,
   endSlidePage,
   formatElapsedTime,
@@ -311,6 +312,13 @@ describe("presentation controls", () => {
     expect(formatRemainingTime(5 * 60)).toBe("−00:05:00");
     expect(formatRemainingTime(0)).toBe("−00:00:00");
     expect(formatRemainingTime(-1)).toBe("+00:00:01");
+  });
+
+  it("parses blank screen URL state", () => {
+    expect(blankScreenFromParam("black")).toBe("black");
+    expect(blankScreenFromParam("white")).toBe("white");
+    expect(blankScreenFromParam("invalid")).toBe("none");
+    expect(blankScreenFromParam(null)).toBe("none");
   });
 });
 

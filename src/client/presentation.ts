@@ -53,6 +53,9 @@ export const presentationStartAt = (
 export const formatRemainingTime = (seconds: number): string =>
   `${seconds < 0 ? "+" : "−"}${formatElapsedTime(Math.abs(seconds))}`;
 
+export const blankScreenFromParam = (value: string | null): BlankScreen =>
+  value === "black" || value === "white" ? value : "none";
+
 const overlayPages = (
   metadata: Metadata,
   logicalSlide: number,

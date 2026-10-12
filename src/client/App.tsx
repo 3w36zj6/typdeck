@@ -30,6 +30,7 @@ import type {
 } from "./drawing";
 import {
   adjacentLogicalSlidePage,
+  blankScreenFromParam,
   completedSlidePage,
   endSlidePage,
   formatElapsedTime,
@@ -255,7 +256,7 @@ const App = () => {
     savePersistentState,
   } = createPresentationSync(
     pageFromHash(window.location.hash),
-    urlParams.has("blackout") ? "black" : "none",
+    blankScreenFromParam(urlParams.get("blank")),
     () => metadata(),
   );
   const [pointerMode, setPointerMode] = createSignal<
@@ -1161,7 +1162,9 @@ const App = () => {
     const url = new URL(window.location.href);
     url.search = "";
     url.searchParams.set("mode", "presenter");
-    if (blankScreen() === "black") url.searchParams.set("blackout", "1");
+    if (blankScreen() !== "none") {
+      url.searchParams.set("blank", blankScreen());
+    }
     url.hash = hashForPage(currentPage(), metadata());
     window.open(
       url.href,
