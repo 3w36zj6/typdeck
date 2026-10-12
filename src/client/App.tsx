@@ -753,6 +753,12 @@ const App = () => {
     ) {
       return;
     }
+    if (
+      (action === "undo-drawing" || action === "redo-drawing") &&
+      drawingTool() === "none"
+    ) {
+      return;
+    }
     if (action !== "reset-view") event.preventDefault();
 
     switch (action) {
