@@ -1,6 +1,25 @@
 import { describe, expect, it } from "vitest";
 import type { Metadata } from "./types/metadata";
-import { adjacentVisiblePage, hashForPage, pageFromHash } from "./navigation";
+import {
+  adjacentVisiblePage,
+  hashForPage,
+  horizontalSwipeDirection,
+  jumpVisiblePages,
+  pageFromHash,
+} from "./navigation";
+
+describe("horizontalSwipeDirection", () => {
+  it.each([
+    [-100, 10, 1280, 1],
+    [100, 10, 1280, -1],
+    [-60, 5, 180, 1],
+    [-75, 5, 1280, undefined],
+    [-100, 100, 1280, undefined],
+    [-10, 100, 1280, undefined],
+  ])("classifies a swipe", (deltaX, deltaY, width, direction) => {
+    expect(horizontalSwipeDirection(deltaX, deltaY, width)).toBe(direction);
+  });
+});
 
 const metadata: Metadata = {
   pageCount: 3,
@@ -81,5 +100,18 @@ describe("stable slide hashes", () => {
     expect(adjacentVisiblePage(deck, 4, -1)).toBe(1);
     expect(adjacentVisiblePage(deck, 1, -1)).toBe(1);
     expect(adjacentVisiblePage(deck, 4, 1)).toBe(4);
+  });
+
+  it("moves by visible pages and stops at either edge", () => {
+    const deck: Metadata = {
+      pageCount: 15,
+      outline: [],
+      slides: { 2: { hidden: true }, 14: { hidden: true } },
+    };
+
+    expect(jumpVisiblePages(deck, 1, 1)).toBe(12);
+    expect(jumpVisiblePages(deck, 15, -1)).toBe(4);
+    expect(jumpVisiblePages(deck, 12, 1)).toBe(15);
+    expect(jumpVisiblePages(deck, 4, -1)).toBe(1);
   });
 });

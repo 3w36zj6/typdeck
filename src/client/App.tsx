@@ -11,12 +11,19 @@ import {
   Show,
   untrack,
 } from "solid-js";
-import { parseMetadata } from "./types/metadata";
 import { addCollection, Icon } from "@iconify-icon/solid";
 import { icons as lucideIcons } from "@iconify-json/lucide";
-import { adjacentVisiblePage, hashForPage, pageFromHash } from "./navigation";
+import { parseMetadata } from "./types/metadata";
 import {
-  actionForKey,
+  adjacentVisiblePage,
+  hashForPage,
+  horizontalSwipeDirection,
+  jumpVisiblePages,
+  pageFromHash,
+} from "./navigation";
+import { actionForKey, isCharacterShortcut } from "./keyboard";
+import {
+  adjacentLogicalSlidePage,
   completedSlidePage,
   endSlidePage,
   formatElapsedTime,
@@ -48,6 +55,8 @@ import {
 } from "pdfjs-dist";
 import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { PdfSlide } from "./PdfSlide";
+import { PageJumpDialog } from "./PageJumpDialog";
+import { ShortcutDialog } from "./ShortcutDialog";
 import { SlideOverviewDialog } from "./SlideOverviewDialog";
 import { SlideSearchDialog } from "./SlideSearchDialog";
 import DOMPurify from "dompurify";
@@ -103,104 +112,6 @@ const BlankScreenButtons = (props: {
       <MenuIcon icon="lucide:sun" />
     </button>
   </>
-);
-
-const ShortcutDialog = (props: {
-  setDialog: (dialog: HTMLDialogElement) => void;
-}) => (
-  <dialog
-    ref={props.setDialog}
-    aria-label="Keyboard shortcuts"
-    class="shortcut-dialog"
-    onClick={(event) => {
-      if (event.target === event.currentTarget) event.currentTarget.close();
-    }}
-  >
-    <div>
-      <h2>Keyboard shortcuts</h2>
-      <dl>
-        <dt>
-          <kbd>← / ↑ / PageUp / Backspace</kbd>
-        </dt>
-        <dd>Previous slide</dd>
-        <dt>
-          <kbd>→ / ↓ / PageDown / Space / Enter</kbd>
-        </dt>
-        <dd>Next slide</dd>
-        <dt>
-          <kbd>Shift + Backspace / Space</kbd>
-        </dt>
-        <dd>Back / forward in slide history</dd>
-        <dt>
-          <kbd>Home / End</kbd>
-        </dt>
-        <dd>Go to the first / end slide</dd>
-        <dt>
-          <kbd>/ / Ctrl/Cmd+K</kbd>
-        </dt>
-        <dd>Search slide text</dd>
-        <dt>
-          <kbd>O</kbd>
-        </dt>
-        <dd>Open slide overview</dd>
-        <dt>
-          <kbd>M / Shift+M</kbd>
-        </dt>
-        <dd>Bookmark / return to the bookmarked or saved slide</dd>
-        <dt>
-          <kbd>S</kbd>
-        </dt>
-        <dd>Start or resume the timer (Presenter View)</dd>
-        <dt>
-          <kbd>P</kbd>
-        </dt>
-        <dd>Pause or resume the timer (Presenter View)</dd>
-        <dt>
-          <kbd>B</kbd>
-        </dt>
-        <dd>Toggle blackout</dd>
-        <dt>
-          <kbd>W</kbd>
-        </dt>
-        <dd>Toggle whiteout</dd>
-        <dt>
-          <kbd>Shift+F</kbd>
-        </dt>
-        <dd>Freeze or unfreeze the Stage (Presenter View)</dd>
-        <dt>
-          <kbd>Shift+A</kbd>
-        </dt>
-        <dd>Maximize or restore the current slide (Presenter View)</dd>
-        <dt>
-          <kbd>1 / 2 / 3 / 4 / 5</kbd>
-        </dt>
-        <dd>Normal / laser / pen / eraser / spotlight mode (Presenter View)</dd>
-        <dt>
-          <kbd>+ / −</kbd>
-        </dt>
-        <dd>Resize the active input tool (Presenter View)</dd>
-        <dt>
-          <kbd>D / C</kbd>
-        </dt>
-        <dd>Hide / clear drawings (Presenter View)</dd>
-        <dt>
-          <kbd>Ctrl/Cmd+Z / Ctrl/Cmd+Y</kbd>
-        </dt>
-        <dd>Undo / redo drawings (Presenter View)</dd>
-        <dt>
-          <kbd>?</kbd>
-        </dt>
-        <dd>Open this list</dd>
-        <dt>
-          <kbd>Esc</kbd>
-        </dt>
-        <dd>Clear blanking, freeze, zoom, and the active tool</dd>
-      </dl>
-      <form method="dialog">
-        <button>Close</button>
-      </form>
-    </div>
-  </dialog>
 );
 
 const TimingDialog = (props: {
@@ -361,6 +272,8 @@ const App = () => {
     durations: {},
   });
   const [scheduledStartAt, setScheduledStartAt] = createSignal<number>();
+  const [characterShortcutsEnabled, setCharacterShortcutsEnabled] =
+    createSignal(true);
   const [autoAdvanceSeconds, setAutoAdvanceSeconds] = createSignal(10);
   const [autoAdvanceState, setAutoAdvanceState] = createSignal<
     "stopped" | "running" | "paused"
@@ -422,7 +335,9 @@ const App = () => {
   let shortcutDialog!: HTMLDialogElement;
   let overviewDialog!: HTMLDialogElement;
   let searchDialog!: HTMLDialogElement;
+  let pageJumpDialog!: HTMLDialogElement;
   let timingDialog!: HTMLDialogElement;
+  let pageJumpInput!: HTMLInputElement;
   let searchInput!: HTMLInputElement;
   const [searchPage, setSearchPage] = createSignal(1);
   const [isCurrentSlideMaximized, setIsCurrentSlideMaximized] =
@@ -544,6 +459,11 @@ const App = () => {
     document.fullscreenElement !== null,
   );
   let pointerHideTimeout: number;
+  let wheelEndTimeout: number;
+  let wheelHandled = false;
+  let stageSwipeStart:
+    | { pointerId: number; clientX: number; clientY: number }
+    | undefined;
 
   const toggleBlankScreen = (color: Exclude<BlankScreen, "none">) =>
     setBlankScreen((value) => (value === color ? "none" : color));
@@ -755,6 +675,11 @@ const App = () => {
     setCurrentPage(nextPage());
     window.setTimeout(() => setIsTransitioning(false), TRANSITION_DURATION_MS);
   };
+  const openPageJump = () => {
+    pageJumpInput.valueAsNumber = currentPage();
+    pageJumpDialog.showModal();
+    pageJumpInput.select();
+  };
 
   const openSearch = () => {
     if (!metadata() || !pdfDocument()) return;
@@ -794,6 +719,7 @@ const App = () => {
       }
     }
     if (document.querySelector("dialog:modal") || !metadata()) return;
+    if (!characterShortcutsEnabled() && isCharacterShortcut(event)) return;
 
     const action = actionForKey(event);
     if (
@@ -832,6 +758,20 @@ const App = () => {
       case "history-forward":
         window.history.forward();
         break;
+      case "previous-ten":
+        setCurrentPage(jumpVisiblePages(metadata()!, currentPage(), -1));
+        break;
+      case "next-ten":
+        setCurrentPage(jumpVisiblePages(metadata()!, currentPage(), 1));
+        break;
+      case "previous-slide":
+        setCurrentPage(
+          adjacentLogicalSlidePage(metadata()!, currentPage(), -1),
+        );
+        break;
+      case "next-slide":
+        setCurrentPage(adjacentLogicalSlidePage(metadata()!, currentPage(), 1));
+        break;
       case "first":
         setCurrentPage(adjacentVisiblePage(metadata()!, 0, 1));
         break;
@@ -844,14 +784,26 @@ const App = () => {
       case "saved":
         goToBookmark();
         break;
+      case "next-physical":
+        setCurrentPage(Math.min(metadata()!.pageCount, currentPage() + 1));
+        break;
+      case "previous-physical":
+        setCurrentPage(Math.max(1, currentPage() - 1));
+        break;
       case "blackout":
         toggleBlankScreen("black");
         break;
       case "whiteout":
         toggleBlankScreen("white");
         break;
+      case "fullscreen":
+        void toggleFullScreen();
+        break;
       case "toggle-freeze":
         toggleFreeze();
+        break;
+      case "go-to-page":
+        openPageJump();
         break;
       case "toggle-current-slide-size":
         toggleCurrentSlideSize();
@@ -915,7 +867,62 @@ const App = () => {
     }
   };
 
+  const handleStageWheel = (event: WheelEvent) => {
+    if (
+      !(event.target instanceof Element) ||
+      !event.target.closest(".slide-container") ||
+      event.deltaY === 0 ||
+      Math.abs(event.deltaY) <= Math.abs(event.deltaX)
+    ) {
+      return;
+    }
+    event.preventDefault();
+    window.clearTimeout(wheelEndTimeout);
+    wheelEndTimeout = window.setTimeout(() => {
+      wheelHandled = false;
+    }, 150);
+    if (wheelHandled) return;
+    wheelHandled = true;
+    if (event.deltaY > 0) goNextPage();
+    else goPreviousPage();
+  };
+
+  const handleStagePointerDown = (event: PointerEvent) => {
+    if (
+      event.pointerType !== "touch" ||
+      !event.isPrimary ||
+      !(event.target instanceof Element) ||
+      !event.target.closest(".slide-container")
+    ) {
+      return;
+    }
+    stageSwipeStart = {
+      pointerId: event.pointerId,
+      clientX: event.clientX,
+      clientY: event.clientY,
+    };
+  };
+
   createEffect(syncPageFromHash);
+  const handleStagePointerUp = (event: PointerEvent) => {
+    const start = stageSwipeStart;
+    if (!start || event.pointerId !== start.pointerId) return;
+    stageSwipeStart = undefined;
+    const stage =
+      event.target instanceof Element
+        ? event.target.closest(".slide-container")
+        : null;
+    if (!(stage instanceof HTMLElement)) return;
+    const direction = horizontalSwipeDirection(
+      event.clientX - start.clientX,
+      event.clientY - start.clientY,
+      stage.clientWidth,
+    );
+    if (direction === undefined) return;
+    event.preventDefault();
+    if (direction === 1) goNextPage();
+    else goPreviousPage();
+  };
 
   createEffect(() => {
     const page = currentPage();
@@ -1042,6 +1049,22 @@ const App = () => {
     const [wakeLock, setWakeLock] = createSignal<WakeLockSentinel>();
     const [acquiringWakeLock, setAcquiringWakeLock] = createSignal(false);
     const lifecycle = new AbortController();
+    if (!isPresenterMode) {
+      const listener = { signal: lifecycle.signal };
+      window.addEventListener("wheel", handleStageWheel, {
+        ...listener,
+        passive: false,
+      });
+      window.addEventListener("pointerdown", handleStagePointerDown, listener);
+      window.addEventListener("pointerup", handleStagePointerUp, listener);
+      window.addEventListener(
+        "pointercancel",
+        () => {
+          stageSwipeStart = undefined;
+        },
+        listener,
+      );
+    }
     const saveBeforeUnload = () => {
       endDrawing(false);
       savePersistentState();
@@ -1100,6 +1123,7 @@ const App = () => {
       document.removeEventListener("visibilitychange", keepScreenAwake);
       releaseWakeLock(wakeLock());
       window.clearTimeout(pointerHideTimeout);
+      window.clearTimeout(wheelEndTimeout);
     });
   });
 
@@ -1295,7 +1319,21 @@ const App = () => {
                 </button>
               </div>
             </div>
-            <ShortcutDialog setDialog={setShortcutDialog} />
+            <PageJumpDialog
+              pageCount={metadata()?.pageCount ?? 0}
+              setDialog={(dialog) => {
+                pageJumpDialog = dialog;
+              }}
+              setInput={(input) => {
+                pageJumpInput = input;
+              }}
+              onConfirm={setCurrentPage}
+            />
+            <ShortcutDialog
+              characterShortcutsEnabled={characterShortcutsEnabled()}
+              onCharacterShortcutsEnabledChange={setCharacterShortcutsEnabled}
+              setDialog={setShortcutDialog}
+            />
             <Show when={pdfDocument()}>
               {(document) => (
                 <SlideOverviewDialog
@@ -2082,7 +2120,21 @@ const App = () => {
               </fieldset>
             </section>
           </div>
-          <ShortcutDialog setDialog={setShortcutDialog} />
+          <PageJumpDialog
+            pageCount={metadata()?.pageCount ?? 0}
+            setDialog={(dialog) => {
+              pageJumpDialog = dialog;
+            }}
+            setInput={(input) => {
+              pageJumpInput = input;
+            }}
+            onConfirm={setCurrentPage}
+          />
+          <ShortcutDialog
+            characterShortcutsEnabled={characterShortcutsEnabled()}
+            onCharacterShortcutsEnabledChange={setCharacterShortcutsEnabled}
+            setDialog={setShortcutDialog}
+          />
           <TimingDialog
             rows={timingRows()}
             totalMilliseconds={timingTotalMilliseconds()}

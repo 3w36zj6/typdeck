@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Metadata } from "./types/metadata";
 import {
-  actionForKey,
   completedSlidePage,
   drawingLayers,
   endSlidePage,
@@ -337,92 +336,6 @@ describe("presentation controls", () => {
     expect(formatRemainingTime(5 * 60)).toBe("−00:05:00");
     expect(formatRemainingTime(0)).toBe("−00:00:00");
     expect(formatRemainingTime(-1)).toBe("+00:00:01");
-  });
-
-  it.each([
-    ["ArrowLeft", false, "previous"],
-    ["ArrowUp", false, "previous"],
-    ["PageUp", false, "previous"],
-    ["PageUp", true, undefined],
-    ["ArrowRight", false, "next"],
-    ["ArrowDown", false, "next"],
-    ["PageDown", false, "next"],
-    ["PageDown", true, undefined],
-    ["Space", false, "next"],
-    ["Space", true, "history-forward"],
-    ["Enter", false, "next"],
-    ["NumpadEnter", false, "next"],
-    ["Enter", true, undefined],
-    ["Backspace", false, "previous"],
-    ["Backspace", true, "history-back"],
-    ["Home", false, "first"],
-    ["Home", true, undefined],
-    ["End", false, "last"],
-    ["End", true, undefined],
-    ["KeyM", true, "saved"],
-    ["KeyM", false, "bookmark"],
-    ["KeyP", false, "toggle-timer"],
-    ["KeyP", true, undefined],
-    ["KeyS", false, "start-timer"],
-    ["KeyS", true, undefined],
-    ["KeyB", false, "blackout"],
-    ["KeyW", false, "whiteout"],
-    ["KeyF", true, "toggle-freeze"],
-    ["KeyF", false, undefined],
-    ["KeyA", true, "toggle-current-slide-size"],
-    ["KeyA", false, undefined],
-    ["KeyD", false, "toggle-drawings"],
-    ["KeyC", false, "clear-drawings"],
-    ["Digit1", false, "normal-mode"],
-    ["Digit2", false, "laser-mode"],
-    ["Digit3", false, "pen-mode"],
-    ["Digit4", false, "eraser-mode"],
-    ["Digit5", false, "spotlight-mode"],
-    ["Escape", false, "reset-view"],
-    ["KeyO", false, "overview"],
-    ["KeyO", true, undefined],
-    ["Equal", false, "input-larger"],
-    ["Equal", true, "input-larger"],
-    ["NumpadAdd", false, "input-larger"],
-    ["Minus", false, "input-smaller"],
-    ["NumpadSubtract", false, "input-smaller"],
-    ["Slash", true, "shortcuts"],
-    ["Slash", false, "search"],
-  ] as const)("maps %s (shift: %s)", (code, shiftKey, expected) => {
-    expect(
-      actionForKey({ code, shiftKey, repeat: false, isComposing: false }),
-    ).toBe(expected);
-  });
-
-  it("maps the browser search shortcut without stealing other modifiers", () => {
-    expect(actionForKey({ code: "KeyK", ctrlKey: true })).toBe("search");
-    expect(actionForKey({ code: "KeyK", metaKey: true })).toBe("search");
-    expect(actionForKey({ code: "ArrowRight", ctrlKey: true })).toBeUndefined();
-    expect(actionForKey({ code: "ArrowRight", altKey: true })).toBeUndefined();
-    expect(actionForKey({ code: "KeyZ", ctrlKey: true })).toBe("undo-drawing");
-    expect(actionForKey({ code: "KeyZ", metaKey: true, shiftKey: true })).toBe(
-      "redo-drawing",
-    );
-    expect(actionForKey({ code: "KeyY", ctrlKey: true })).toBe("redo-drawing");
-  });
-
-  it("ignores repeated and composing keys", () => {
-    expect(
-      actionForKey({
-        code: "ArrowRight",
-        shiftKey: false,
-        repeat: true,
-        isComposing: false,
-      }),
-    ).toBeUndefined();
-    expect(
-      actionForKey({
-        code: "ArrowRight",
-        shiftKey: false,
-        repeat: false,
-        isComposing: true,
-      }),
-    ).toBeUndefined();
   });
 });
 

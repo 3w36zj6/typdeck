@@ -43,97 +43,6 @@ export const drawingLayers = (strokes: DrawingStroke[]) =>
       : [],
   );
 
-export const actionForKey = ({
-  code,
-  shiftKey = false,
-  repeat = false,
-  isComposing = false,
-  altKey = false,
-  ctrlKey = false,
-  metaKey = false,
-}: Pick<KeyboardEvent, "code"> &
-  Partial<
-    Pick<
-      KeyboardEvent,
-      "shiftKey" | "repeat" | "isComposing" | "altKey" | "ctrlKey" | "metaKey"
-    >
-  >) => {
-  if (repeat || isComposing || altKey) return;
-  if (ctrlKey || metaKey) {
-    if (code === "KeyZ") return shiftKey ? "redo-drawing" : "undo-drawing";
-    if (code === "KeyY" && !shiftKey) return "redo-drawing";
-    return code === "KeyK" && !shiftKey ? "search" : undefined;
-  }
-  switch (code) {
-    case "ArrowLeft":
-    case "ArrowUp":
-      return "previous";
-    case "PageUp":
-      return shiftKey ? undefined : "previous";
-    case "ArrowRight":
-    case "ArrowDown":
-      return "next";
-    case "PageDown":
-      return shiftKey ? undefined : "next";
-    case "Space":
-      return shiftKey ? "history-forward" : "next";
-    case "Enter":
-    case "NumpadEnter":
-      return shiftKey ? undefined : "next";
-    case "Backspace":
-      return shiftKey ? "history-back" : "previous";
-    case "Home":
-      return shiftKey ? undefined : "first";
-    case "End":
-      return shiftKey ? undefined : "last";
-    case "KeyM":
-      return shiftKey ? "saved" : "bookmark";
-    case "KeyP":
-      return shiftKey ? undefined : "toggle-timer";
-    case "KeyS":
-      return shiftKey ? undefined : "start-timer";
-    case "KeyB":
-      return "blackout";
-    case "KeyW":
-      return "whiteout";
-    case "KeyF":
-      return shiftKey ? "toggle-freeze" : undefined;
-    case "KeyA":
-      return shiftKey ? "toggle-current-slide-size" : undefined;
-    case "KeyD":
-      return shiftKey ? undefined : "toggle-drawings";
-    case "KeyC":
-      return shiftKey ? undefined : "clear-drawings";
-    case "Digit1":
-    case "Numpad1":
-      return shiftKey ? undefined : "normal-mode";
-    case "Digit2":
-    case "Numpad2":
-      return shiftKey ? undefined : "laser-mode";
-    case "Digit3":
-    case "Numpad3":
-      return shiftKey ? undefined : "pen-mode";
-    case "Digit4":
-    case "Numpad4":
-      return shiftKey ? undefined : "eraser-mode";
-    case "Digit5":
-    case "Numpad5":
-      return shiftKey ? undefined : "spotlight-mode";
-    case "Escape":
-      return "reset-view";
-    case "KeyO":
-      return shiftKey ? undefined : "overview";
-    case "Equal":
-    case "NumpadAdd":
-      return "input-larger";
-    case "Minus":
-    case "NumpadSubtract":
-      return "input-smaller";
-    case "Slash":
-      return shiftKey ? "shortcuts" : "search";
-  }
-};
-
 export const formatElapsedTime = (seconds: number): string => {
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
@@ -484,4 +393,22 @@ export const presentationPace = (
           : "on-pace",
     differenceSeconds,
   };
+};
+
+export const adjacentLogicalSlidePage = (
+  metadata: Metadata,
+  page: number,
+  direction: -1 | 1,
+): number => {
+  const pages = overviewPages(metadata)
+    .map((candidate) => logicalSlideStartPage(metadata, candidate))
+    .filter((candidate) => !metadata.slides?.[`${candidate}`]?.hidden);
+  const index = pages.indexOf(logicalSlideStartPage(metadata, page));
+  const target =
+    index >= 0
+      ? pages[index + direction]
+      : direction === 1
+        ? pages.find((candidate) => candidate > page)
+        : pages.findLast((candidate) => candidate < page);
+  return target ?? page;
 };

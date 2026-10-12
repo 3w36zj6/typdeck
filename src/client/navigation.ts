@@ -15,6 +15,32 @@ export const adjacentVisiblePage = (
   return Math.min(Math.max(page, 1), metadata.pageCount);
 };
 
+export const jumpVisiblePages = (
+  metadata: Metadata,
+  page: number,
+  direction: -1 | 1,
+): number => {
+  let target = page;
+  for (let step = 0; step < 10; step += 1) {
+    const next = adjacentVisiblePage(metadata, target, direction);
+    if (next === target) break;
+    target = next;
+  }
+  return target;
+};
+
+export const horizontalSwipeDirection = (
+  deltaX: number,
+  deltaY: number,
+  width: number,
+): -1 | 1 | undefined => {
+  const distance = Math.abs(deltaX);
+  if (distance <= Math.abs(deltaY) || distance <= Math.min(75, width * 0.3)) {
+    return;
+  }
+  return deltaX < 0 ? 1 : -1;
+};
+
 const decodeHash = (hash: string): string => {
   try {
     return decodeURIComponent(hash.replace(/^#/, ""));
