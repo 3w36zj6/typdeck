@@ -363,9 +363,7 @@ export const PdfSlide = (props: PdfSlideProps) => {
             ? "crosshair"
             : undefined,
         "touch-action":
-          props.onPointerMove || props.onDrawStart || props.onSelectZoom
-            ? "none"
-            : "auto",
+          props.onDrawStart || props.onSelectZoom ? "none" : "auto",
       }}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
