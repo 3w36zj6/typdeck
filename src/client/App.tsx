@@ -83,6 +83,12 @@ const MenuIcon = (props: MenuIconProps) => {
   );
 };
 
+const wallClockFormatter = new Intl.DateTimeFormat(undefined, {
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+});
+
 const BlankScreenButtons = (props: {
   blankScreen: BlankScreen;
   height: string;
@@ -1565,7 +1571,7 @@ const App = () => {
                       <div
                         role="timer"
                         aria-label="Elapsed time"
-                        style={{ "font-size": "32px" }}
+                        style={{ "font-size": "24px" }}
                       >
                         {formatElapsedTime(elapsedSeconds())}
                       </div>
@@ -1575,7 +1581,7 @@ const App = () => {
                       <div
                         role="timer"
                         aria-label="Time until scheduled start"
-                        style={{ "font-size": "32px" }}
+                        style={{ "font-size": "24px" }}
                       >
                         Starts in{" "}
                         {formatElapsedTime(
@@ -1641,6 +1647,13 @@ const App = () => {
                       </div>
                     )}
                   </Show>
+                  <time
+                    aria-label="Current time"
+                    dateTime={new Date(currentTime()).toISOString()}
+                    style={{ "font-size": "16px" }}
+                  >
+                    {wallClockFormatter.format(currentTime())}
+                  </time>
                   <Show when={timerStartedAt() === undefined}>
                     <button
                       class="icon-button"
