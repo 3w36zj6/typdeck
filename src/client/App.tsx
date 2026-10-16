@@ -1287,6 +1287,7 @@ const App = () => {
                     "font-size": "14px",
                     "line-height": "16px",
                     "min-width": "0",
+                    overflow: "hidden",
                     "white-space": "pre-line",
                     "text-align": "center",
                   }}
