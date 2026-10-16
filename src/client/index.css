@@ -307,19 +307,7 @@ button {
   white-space: nowrap;
 }
 
-.search-dialog {
-  max-width: calc(100vw - 32px);
-  max-height: calc(100vh - 32px);
-  overflow: auto;
-}
-
 .search-dialog > form {
-  box-sizing: border-box;
-  min-width: 280px;
-  padding: 24px;
-  border: 1px solid #555;
-  border-radius: 8px;
-  background: #191919;
   width: min(900px, calc(100vw - 64px));
 }
 
