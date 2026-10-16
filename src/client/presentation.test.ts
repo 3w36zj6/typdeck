@@ -194,6 +194,23 @@ describe("overlay presentation", () => {
     expect(previousPresentationPage(deck, 4)).toBe(1);
   });
 
+  it("uses visible boundary overlays for logical slide navigation", () => {
+    const deckWithHiddenBoundaries: Metadata = {
+      pageCount: 4,
+      outline: [],
+      slides: {
+        1: { logicalSlide: 1, overlay: 0, hidden: true },
+        2: { logicalSlide: 1, overlay: 1 },
+        3: { logicalSlide: 2, overlay: 0 },
+        4: { logicalSlide: 2, overlay: 1, hidden: true },
+      },
+    };
+
+    expect(logicalSlideStartPage(deckWithHiddenBoundaries, 1)).toBe(2);
+    expect(logicalSlideStartPage(deckWithHiddenBoundaries, 2)).toBe(2);
+    expect(nextPreviewPage(deckWithHiddenBoundaries, 2)).toBe(3);
+  });
+
   it("reports logical slide and overlay progress", () => {
     expect(presentationPositionLabel(deck, 2)).toBe(
       "Slide 1 of 3\nStep 2 of 3",
