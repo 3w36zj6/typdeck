@@ -81,17 +81,53 @@ typdeck completion zsh > ~/.zfunc/_typdeck
 
 ## Features
 
-### Pointer tools
+### Stage
 
-Presenter View provides a laser pointer and spotlight that follow pointer input on the current slide and appear on the Stage.
+![A Typst presentation displayed on the typdeck Stage](docs/screenshots/stage.png)
 
-### Zoom
+The Stage preserves the slides rendered by Typst.
 
-Presenter View can select a region to enlarge on both displays while preserving the PDF text, links, and document structure.
+### Presenter View
+
+![typdeck Presenter View with the current slide, next slide, speaker notes, and controls](docs/screenshots/presenter-view.png)
+
+Presenter View uses headings, speaker notes, and overlays from the Typst document.
+
+### Slide overview
+
+![Slide overview labeled with Typst headings](docs/screenshots/overview.png)
+
+Open a tile overview labeled with headings from the Typst document.
+
+### Full-text search
+
+![Full-text slide search with a page preview](docs/screenshots/search.png)
+
+Search slide text and preview a result before opening it.
 
 ### Drawing
 
-Presenter View synchronizes temporary pen and eraser strokes with the Stage. Drawings are shared across overlay steps and are never written to the source.
+![A synchronized drawing on the Stage](docs/screenshots/drawing.png)
+
+Draw temporary pen and eraser strokes in Presenter View and show them on the Stage. Strokes persist across overlay steps without modifying the source.
+
+### Laser pointer
+
+![A laser pointer on the Stage](docs/screenshots/laser-pointer.png)
+
+Point at the current slide from Presenter View and show the pointer on the Stage.
+
+### Spotlight
+
+![A spotlight focused on part of a slide](docs/screenshots/spotlight.png)
+
+Highlight part of the current slide from Presenter View.
+
+### Zoom
+
+![Presenter View with the current slide enlarged](docs/screenshots/zoom.png)
+
+Select a region to enlarge on both displays while preserving text, links, and document structure.
 
 ### Blank screens
 
