@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import chalk from "chalk";
+import { log, spinner } from "@clack/prompts";
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 import * as v from "valibot";
 import { parseMetadata, type Metadata } from "../../client/types/metadata";
@@ -11,17 +11,6 @@ import { runProcess } from "./runProcess";
 const CompilationInputsSchema = v.object({
   inputs: v.array(v.string()),
 });
-
-const timestampFormat = new Intl.DateTimeFormat("en-GB", {
-  hour: "2-digit",
-  hourCycle: "h23",
-  minute: "2-digit",
-  second: "2-digit",
-});
-
-const logWithTimestamp = (message: string, logFn = console.info): void => {
-  logFn(`${chalk.gray(`[${timestampFormat.format()}]`)} ${message}`);
-};
 
 const existingAncestor = (candidate: string): string => {
   if (fs.lstatSync(candidate, { throwIfNoEntry: false })) return candidate;
@@ -101,14 +90,24 @@ export const compileTypst = async (
     "--deps-format",
     "json",
   ];
-  logWithTimestamp(
-    chalk.dim(
-      `${chalk.magenta("$")} typst ${args.map((arg) => JSON.stringify(arg)).join(" ")}`,
-    ),
+  const filename = path.basename(typstFile);
+  const compilation = process.stdout.isTTY
+    ? spinner({ indicator: "timer", signal })
+    : undefined;
+  compilation?.start(`Compiling ${filename}`);
+  if (!compilation) log.step(`Compiling ${filename}`);
+  const { stdout, stderr } = await runProcess("typst", args, signal).then(
+    (result) => {
+      compilation?.stop(`Compiled ${filename}`);
+      return result;
+    },
+    (error: unknown) => {
+      if (!signal?.aborted) compilation?.error("Compilation failed");
+      throw error;
+    },
   );
-  const { stdout, stderr } = await runProcess("typst", args, signal);
-  if (stderr.trim()) console.warn(stderr.trim());
-  console.info(chalk.dim(stdout.trim()));
+  if (stderr.trim()) log.warn(stderr.trim(), { output: process.stderr });
+  if (stdout.trim()) log.info(stdout.trim());
   const compilationInputs = v
     .parse(
       CompilationInputsSchema,
@@ -168,5 +167,6 @@ export const compileTypst = async (
     JSON.stringify(metadata),
   );
   replaceDirectory(stagingDir, resolvedPublicDir);
+  log.success("Compiled presentation");
   return compilationInputs;
 };

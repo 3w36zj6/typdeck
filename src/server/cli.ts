@@ -12,7 +12,7 @@ import {
   withDefault,
 } from "@optique/core";
 import { path as pathValue, run } from "@optique/run";
-import chalk from "chalk";
+import { note } from "@clack/prompts";
 import { GlobalWorkerOptions } from "pdfjs-dist/legacy/build/pdf.mjs";
 import { clientAssets } from "./clientAssets";
 import {
@@ -27,9 +27,7 @@ declare const __TYPDECK_VERSION__: string;
 const printUrl = (server: Server) => {
   const address = server.address();
   if (!address || typeof address === "string") return;
-  console.info(
-    `${chalk.green("  ➜")}  ${chalk.bold("Local:")}   ${chalk.cyan(`http://127.0.0.1:${chalk.bold(address.port)}/`)}`,
-  );
+  note(`http://127.0.0.1:${address.port}/`, "Local");
 };
 
 const containsPath = (directory: string, target: string) => {

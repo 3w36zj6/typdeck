@@ -38,10 +38,10 @@
     "tsc": "tsc -b"
   },
   "dependencies": {
+    "@clack/prompts": "^1.8.1",
     "@fastify/send": "^4.1.1",
     "@optique/core": "1.3.6",
     "@optique/run": "1.3.6",
-    "chalk": "^5.6.2",
     "chokidar": "^5.0.0",
     "pdfjs-dist": "6.4.299",
     "valibot": "^1.5.0"

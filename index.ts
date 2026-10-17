@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 
 import { main } from "./src/server/cli";
+import { reportError } from "./src/server/cliOutput";
 
 main().catch((error: unknown) => {
-  console.error(error instanceof Error ? error.message : error);
+  reportError(error);
   process.exitCode = 1;
 });

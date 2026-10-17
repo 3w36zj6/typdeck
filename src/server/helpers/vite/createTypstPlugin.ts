@@ -1,5 +1,6 @@
 import { type PluginOption } from "vite";
 
+import { reportError } from "../../cliOutput";
 import { compileTypst } from "../compileTypst";
 
 export const typstPlugin = (typstFile: string): PluginOption => {
@@ -24,7 +25,7 @@ export const typstPlugin = (typstFile: string): PluginOption => {
           server.ws.send({ type: "full-reload", path: "*" });
         } catch (error) {
           if (!controller.signal.aborted) {
-            console.error(error);
+            reportError(error);
             throw error;
           }
         } finally {

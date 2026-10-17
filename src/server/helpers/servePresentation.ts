@@ -9,6 +9,7 @@ import { pipeline } from "node:stream";
 import send from "@fastify/send";
 import { watch } from "chokidar";
 import { clientAssets, type ClientAsset } from "../clientAssets";
+import { reportError } from "../cliOutput";
 import { compileTypst } from "./compileTypst";
 
 const reloadPath = "/__typdeck_reload";
@@ -59,7 +60,7 @@ const startServer = async (
 ): Promise<Server> => {
   const server = http.createServer((request, response) => {
     void handleRequest(request, response).catch((error: unknown) => {
-      console.error(error);
+      reportError(error);
       if (response.headersSent) response.destroy();
       else sendStatus(response, 500);
     });
@@ -193,13 +194,13 @@ export const servePresentation = async (
         for (const client of reloadClients) client.write("data: reload\n\n");
       }
     } catch (error) {
-      if (!controller.signal.aborted) console.error(error);
+      if (!controller.signal.aborted) reportError(error);
     } finally {
       if (activeCompile === controller) activeCompile = undefined;
     }
   };
   watcher.on("add", recompile).on("change", recompile).on("unlink", recompile);
-  watcher.on("error", console.error);
+  watcher.on("error", reportError);
   server.on("close", () => {
     void watcher.close();
     activeCompile?.abort();
