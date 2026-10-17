@@ -23,6 +23,21 @@ const logWithTimestamp = (message: string, logFn = console.info): void => {
   logFn(`${chalk.gray(`[${timestampFormat.format()}]`)} ${message}`);
 };
 
+const existingAncestor = (candidate: string): string => {
+  if (fs.lstatSync(candidate, { throwIfNoEntry: false })) return candidate;
+  const parent = path.dirname(candidate);
+  return parent === candidate ? candidate : existingAncestor(parent);
+};
+
+export const resolveOutputPath = (candidate: string): string => {
+  const output = path.resolve(candidate);
+  const ancestor = existingAncestor(output);
+  return path.resolve(
+    fs.realpathSync.native(ancestor),
+    path.relative(ancestor, output),
+  );
+};
+
 export const assertSupportedTypstVersion = (output: string): void => {
   const match = /^typst (\d+)\.(\d+)\.(\d+)(?:\s|$)/.exec(output.trim());
   if (!match || (Number(match[1]) === 0 && Number(match[2]) < 15)) {
@@ -38,14 +53,15 @@ const ensureSupportedTypstVersion = (): Promise<void> =>
   ));
 
 export const replaceDirectory = (source: string, destination: string) => {
+  const output = resolveOutputPath(destination);
   const backup = `${source}-previous`;
-  const hasPrevious = fs.existsSync(destination);
+  const hasPrevious = fs.existsSync(output);
 
-  if (hasPrevious) fs.renameSync(destination, backup);
+  if (hasPrevious) fs.renameSync(output, backup);
   try {
-    fs.renameSync(source, destination);
+    fs.renameSync(source, output);
   } catch (error) {
-    if (hasPrevious) fs.renameSync(backup, destination);
+    if (hasPrevious) fs.renameSync(backup, output);
     throw error;
   }
   fs.rmSync(backup, { recursive: true, force: true });
@@ -57,7 +73,7 @@ export const compileTypst = async (
   signal?: AbortSignal,
 ): Promise<string[]> => {
   await ensureSupportedTypstVersion();
-  const resolvedPublicDir = path.resolve(publicDir);
+  const resolvedPublicDir = resolveOutputPath(publicDir);
   fs.mkdirSync(path.dirname(resolvedPublicDir), { recursive: true });
   using staging = fs.mkdtempDisposableSync(
     path.join(

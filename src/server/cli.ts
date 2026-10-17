@@ -6,7 +6,11 @@ import { hideBin } from "yargs/helpers";
 import chalk from "chalk";
 import { GlobalWorkerOptions } from "pdfjs-dist/legacy/build/pdf.mjs";
 import { clientAssets } from "./clientAssets";
-import { compileTypst, replaceDirectory } from "./helpers/compileTypst";
+import {
+  compileTypst,
+  replaceDirectory,
+  resolveOutputPath,
+} from "./helpers/compileTypst";
 import { serveDirectory, servePresentation } from "./helpers/servePresentation";
 
 const printUrl = (server: Server) => {
@@ -48,7 +52,7 @@ const compileDeck = async (typstFile: string) => {
   if (!pdfWorker) throw new Error("Missing embedded PDF worker");
   GlobalWorkerOptions.workerSrc = `data:text/javascript;base64,${pdfWorker.body.toString("base64")}`;
 
-  const dotDirectory = path.resolve(".typdeck");
+  const dotDirectory = resolveOutputPath(".typdeck");
   const deckDirectory = path.join(dotDirectory, "deck");
   fs.mkdirSync(dotDirectory, { recursive: true });
   fs.writeFileSync(path.join(dotDirectory, ".gitignore"), "*\n", "utf8");
@@ -57,15 +61,20 @@ const compileDeck = async (typstFile: string) => {
 };
 
 const buildPresentation = async (typstFile: string, outDir: string) => {
-  const output = path.resolve(outDir);
-  const typstInput = path.resolve(typstFile);
-  if (containsPath(output, process.cwd()) || containsPath(output, typstInput)) {
+  const output = resolveOutputPath(outDir);
+  const project = fs.realpathSync.native(process.cwd());
+  const typstInput = fs.realpathSync.native(typstFile);
+  if (containsPath(output, project) || containsPath(output, typstInput)) {
     throw new Error(
       "outDir must not contain the project directory or Typst input",
     );
   }
   const { compilationInputs, deckDirectory } = await compileDeck(typstFile);
-  if (compilationInputs.some((input) => containsPath(output, input))) {
+  if (
+    compilationInputs.some((input) =>
+      containsPath(output, fs.realpathSync.native(input)),
+    )
+  ) {
     throw new Error(
       "outDir must not contain the project directory or Typst input",
     );

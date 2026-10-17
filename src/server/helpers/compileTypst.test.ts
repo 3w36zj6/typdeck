@@ -2,7 +2,35 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { assertSupportedTypstVersion, compileTypst } from "./compileTypst";
+import {
+  assertSupportedTypstVersion,
+  compileTypst,
+  resolveOutputPath,
+} from "./compileTypst";
+
+describe("resolveOutputPath", () => {
+  it("resolves symbolic links in output paths", () => {
+    using root = fs.mkdtempDisposableSync(
+      path.join(os.tmpdir(), "typdeck-output-path-"),
+    );
+    const target = path.join(root.path, "target");
+    const link = path.join(root.path, "link");
+    fs.mkdirSync(target);
+    fs.symlinkSync(
+      target,
+      link,
+      process.platform === "win32" ? "junction" : "dir",
+    );
+
+    expect(resolveOutputPath(path.join(root.path, "output"))).toBe(
+      path.join(root.path, "output"),
+    );
+    expect(resolveOutputPath(link)).toBe(target);
+    expect(resolveOutputPath(path.join(link, "output"))).toBe(
+      path.join(target, "output"),
+    );
+  });
+});
 
 describe("compileTypst", () => {
   it("requires Typst 0.15.0 or newer", () => {
@@ -40,6 +68,30 @@ describe("compileTypst", () => {
       endTime: "14:40",
       lastMinutes: 5,
     });
+  });
+
+  it("preserves symbolic input paths for watching", async () => {
+    using project = fs.mkdtempDisposableSync(
+      path.join(process.cwd(), ".typdeck-symlink-input-"),
+    );
+    const actual = path.join(project.path, "actual");
+    const linked = path.join(project.path, "linked");
+    fs.mkdirSync(actual);
+    fs.writeFileSync(path.join(actual, "content.txt"), "content");
+    fs.symlinkSync(
+      actual,
+      linked,
+      process.platform === "win32" ? "junction" : "dir",
+    );
+    const input = path.join(project.path, "slides.typ");
+    fs.writeFileSync(input, '#read("linked/content.txt")');
+
+    const compilationInputs = await compileTypst(
+      input,
+      path.join(project.path, "output"),
+    );
+
+    expect(compilationInputs).toContain(path.join(linked, "content.txt"));
   });
 
   it("compiles Slydst 0.1.5 slides", async () => {
