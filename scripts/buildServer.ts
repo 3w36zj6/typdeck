@@ -1,6 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
 import { build } from "esbuild";
+import * as v from "valibot";
+
+const { version } = v.parse(
+  v.object({ version: v.string() }),
+  JSON.parse(fs.readFileSync("package.json", "utf8")),
+);
 
 const clientDirectory = path.resolve("public");
 const contentTypes = new Map([
@@ -33,6 +39,7 @@ await build({
   bundle: true,
   define: {
     __TYPDECK_CLIENT_ASSETS__: JSON.stringify(clientAssets),
+    __TYPDECK_VERSION__: JSON.stringify(version),
   },
   entryPoints: ["index.ts"],
   format: "esm",

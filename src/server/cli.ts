@@ -22,6 +22,8 @@ import {
 } from "./helpers/compileTypst";
 import { serveDirectory, servePresentation } from "./helpers/servePresentation";
 
+declare const __TYPDECK_VERSION__: string;
+
 const printUrl = (server: Server) => {
   const address = server.address();
   if (!address || typeof address === "string") return;
@@ -125,6 +127,7 @@ export const main = async () => {
     help: "option",
     programName: "typdeck",
     showDefault: true,
+    version: __TYPDECK_VERSION__,
   });
 
   switch (args.command) {
