@@ -71,6 +71,14 @@ Serve the build output without recompiling or watching source files:
 typdeck preview
 ```
 
+#### Shell Completion
+
+Generate completion for Bash (`bash`), Zsh (`zsh`), Fish (`fish`), PowerShell (`pwsh`), or Nushell (`nu`):
+
+```sh
+typdeck completion zsh > ~/.zfunc/_typdeck
+```
+
 ## Features
 
 ### Pointer tools

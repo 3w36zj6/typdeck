@@ -1,8 +1,17 @@
 import fs from "node:fs";
 import { type Server } from "node:http";
 import path from "node:path";
-import yargs from "yargs/yargs";
-import { hideBin } from "yargs/helpers";
+import {
+  argument,
+  command,
+  constant,
+  message,
+  object,
+  option,
+  or,
+  withDefault,
+} from "@optique/core";
+import { path as pathValue, run } from "@optique/run";
 import chalk from "chalk";
 import { GlobalWorkerOptions } from "pdfjs-dist/legacy/build/pdf.mjs";
 import { clientAssets } from "./clientAssets";
@@ -19,19 +28,6 @@ const printUrl = (server: Server) => {
   console.info(
     `${chalk.green("  ➜")}  ${chalk.bold("Local:")}   ${chalk.cyan(`http://127.0.0.1:${chalk.bold(address.port)}/`)}`,
   );
-};
-
-type DevArgs = {
-  typstFile: string;
-};
-
-type BuildArgs = {
-  outDir: string;
-  typstFile: string;
-};
-
-type PreviewArgs = {
-  outDir: string;
 };
 
 const containsPath = (directory: string, target: string) => {
@@ -92,42 +88,63 @@ const buildPresentation = async (typstFile: string, outDir: string) => {
   replaceDirectory(staging.path, output);
 };
 
+const outDir = withDefault(
+  option("--outDir", pathValue({ metavar: "DIRECTORY" }), {
+    description: message`output directory`,
+  }),
+  "dist",
+);
+
+const parser = or(
+  command(
+    "dev",
+    object({
+      command: constant("dev"),
+      typstFile: argument(pathValue({ metavar: "TYPST_FILE" })),
+    }),
+    { description: message`start dev server` },
+  ),
+  command(
+    "build",
+    object({
+      command: constant("build"),
+      typstFile: argument(pathValue({ metavar: "TYPST_FILE" })),
+      outDir,
+    }),
+    { description: message`build for production` },
+  ),
+  command("preview", object({ command: constant("preview"), outDir }), {
+    description: message`preview build output`,
+  }),
+);
+
 export const main = async () => {
-  await yargs(hideBin(process.argv))
-    .command<DevArgs>({
-      command: "dev <typstFile>",
-      describe: "start dev server",
-      handler: async (argv) => {
-        const { compilationInputs, deckDirectory } = await compileDeck(
-          argv.typstFile,
-        );
-        const server = await servePresentation(
-          argv.typstFile,
-          deckDirectory,
-          compilationInputs,
-        );
-        printUrl(server);
-      },
-    })
-    .command<BuildArgs>({
-      command: "build <typstFile>",
-      describe: "build for production",
-      handler: async (argv) => {
-        await buildPresentation(argv.typstFile, argv.outDir);
-      },
-    })
-    .command<PreviewArgs>({
-      command: "preview",
-      describe: "preview build output",
-      handler: async (argv) => {
-        printUrl(await serveDirectory(argv.outDir));
-      },
-    })
-    .option("outDir", {
-      type: "string",
-      default: "dist",
-      describe: "output directory",
-    })
-    .demandCommand(1)
-    .parse();
+  const args = run(parser, {
+    aboveError: "none",
+    completion: "command",
+    help: "option",
+    programName: "typdeck",
+    showDefault: true,
+  });
+
+  switch (args.command) {
+    case "dev": {
+      const { compilationInputs, deckDirectory } = await compileDeck(
+        args.typstFile,
+      );
+      const server = await servePresentation(
+        args.typstFile,
+        deckDirectory,
+        compilationInputs,
+      );
+      printUrl(server);
+      break;
+    }
+    case "build":
+      await buildPresentation(args.typstFile, args.outDir);
+      break;
+    case "preview":
+      printUrl(await serveDirectory(args.outDir));
+      break;
+  }
 };
