@@ -1,5 +1,6 @@
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import {
+  createDeferred,
   createEffect,
   createMemo,
   createSignal,
@@ -9,7 +10,11 @@ import {
 } from "solid-js";
 import { pageLabel } from "./presentation";
 import { PdfSlide } from "./PdfSlide";
-import { searchSlides, type SearchableSlide } from "./slideSearch";
+import {
+  MAX_SEARCH_QUERY_LENGTH,
+  searchSlides,
+  type SearchableSlide,
+} from "./slideSearch";
 import type { Metadata } from "./types/metadata";
 
 export const SlideSearchDialog = (props: {
@@ -25,7 +30,10 @@ export const SlideSearchDialog = (props: {
   onConfirm: (page: number) => void;
 }) => {
   const [query, setQuery] = createSignal("");
-  const results = createMemo(() => searchSlides(props.slides ?? [], query()));
+  const deferredQuery = createDeferred(query, { timeoutMs: 150 });
+  const results = createMemo(() =>
+    searchSlides(props.slides ?? [], deferredQuery()),
+  );
 
   createEffect(
     on(results, (matches) => {
@@ -59,6 +67,7 @@ export const SlideSearchDialog = (props: {
             ref={props.setInput}
             type="search"
             value={query()}
+            maxLength={MAX_SEARCH_QUERY_LENGTH}
             onInput={(event) => setQuery(event.currentTarget.value)}
             autocomplete="off"
             placeholder="Type at least 2 characters"

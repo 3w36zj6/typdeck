@@ -1,3 +1,7 @@
+import type { Metadata } from "./types/metadata";
+
+export const MAX_SEARCH_QUERY_LENGTH = 200;
+
 export type SearchableSlide = {
   page: number;
   logicalSlide?: number;
@@ -7,6 +11,48 @@ export type SearchableSlide = {
 export type SlideSearchResult = SearchableSlide & {
   excerpt: string;
   score: number;
+};
+
+type SearchDocument = {
+  numPages: number;
+  getPage(page: number): Promise<{
+    getTextContent(): Promise<{ items: readonly object[] }>;
+  }>;
+};
+
+const SEARCH_INDEX_BATCH_SIZE = 4;
+
+export const indexSlideText = async (
+  document: SearchDocument,
+  metadata: Metadata,
+): Promise<SearchableSlide[]> => {
+  const pages = Array.from(
+    { length: document.numPages },
+    (_, index) => index + 1,
+  );
+  const indexPage = async (page: number): Promise<SearchableSlide> => {
+    const content = await (await document.getPage(page)).getTextContent();
+    return {
+      page,
+      logicalSlide: metadata.slides?.[`${page}`]?.logicalSlide,
+      text: content.items
+        .map((item) =>
+          "str" in item && typeof item.str === "string"
+            ? `${item.str}${"hasEOL" in item && item.hasEOL ? "\n" : " "}`
+            : "",
+        )
+        .join(""),
+    };
+  };
+  const indexFrom = async (offset: number): Promise<SearchableSlide[]> => {
+    if (offset >= pages.length) return [];
+    const batch = await Promise.all(
+      pages.slice(offset, offset + SEARCH_INDEX_BATCH_SIZE).map(indexPage),
+    );
+    return batch.concat(await indexFrom(offset + SEARCH_INDEX_BATCH_SIZE));
+  };
+
+  return indexFrom(0);
 };
 
 export const normalizeSearchText = (text: string) =>
@@ -60,7 +106,7 @@ export const searchSlides = (
   input: string,
 ): SlideSearchResult[] => {
   const query = normalizeSearchText(input);
-  if (query.length < 2) return [];
+  if (query.length < 2 || query.length > MAX_SEARCH_QUERY_LENGTH) return [];
 
   const matches = slides.flatMap((slide) => {
     const displayText = slide.text.replace(/\s+/g, " ").trim();

@@ -95,6 +95,7 @@ import { PageJumpDialog } from "./PageJumpDialog";
 import { ShortcutDialog } from "./ShortcutDialog";
 import { SlideOverviewDialog } from "./SlideOverviewDialog";
 import { SlideSearchDialog } from "./SlideSearchDialog";
+import { indexSlideText } from "./slideSearch";
 import DOMPurify from "dompurify";
 import { marked } from "marked";
 
@@ -245,22 +246,7 @@ const App = () => {
         ? { document, deck }
         : undefined;
     },
-    async ({ document, deck }) =>
-      Promise.all(
-        Array.from({ length: document.numPages }, async (_, index) => {
-          const page = index + 1;
-          const content = await (await document.getPage(page)).getTextContent();
-          return {
-            page,
-            logicalSlide: deck.slides?.[`${page}`]?.logicalSlide,
-            text: content.items
-              .map((item) =>
-                "str" in item ? `${item.str}${item.hasEOL ? "\n" : " "}` : "",
-              )
-              .join(""),
-          };
-        }),
-      ),
+    ({ document, deck }) => indexSlideText(document, deck),
   );
 
   const getPageFromHash = () => pageFromHash(window.location.hash, metadata());

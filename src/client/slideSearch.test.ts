@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { normalizeSearchText, searchSlides } from "./slideSearch";
+import {
+  indexSlideText,
+  MAX_SEARCH_QUERY_LENGTH,
+  normalizeSearchText,
+  searchSlides,
+} from "./slideSearch";
 
 describe("slide search", () => {
   it("normalizes case, width, and whitespace", () => {
@@ -38,5 +43,42 @@ describe("slide search", () => {
 
   it("does not return broad one-character matches", () => {
     expect(searchSlides([{ page: 1, text: "Typst" }], "t")).toEqual([]);
+  });
+
+  it("does not process overlong queries", () => {
+    expect(
+      searchSlides(
+        [{ page: 1, text: "Typst" }],
+        "t".repeat(MAX_SEARCH_QUERY_LENGTH + 1),
+      ),
+    ).toEqual([]);
+  });
+
+  it("indexes at most four pages concurrently", async () => {
+    const state = { active: 0, maximum: 0 };
+    const slides = await indexSlideText(
+      {
+        numPages: 9,
+        async getPage(page) {
+          return {
+            async getTextContent() {
+              state.active += 1;
+              state.maximum = Math.max(state.maximum, state.active);
+              await new Promise((resolve) => setTimeout(resolve));
+              state.active -= 1;
+              return {
+                items: [{ str: `Slide ${page}`, hasEOL: false }],
+              };
+            },
+          };
+        },
+      },
+      { pageCount: 9, outline: [] },
+    );
+
+    expect(state.maximum).toBe(4);
+    expect(slides.map(({ text }) => text.trim())).toEqual(
+      Array.from({ length: 9 }, (_, index) => `Slide ${index + 1}`),
+    );
   });
 });
