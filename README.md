@@ -23,7 +23,19 @@ Compile Typst slides into a web stage and presenter view.
 
 ### Installation
 
-First, make sure you have [Typst] 0.15.0 or newer installed on your system. Then install typdeck using your preferred package manager:
+First, install [Typst] 0.15.0 or newer.
+
+#### mise
+
+Install the standalone executable from GitHub Releases:
+
+```sh
+mise use -g github:3w36zj6/typdeck
+```
+
+#### npm
+
+Install the Node.js package with your preferred package manager:
 
 ```sh
 # npm
