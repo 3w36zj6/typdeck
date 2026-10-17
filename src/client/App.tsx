@@ -1182,7 +1182,11 @@ const App = () => {
     <Show
       when={!metadata.error && !pdfDocument.error}
       fallback={
-        <main role="alert">Could not load this typdeck presentation.</main>
+        <main role="alert">
+          {metadata.error
+            ? "Could not load presentation metadata."
+            : "Could not load presentation PDF."}
+        </main>
       }
     >
       <Show
