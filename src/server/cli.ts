@@ -89,12 +89,22 @@ const outDir = withDefault(
   "dist",
 );
 
+const typstFile = pathValue({
+  errors: {
+    pathNotFound: (input) =>
+      message`Typst file does not exist: ${input}${lineBreak()}Please check the path and try again.`,
+  },
+  metavar: "TYPST_FILE",
+  mustExist: true,
+  type: "file",
+});
+
 const parser = or(
   command(
     "dev",
     object({
       command: constant("dev"),
-      typstFile: argument(pathValue({ metavar: "TYPST_FILE" })),
+      typstFile: argument(typstFile),
     }),
     { description: message`start dev server` },
   ),
@@ -102,7 +112,7 @@ const parser = or(
     "build",
     object({
       command: constant("build"),
-      typstFile: argument(pathValue({ metavar: "TYPST_FILE" })),
+      typstFile: argument(typstFile),
       outDir,
     }),
     { description: message`build for production` },
