@@ -1375,54 +1375,6 @@ const App = () => {
                 </button>
               </div>
             </div>
-            <PageJumpDialog
-              pageCount={metadata()?.pageCount ?? 0}
-              setDialog={(dialog) => {
-                pageJumpDialog = dialog;
-              }}
-              setInput={(input) => {
-                pageJumpInput = input;
-              }}
-              onConfirm={setCurrentPage}
-            />
-            <ShortcutDialog
-              characterShortcutsEnabled={characterShortcutsEnabled()}
-              onCharacterShortcutsEnabledChange={setCharacterShortcutsEnabled}
-              setDialog={setShortcutDialog}
-            />
-            <Show when={pdfDocument()}>
-              {(document) => (
-                <SlideOverviewDialog
-                  document={document()}
-                  metadata={metadata()!}
-                  currentPage={completedSlidePage(metadata()!, currentPage())}
-                  setDialog={(dialog) => {
-                    overviewDialog = dialog;
-                  }}
-                  onConfirm={confirmOverview}
-                />
-              )}
-            </Show>
-            <Show when={pdfDocument()}>
-              {(document) => (
-                <SlideSearchDialog
-                  document={document()}
-                  metadata={metadata()!}
-                  slides={searchableSlides()}
-                  loading={searchableSlides.loading}
-                  error={searchableSlides.error}
-                  selectedPage={searchPage()}
-                  setDialog={(dialog) => {
-                    searchDialog = dialog;
-                  }}
-                  setInput={(input) => {
-                    searchInput = input;
-                  }}
-                  onSelect={setSearchPage}
-                  onConfirm={confirmSearch}
-                />
-              )}
-            </Show>
           </>
         }
       >
@@ -2180,21 +2132,6 @@ const App = () => {
               </fieldset>
             </section>
           </div>
-          <PageJumpDialog
-            pageCount={metadata()?.pageCount ?? 0}
-            setDialog={(dialog) => {
-              pageJumpDialog = dialog;
-            }}
-            setInput={(input) => {
-              pageJumpInput = input;
-            }}
-            onConfirm={setCurrentPage}
-          />
-          <ShortcutDialog
-            characterShortcutsEnabled={characterShortcutsEnabled()}
-            onCharacterShortcutsEnabledChange={setCharacterShortcutsEnabled}
-            setDialog={setShortcutDialog}
-          />
           <TimingDialog
             rows={timingRows()}
             totalMilliseconds={timingTotalMilliseconds()}
@@ -2202,40 +2139,53 @@ const App = () => {
               timingDialog = dialog;
             }}
           />
-          <Show when={pdfDocument()}>
-            {(document) => (
-              <SlideOverviewDialog
-                document={document()}
-                metadata={metadata()!}
-                currentPage={completedSlidePage(metadata()!, currentPage())}
-                setDialog={(dialog) => {
-                  overviewDialog = dialog;
-                }}
-                onConfirm={confirmOverview}
-              />
-            )}
-          </Show>
-          <Show when={pdfDocument()}>
-            {(document) => (
-              <SlideSearchDialog
-                document={document()}
-                metadata={metadata()!}
-                slides={searchableSlides()}
-                loading={searchableSlides.loading}
-                error={searchableSlides.error}
-                selectedPage={searchPage()}
-                setDialog={(dialog) => {
-                  searchDialog = dialog;
-                }}
-                setInput={(input) => {
-                  searchInput = input;
-                }}
-                onSelect={setSearchPage}
-                onConfirm={confirmSearch}
-              />
-            )}
-          </Show>
         </div>
+      </Show>
+      <PageJumpDialog
+        pageCount={metadata()?.pageCount ?? 0}
+        setDialog={(dialog) => {
+          pageJumpDialog = dialog;
+        }}
+        setInput={(input) => {
+          pageJumpInput = input;
+        }}
+        onConfirm={setCurrentPage}
+      />
+      <ShortcutDialog
+        characterShortcutsEnabled={characterShortcutsEnabled()}
+        onCharacterShortcutsEnabledChange={setCharacterShortcutsEnabled}
+        setDialog={setShortcutDialog}
+      />
+      <Show when={pdfDocument()}>
+        {(document) => (
+          <>
+            <SlideOverviewDialog
+              document={document()}
+              metadata={metadata()!}
+              currentPage={completedSlidePage(metadata()!, currentPage())}
+              setDialog={(dialog) => {
+                overviewDialog = dialog;
+              }}
+              onConfirm={confirmOverview}
+            />
+            <SlideSearchDialog
+              document={document()}
+              metadata={metadata()!}
+              slides={searchableSlides()}
+              loading={searchableSlides.loading}
+              error={searchableSlides.error}
+              selectedPage={searchPage()}
+              setDialog={(dialog) => {
+                searchDialog = dialog;
+              }}
+              setInput={(input) => {
+                searchInput = input;
+              }}
+              onSelect={setSearchPage}
+              onConfirm={confirmSearch}
+            />
+          </>
+        )}
       </Show>
     </Show>
   );
