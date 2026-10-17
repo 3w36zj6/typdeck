@@ -4,7 +4,9 @@ import path from "node:path";
 import {
   argument,
   command,
+  commandLine,
   constant,
+  lineBreak,
   message,
   object,
   option,
@@ -111,10 +113,14 @@ const parser = or(
 );
 
 export const main = async () => {
+  const cliArgs = process.argv.slice(2);
   const args = run(parser, {
+    args: cliArgs.length === 0 ? ["--help"] : cliArgs,
     aboveError: "none",
+    brief: message`Compile Typst slides into a web stage and presenter view.`,
     completion: "command",
-    help: "option",
+    examples: message`${commandLine("typdeck dev main.typ")}${lineBreak()}${commandLine("typdeck build main.typ")}${lineBreak()}${commandLine("typdeck preview")}`,
+    help: { option: { names: ["-h", "--help"] } },
     programName: "typdeck",
     showDefault: true,
     version: __TYPDECK_VERSION__,
