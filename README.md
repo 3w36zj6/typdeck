@@ -17,7 +17,7 @@ Compile Typst slides into a web stage and presenter view.
 - 📝 **Typst based** - create beautiful slides using [Typst], with full access to its powerful typesetting capabilities and growing ecosystem of packages
 - 🔓 **Theme independent** - works with any Typst theme, not just [Polylux], [Slydst], [Touying], etc.
 - ⚡️ **Hot reload** - automatically reloads the browser when you save a Typst file
-- 📢 **Presenter mode** - access speaker notes and presentation controls in a dedicated presenter view
+- 📢 **Presenter View** - access speaker notes and presentation controls in a dedicated presenter view
 
 ## Getting Started
 

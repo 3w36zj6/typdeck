@@ -998,7 +998,7 @@ const App = () => {
   createEffect(() => {
     const deck = metadata();
     document.title = deck
-      ? `${pageLabel(deck, isPresenterMode ? currentPage() : stagePage())}${deck.title ? ` — ${deck.title}` : ""} — typdeck ${isPresenterMode ? "Presenter" : "Stage"}`
+      ? `${pageLabel(deck, isPresenterMode ? currentPage() : stagePage())}${deck.title ? ` — ${deck.title}` : ""} — typdeck ${isPresenterMode ? "Presenter View" : "Stage"}`
       : "typdeck";
   });
 

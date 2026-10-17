@@ -40,7 +40,7 @@
   - works with any Typst theme, not just Polylux, Slydst, Touying, etc. #pause
 - ⚡️ *Hot reload*
   - automatically reloads the browser when you save a Typst file #pause
-- 📢 *Presenter mode*
+- 📢 *Presenter View*
   - access speaker notes and presentation controls in a dedicated presenter view
 
 = Getting started
