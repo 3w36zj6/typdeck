@@ -11,8 +11,41 @@ import {
   Show,
   untrack,
 } from "solid-js";
-import { addCollection, Icon } from "@iconify-icon/solid";
-import { icons as lucideIcons } from "@iconify-json/lucide";
+import { Icon, type IconifyIcon } from "@iconify-icon/solid";
+import bookmarkCheckIcon from "@iconify-icons/lucide/bookmark-check";
+import bookmarkPlusIcon from "@iconify-icons/lucide/bookmark-plus";
+import chartNoAxesColumnIcon from "@iconify-icons/lucide/chart-no-axes-column";
+import chevronLeftIcon from "@iconify-icons/lucide/chevron-left";
+import chevronRightIcon from "@iconify-icons/lucide/chevron-right";
+import circleHelpIcon from "@iconify-icons/lucide/circle-help";
+import clockIcon from "@iconify-icons/lucide/clock";
+import crosshairIcon from "@iconify-icons/lucide/crosshair";
+import eraserIcon from "@iconify-icons/lucide/eraser";
+import eyeIcon from "@iconify-icons/lucide/eye";
+import eyeOffIcon from "@iconify-icons/lucide/eye-off";
+import grid2x2Icon from "@iconify-icons/lucide/grid-2x2";
+import maximizeIcon from "@iconify-icons/lucide/maximize";
+import maximize2Icon from "@iconify-icons/lucide/maximize-2";
+import minimizeIcon from "@iconify-icons/lucide/minimize";
+import minimize2Icon from "@iconify-icons/lucide/minimize-2";
+import minusIcon from "@iconify-icons/lucide/minus";
+import monitorXIcon from "@iconify-icons/lucide/monitor-x";
+import panelsTopLeftIcon from "@iconify-icons/lucide/panels-top-left";
+import pauseIcon from "@iconify-icons/lucide/pause";
+import pencilIcon from "@iconify-icons/lucide/pencil";
+import playIcon from "@iconify-icons/lucide/play";
+import plusIcon from "@iconify-icons/lucide/plus";
+import presentationIcon from "@iconify-icons/lucide/presentation";
+import redo2Icon from "@iconify-icons/lucide/redo-2";
+import scanIcon from "@iconify-icons/lucide/scan";
+import scanSearchIcon from "@iconify-icons/lucide/scan-search";
+import searchIcon from "@iconify-icons/lucide/search";
+import squareIcon from "@iconify-icons/lucide/square";
+import sunIcon from "@iconify-icons/lucide/sun";
+import timerResetIcon from "@iconify-icons/lucide/timer-reset";
+import trash2Icon from "@iconify-icons/lucide/trash-2";
+import undo2Icon from "@iconify-icons/lucide/undo-2";
+import zoomOutIcon from "@iconify-icons/lucide/zoom-out";
 import { parseMetadata } from "./types/metadata";
 import {
   adjacentVisiblePage,
@@ -66,10 +99,9 @@ import DOMPurify from "dompurify";
 import { marked } from "marked";
 
 GlobalWorkerOptions.workerSrc = pdfWorker;
-addCollection(lucideIcons);
 
 type MenuIconProps = {
-  icon: string;
+  icon: IconifyIcon;
 };
 
 const MenuIcon = (props: MenuIconProps) => {
@@ -106,7 +138,7 @@ const BlankScreenButtons = (props: {
       }
       style={{ height: props.height }}
     >
-      <MenuIcon icon="lucide:monitor-x" />
+      <MenuIcon icon={monitorXIcon} />
     </button>
     <button
       class="icon-button"
@@ -118,7 +150,7 @@ const BlankScreenButtons = (props: {
       }
       style={{ height: props.height }}
     >
-      <MenuIcon icon="lucide:sun" />
+      <MenuIcon icon={sunIcon} />
     </button>
   </>
 );
@@ -1279,7 +1311,7 @@ const App = () => {
                   disabled={previousPage() === currentPage()}
                   style={{ height: "100%" }}
                 >
-                  <MenuIcon icon="lucide:chevron-left" />
+                  <MenuIcon icon={chevronLeftIcon} />
                 </button>
                 <span
                   role="status"
@@ -1306,7 +1338,7 @@ const App = () => {
                   disabled={nextPage() === currentPage()}
                   style={{ height: "100%" }}
                 >
-                  <MenuIcon icon="lucide:chevron-right" />
+                  <MenuIcon icon={chevronRightIcon} />
                 </button>
               </div>
               <div
@@ -1332,9 +1364,7 @@ const App = () => {
                   style={{ height: "100%" }}
                 >
                   <MenuIcon
-                    icon={
-                      isFullscreen() ? "lucide:minimize" : "lucide:maximize"
-                    }
+                    icon={isFullscreen() ? minimizeIcon : maximizeIcon}
                   />
                 </button>
                 <button
@@ -1345,7 +1375,7 @@ const App = () => {
                   aria-label="Open presenter view"
                   style={{ height: "100%" }}
                 >
-                  <MenuIcon icon="lucide:presentation" />
+                  <MenuIcon icon={presentationIcon} />
                 </button>
                 <button
                   class="icon-button"
@@ -1354,7 +1384,7 @@ const App = () => {
                   data-tooltip="Show keyboard shortcuts"
                   style={{ height: "100%" }}
                 >
-                  <MenuIcon icon="lucide:circle-help" />
+                  <MenuIcon icon={circleHelpIcon} />
                 </button>
               </div>
             </div>
@@ -1570,7 +1600,7 @@ const App = () => {
                 <div class="presenter-control-row">
                   <Icon
                     aria-hidden="true"
-                    icon="lucide:clock"
+                    icon={clockIcon}
                     width="32"
                     height="32"
                     style={{
@@ -1674,7 +1704,7 @@ const App = () => {
                       aria-label="Start timer"
                       style={{ height: "32px" }}
                     >
-                      <MenuIcon icon="lucide:play" />
+                      <MenuIcon icon={playIcon} />
                     </button>
                   </Show>
                   <Show when={timerStartedAt() !== undefined}>
@@ -1689,11 +1719,7 @@ const App = () => {
                       style={{ height: "32px" }}
                     >
                       <MenuIcon
-                        icon={
-                          timerStartedAt() === null
-                            ? "lucide:play"
-                            : "lucide:pause"
-                        }
+                        icon={timerStartedAt() === null ? playIcon : pauseIcon}
                       />
                     </button>
                   </Show>
@@ -1704,7 +1730,7 @@ const App = () => {
                     disabled={timerStartedAt() === undefined}
                     style={{ height: "32px" }}
                   >
-                    <MenuIcon icon="lucide:timer-reset" />
+                    <MenuIcon icon={timerResetIcon} />
                   </button>
                   <button
                     class="icon-button"
@@ -1713,7 +1739,7 @@ const App = () => {
                     data-tooltip="Show timing breakdown"
                     style={{ height: "32px" }}
                   >
-                    <MenuIcon icon="lucide:chart-no-axes-column" />
+                    <MenuIcon icon={chartNoAxesColumnIcon} />
                   </button>
                 </div>
               </fieldset>
@@ -1739,8 +1765,8 @@ const App = () => {
                     <MenuIcon
                       icon={
                         isCurrentSlideMaximized()
-                          ? "lucide:minimize-2"
-                          : "lucide:maximize-2"
+                          ? minimize2Icon
+                          : maximize2Icon
                       }
                     />
                   </button>
@@ -1751,7 +1777,7 @@ const App = () => {
                     data-tooltip="Show keyboard shortcuts"
                     style={{ height: "32px" }}
                   >
-                    <MenuIcon icon="lucide:circle-help" />
+                    <MenuIcon icon={circleHelpIcon} />
                   </button>
                   <button
                     class="icon-button"
@@ -1761,7 +1787,7 @@ const App = () => {
                     disabled={!pdfDocument()}
                     style={{ height: "32px" }}
                   >
-                    <MenuIcon icon="lucide:grid-2x2" />
+                    <MenuIcon icon={grid2x2Icon} />
                   </button>
                   <button
                     class="icon-button"
@@ -1771,7 +1797,7 @@ const App = () => {
                     disabled={!pdfDocument()}
                     style={{ height: "32px" }}
                   >
-                    <MenuIcon icon="lucide:search" />
+                    <MenuIcon icon={searchIcon} />
                   </button>
                   <button
                     class="icon-button"
@@ -1782,7 +1808,7 @@ const App = () => {
                     disabled={!metadata()}
                     style={{ height: "32px" }}
                   >
-                    <MenuIcon icon="lucide:bookmark-plus" />
+                    <MenuIcon icon={bookmarkPlusIcon} />
                   </button>
                 </div>
               </fieldset>
@@ -1842,9 +1868,7 @@ const App = () => {
                   >
                     <MenuIcon
                       icon={
-                        autoAdvanceState() === "stopped"
-                          ? "lucide:play"
-                          : "lucide:square"
+                        autoAdvanceState() === "stopped" ? playIcon : squareIcon
                       }
                     />
                   </button>
@@ -1870,9 +1894,7 @@ const App = () => {
                   >
                     <MenuIcon
                       icon={
-                        autoAdvanceState() === "paused"
-                          ? "lucide:play"
-                          : "lucide:pause"
+                        autoAdvanceState() === "paused" ? playIcon : pauseIcon
                       }
                     />
                   </button>
@@ -1896,7 +1918,7 @@ const App = () => {
                     }
                     style={{ height: "32px" }}
                   >
-                    <MenuIcon icon="lucide:panels-top-left" />
+                    <MenuIcon icon={panelsTopLeftIcon} />
                   </button>
                 </div>
               </fieldset>
@@ -1915,7 +1937,7 @@ const App = () => {
                     }
                     style={{ height: "32px" }}
                   >
-                    <MenuIcon icon="lucide:crosshair" />
+                    <MenuIcon icon={crosshairIcon} />
                   </button>
                   <button
                     class="icon-button"
@@ -1929,7 +1951,7 @@ const App = () => {
                     }
                     style={{ height: "32px" }}
                   >
-                    <MenuIcon icon="lucide:scan" />
+                    <MenuIcon icon={scanIcon} />
                   </button>
                   <button
                     class="icon-button"
@@ -1951,9 +1973,7 @@ const App = () => {
                     }
                     style={{ height: "32px" }}
                   >
-                    <MenuIcon
-                      icon={zoom() ? "lucide:zoom-out" : "lucide:scan-search"}
-                    />
+                    <MenuIcon icon={zoom() ? zoomOutIcon : scanSearchIcon} />
                   </button>
                 </div>
               </fieldset>
@@ -1972,7 +1992,7 @@ const App = () => {
                     }
                     style={{ height: "32px" }}
                   >
-                    <MenuIcon icon="lucide:pencil" />
+                    <MenuIcon icon={pencilIcon} />
                   </button>
                   <input
                     aria-label="Pen color"
@@ -1994,7 +2014,7 @@ const App = () => {
                     }
                     style={{ height: "32px" }}
                   >
-                    <MenuIcon icon="lucide:eraser" />
+                    <MenuIcon icon={eraserIcon} />
                   </button>
                   <div
                     role="group"
@@ -2013,7 +2033,7 @@ const App = () => {
                       disabled={(currentInput()?.size ?? 0.5) <= 0.5}
                       style={{ height: "32px" }}
                     >
-                      <MenuIcon icon="lucide:minus" />
+                      <MenuIcon icon={minusIcon} />
                     </button>
                     <output
                       aria-live="polite"
@@ -2030,7 +2050,7 @@ const App = () => {
                       disabled={(currentInput()?.size ?? 3) >= 3}
                       style={{ height: "32px" }}
                     >
-                      <MenuIcon icon="lucide:plus" />
+                      <MenuIcon icon={plusIcon} />
                     </button>
                   </div>
                   <button
@@ -2045,9 +2065,7 @@ const App = () => {
                     }
                     style={{ height: "32px" }}
                   >
-                    <MenuIcon
-                      icon={drawingsHidden() ? "lucide:eye" : "lucide:eye-off"}
-                    />
+                    <MenuIcon icon={drawingsHidden() ? eyeIcon : eyeOffIcon} />
                   </button>
                   <button
                     class="icon-button"
@@ -2057,7 +2075,7 @@ const App = () => {
                     disabled={drawingsForPage(currentPage()).length === 0}
                     style={{ height: "32px" }}
                   >
-                    <MenuIcon icon="lucide:undo-2" />
+                    <MenuIcon icon={undo2Icon} />
                   </button>
                   <button
                     class="icon-button"
@@ -2069,7 +2087,7 @@ const App = () => {
                     }
                     style={{ height: "32px" }}
                   >
-                    <MenuIcon icon="lucide:redo-2" />
+                    <MenuIcon icon={redo2Icon} />
                   </button>
                   <button
                     class="icon-button"
@@ -2079,7 +2097,7 @@ const App = () => {
                     disabled={drawingsForPage(currentPage()).length === 0}
                     style={{ height: "32px" }}
                   >
-                    <MenuIcon icon="lucide:trash-2" />
+                    <MenuIcon icon={trash2Icon} />
                   </button>
                 </div>
               </fieldset>
@@ -2094,7 +2112,7 @@ const App = () => {
                     disabled={bookmarkDestination() === undefined}
                     style={{ height: "32px" }}
                   >
-                    <MenuIcon icon="lucide:bookmark-check" />
+                    <MenuIcon icon={bookmarkCheckIcon} />
                   </button>
                   <Show when={metadata()}>
                     {(deck) => (
@@ -2143,7 +2161,7 @@ const App = () => {
                       disabled={previousPage() === currentPage()}
                       style={{ height: "32px" }}
                     >
-                      <MenuIcon icon="lucide:chevron-left" />
+                      <MenuIcon icon={chevronLeftIcon} />
                     </button>
                     <span
                       role="status"
@@ -2168,7 +2186,7 @@ const App = () => {
                       disabled={nextPage() === currentPage()}
                       style={{ height: "32px" }}
                     >
-                      <MenuIcon icon="lucide:chevron-right" />
+                      <MenuIcon icon={chevronRightIcon} />
                     </button>
                   </div>
                 </div>
