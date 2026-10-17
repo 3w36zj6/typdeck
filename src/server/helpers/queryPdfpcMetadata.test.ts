@@ -110,4 +110,14 @@ describe("queryPdfpcMetadata", () => {
       ),
     ).resolves.toEqual({ slides: [{ page: 2, hidden: true }] });
   });
+
+  it("rejects incomplete overlay metadata", async () => {
+    const root = process.cwd();
+    await expect(
+      queryPdfpcMetadata(
+        path.join(root, "tests/fixtures/pdfpc-incomplete-overlay.typ"),
+        root,
+      ),
+    ).rejects.toThrow("Page 1 must provide LogicalSlide and Overlay together");
+  });
 });

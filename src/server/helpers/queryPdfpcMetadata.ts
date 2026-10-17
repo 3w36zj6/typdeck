@@ -115,12 +115,18 @@ export const queryPdfpcMetadata = async (
     if (event.overlay !== null) slide.overlay = event.overlay;
     slides.set(event.page, slide);
   }
+  const slideList = [...slides.values()];
+  const incompleteOverlay = slideList.find(
+    ({ logicalSlide, overlay }) =>
+      (logicalSlide === undefined) !== (overlay === undefined),
+  );
+  if (incompleteOverlay) {
+    throw new Error(
+      `Page ${incompleteOverlay.page} must provide LogicalSlide and Overlay together`,
+    );
+  }
   return {
-    slides: [...slides.values()].map(({ logicalSlide, overlay, ...slide }) =>
-      logicalSlide !== undefined && overlay !== undefined
-        ? { ...slide, logicalSlide, overlay }
-        : slide,
-    ),
+    slides: slideList,
     ...(durationMinutes === undefined ? {} : { durationMinutes }),
     ...(startTime === undefined ? {} : { startTime }),
     ...(endTime === undefined ? {} : { endTime }),
