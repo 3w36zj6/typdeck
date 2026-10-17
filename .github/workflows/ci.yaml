@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-24.04
     strategy:
       matrix:
-        check: [format, lint, tsc, test, build-client, build-server]
+        check: [format, lint, tsc, test, build]
         include:
           - check: format
             name: Prettier
@@ -35,14 +35,10 @@ jobs:
             name: Unit tests
             command: test
             step_name: Run unit tests
-          - check: build-client
-            name: Build client
-            command: build:client
-            step_name: Build client
-          - check: build-server
-            name: Build server
-            command: build:server
-            step_name: Build server
+          - check: build
+            name: Build
+            command: build
+            step_name: Build
     steps:
       - name: Checkout your repository using git
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
