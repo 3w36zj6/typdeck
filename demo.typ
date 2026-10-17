@@ -49,7 +49,7 @@
 
 #speaker-note[Remind the audience that Typst is required.]
 
-First, make sure you have Typst installed on your system. Then install typdeck using your preferred package manager:
+First, make sure you have Typst 0.15.0 or newer installed on your system. Then install typdeck using your preferred package manager:
 
 ```sh
 # npm
