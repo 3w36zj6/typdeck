@@ -3,7 +3,7 @@ import path from "node:path";
 import chalk from "chalk";
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 import * as v from "valibot";
-import { type Metadata } from "../../client/types/metadata";
+import { parseMetadata, type Metadata } from "../../client/types/metadata";
 import { queryPdfpcMetadata } from "./queryPdfpcMetadata";
 import { queryTypstHeadings } from "./queryTypstHeadings";
 import { runProcess } from "./runProcess";
@@ -153,7 +153,7 @@ export const compileTypst = async (
       .filter(({ page }) => page <= pageCount)
       .map(({ page, ...slide }) => [`${page}`, slide]),
   );
-  const metadata: Metadata = {
+  const metadata = parseMetadata({
     pageCount,
     ...(pageLabels === undefined ? {} : { pageLabels }),
     ...(title === undefined ? {} : { title }),
@@ -161,7 +161,7 @@ export const compileTypst = async (
     ...presentation,
     outline,
     ...(Object.keys(slides).length > 0 ? { slides } : {}),
-  };
+  });
 
   fs.writeFileSync(
     path.join(stagingDir, "metadata.json"),
