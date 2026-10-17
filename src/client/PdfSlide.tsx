@@ -2,7 +2,6 @@ import {
   createEffect,
   createSignal,
   createUniqueId,
-  For,
   on,
   onCleanup,
   Show,
@@ -17,8 +16,9 @@ import {
 } from "pdfjs-dist/web/pdf_viewer.mjs";
 import "pdfjs-dist/web/pdf_viewer.css";
 import {
-  drawingLayers,
+  drawingTree,
   slideRectFromPoints,
+  type DrawingNode,
   type DrawingStroke,
   type SlideRect,
   type SlidePoint,
@@ -45,6 +45,60 @@ type PdfSlideProps = {
 const PDF_TO_CSS_UNITS = 96 / 72;
 // ponytail: Keep PDF canvases bounded; tiled rendering is required before deeper zoom.
 const MAX_ZOOM = 4;
+
+const strokePoints = ({ points }: DrawingStroke) =>
+  points.map(({ x, y }) => `${x},${y}`).join(" ");
+
+const DrawingTree = (props: {
+  maskPrefix: string;
+  node: DrawingNode | null;
+}) => (
+  <Show when={props.node} keyed>
+    {(node) =>
+      node.stroke.kind === "pen" ? (
+        <>
+          <DrawingTree maskPrefix={props.maskPrefix} node={node.previous} />
+          <polyline
+            points={strokePoints(node.stroke)}
+            fill="none"
+            stroke={node.stroke.color}
+            stroke-width={4 * node.stroke.size}
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            vector-effect="non-scaling-stroke"
+          />
+        </>
+      ) : (
+        <>
+          <defs>
+            <mask
+              id={`${props.maskPrefix}-${node.index}`}
+              x="0"
+              y="0"
+              width="1"
+              height="1"
+              maskUnits="userSpaceOnUse"
+            >
+              <rect width="1" height="1" fill="white" />
+              <polyline
+                points={strokePoints(node.stroke)}
+                fill="none"
+                stroke="black"
+                stroke-width={24 * node.stroke.size}
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                vector-effect="non-scaling-stroke"
+              />
+            </mask>
+          </defs>
+          <g mask={`url(#${props.maskPrefix}-${node.index})`}>
+            <DrawingTree maskPrefix={props.maskPrefix} node={node.previous} />
+          </g>
+        </>
+      )
+    }
+  </Show>
+);
 
 export const PdfSlide = (props: PdfSlideProps) => {
   const drawingMask = createUniqueId();
@@ -424,55 +478,10 @@ export const PdfSlide = (props: PdfSlideProps) => {
         aria-hidden="true"
         style={{ display: "none" }}
       >
-        <For each={drawingLayers(props.drawings ?? [])}>
-          {({ index, stroke, erasers }) => {
-            const mask = `${drawingMask}-${index}`;
-            return (
-              <>
-                <defs>
-                  <mask
-                    id={mask}
-                    x="0"
-                    y="0"
-                    width="1"
-                    height="1"
-                    maskUnits="userSpaceOnUse"
-                  >
-                    <rect width="1" height="1" fill="white" />
-                    <For each={erasers}>
-                      {(eraser) => (
-                        <polyline
-                          points={eraser.points
-                            .map(({ x, y }) => `${x},${y}`)
-                            .join(" ")}
-                          fill="none"
-                          stroke="black"
-                          stroke-width={24 * eraser.size}
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          vector-effect="non-scaling-stroke"
-                        />
-                      )}
-                    </For>
-                  </mask>
-                </defs>
-                <g mask={`url(#${mask})`}>
-                  <polyline
-                    points={stroke.points
-                      .map(({ x, y }) => `${x},${y}`)
-                      .join(" ")}
-                    fill="none"
-                    stroke={stroke.color}
-                    stroke-width={4 * stroke.size}
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    vector-effect="non-scaling-stroke"
-                  />
-                </g>
-              </>
-            );
-          }}
-        </For>
+        <DrawingTree
+          maskPrefix={drawingMask}
+          node={drawingTree(props.drawings ?? [])}
+        />
       </svg>
       <Show when={error()}>{(message) => <p role="alert">{message()}</p>}</Show>
     </div>

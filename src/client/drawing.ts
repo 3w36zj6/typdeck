@@ -13,6 +13,11 @@ type DrawingStrokeBase = {
 };
 export type DrawingStroke = DrawingStrokeBase &
   ({ kind: "pen"; color: string } | { kind: "eraser" });
+export type DrawingNode = {
+  index: number;
+  previous: DrawingNode | null;
+  stroke: DrawingStroke;
+};
 
 export const slideRectFromPoints = (
   start: SlidePoint,
@@ -24,17 +29,8 @@ export const slideRectFromPoints = (
   height: Math.abs(end.y - start.y),
 });
 
-export const drawingLayers = (strokes: DrawingStroke[]) =>
-  strokes.flatMap((stroke, index) =>
-    stroke.kind === "pen"
-      ? [
-          {
-            index,
-            stroke,
-            erasers: strokes
-              .slice(index + 1)
-              .filter(({ kind }) => kind === "eraser"),
-          },
-        ]
-      : [],
+export const drawingTree = (strokes: DrawingStroke[]) =>
+  strokes.reduce<DrawingNode | null>(
+    (previous, stroke, index) => ({ index, previous, stroke }),
+    null,
   );

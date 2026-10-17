@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { drawingLayers, slideRectFromPoints } from "./drawing";
+import { drawingTree, slideRectFromPoints } from "./drawing";
 
 describe("slideRectFromPoints", () => {
   it("normalizes a drag in either direction", () => {
@@ -11,8 +11,8 @@ describe("slideRectFromPoints", () => {
   });
 });
 
-describe("drawingLayers", () => {
-  it("applies erasers only to earlier pen strokes", () => {
+describe("drawingTree", () => {
+  it("preserves stroke order without duplicating erasers", () => {
     const first = {
       kind: "pen" as const,
       color: "#f00",
@@ -27,10 +27,20 @@ describe("drawingLayers", () => {
       points: [{ x: 0.5, y: 0.5 }],
     };
     const second = { ...first, color: "#0f0" };
+    const third = { ...first, color: "#00f" };
 
-    expect(drawingLayers([first, eraser, second])).toEqual([
-      { index: 0, stroke: first, erasers: [eraser] },
-      { index: 2, stroke: second, erasers: [] },
-    ]);
+    expect(drawingTree([first, second, eraser, third])).toEqual({
+      index: 3,
+      previous: {
+        index: 2,
+        previous: {
+          index: 1,
+          previous: { index: 0, previous: null, stroke: first },
+          stroke: second,
+        },
+        stroke: eraser,
+      },
+      stroke: third,
+    });
   });
 });
