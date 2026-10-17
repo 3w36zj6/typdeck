@@ -12,7 +12,6 @@ const metadata: Metadata = {
 };
 const deck = metadataIdentity(metadata);
 const syncedState = {
-  activeDrawing: null,
   blankScreen: "white",
   bookmarkPage: 2,
   currentPage: 2,
@@ -30,15 +29,15 @@ const syncedState = {
   ],
   drawingsHidden: true,
   frozenPage: 1,
-  pointer: {
-    kind: "spotlight",
-    page: 2,
-    size: 1.25,
-    x: 0.25,
-    y: 0.75,
-  },
   zoom: { page: 2, x: 0.2, y: 0.25, width: 0.5, height: 0.5 },
 } satisfies Parameters<typeof shouldBroadcastState>[1];
+const syncedPointer = {
+  kind: "spotlight",
+  page: 2,
+  size: 1.25,
+  x: 0.25,
+  y: 0.75,
+} as const;
 
 const stubStorage = (value?: string) => {
   const entries = new Map<string, string>();
@@ -99,9 +98,18 @@ describe("createPresentationSync", () => {
     expect(sync.currentPage()).toBe(1);
 
     channel.dispatch({ deck, type: "state", state: syncedState });
+    channel.dispatch({
+      deck,
+      state: {
+        activeDrawing: syncedState.drawings[0],
+        pointer: syncedPointer,
+      },
+      type: "transient-state",
+    });
     expect(sync.currentPage()).toBe(2);
     expect(sync.blankScreen()).toBe("white");
-    expect(sync.pointer()).toEqual(syncedState.pointer);
+    expect(sync.activeDrawing()).toEqual(syncedState.drawings[0]);
+    expect(sync.pointer()).toEqual(syncedPointer);
     expect(sync.drawings()).toEqual(syncedState.drawings);
     expect(sync.zoom()).toEqual(syncedState.zoom);
 
@@ -111,6 +119,14 @@ describe("createPresentationSync", () => {
       deck,
       type: "state",
       state: syncedState,
+    });
+    expect(channel.postMessage).toHaveBeenCalledWith({
+      deck,
+      state: {
+        activeDrawing: syncedState.drawings[0],
+        pointer: syncedPointer,
+      },
+      type: "transient-state",
     });
 
     dispose();
@@ -134,8 +150,17 @@ describe("createPresentationSync", () => {
       type: "state",
       state: { ...syncedState, currentPage: 3 },
     });
+    channel.dispatch({
+      deck,
+      state: {
+        activeDrawing: null,
+        pointer: { ...syncedPointer, page: 3 },
+      },
+      type: "transient-state",
+    });
     expect(sync.currentPage()).toBe(1);
     expect(sync.blankScreen()).toBe("none");
+    expect(sync.pointer()).toBeNull();
     dispose();
   });
 
@@ -210,7 +235,7 @@ describe("createPresentationSync", () => {
     stubStorage();
     const { sync, dispose } = createSync();
     sync.setActiveDrawing(syncedState.drawings[0]);
-    sync.setPointer(syncedState.pointer);
+    sync.setPointer(syncedPointer);
     sync.setZoom(syncedState.zoom);
     sync.setDrawings(syncedState.drawings);
     sync.savePersistentState();

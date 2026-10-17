@@ -7,6 +7,7 @@ import {
   createSignal,
   on,
   onCleanup,
+  untrack,
 } from "solid-js";
 import * as v from "valibot";
 import type { DrawingStroke, SlidePointer, SlideZoom } from "./drawing";
@@ -62,14 +63,12 @@ const DrawingSchema = v.variant("kind", [
 ]);
 
 const SlideStateSchema = v.object({
-  activeDrawing: v.nullable(DrawingSchema),
   blankScreen: v.picklist(["none", "black", "white"]),
   bookmarkPage: v.nullable(v.pipe(v.number(), v.integer(), v.minValue(1))),
   currentPage: v.pipe(v.number(), v.integer(), v.minValue(1)),
   drawings: v.array(DrawingSchema),
   drawingsHidden: v.boolean(),
   frozenPage: v.nullable(v.pipe(v.number(), v.integer(), v.minValue(1))),
-  pointer: PointerSchema,
   zoom: ZoomSchema,
 });
 const PersistentStateSchema = v.object({
@@ -83,8 +82,17 @@ const StoredStateSchema = v.object({
   deck: v.string(),
   state: PersistentStateSchema,
 });
+const TransientStateSchema = v.object({
+  activeDrawing: v.nullable(DrawingSchema),
+  pointer: PointerSchema,
+});
 const ChannelMessageSchema = v.variant("type", [
   v.object({ deck: v.string(), type: v.literal("request-state") }),
+  v.object({
+    deck: v.string(),
+    state: TransientStateSchema,
+    type: v.literal("transient-state"),
+  }),
   v.object({
     deck: v.string(),
     type: v.literal("state"),
@@ -135,25 +143,28 @@ const sameDrawings = (left: DrawingStroke[], right: DrawingStroke[]) =>
 
 type SlideState = v.InferOutput<typeof SlideStateSchema>;
 type PersistentState = v.InferOutput<typeof PersistentStateSchema>;
+type TransientState = v.InferOutput<typeof TransientStateSchema>;
 
 const fitsDeck = (state: PersistentState, pageCount: number) =>
   (state.bookmarkPage === null || state.bookmarkPage <= pageCount) &&
   state.drawings.every(({ page }) => page <= pageCount) &&
   (state.frozenPage === null || state.frozenPage <= pageCount);
 
+const sameTransientState = (left: TransientState, right: TransientState) =>
+  sameDrawing(left.activeDrawing, right.activeDrawing) &&
+  samePointer(left.pointer, right.pointer);
+
 export const shouldBroadcastState = (
   received: SlideState | undefined,
   current: SlideState,
 ) =>
   received === undefined ||
-  !sameDrawing(received.activeDrawing, current.activeDrawing) ||
   received.blankScreen !== current.blankScreen ||
   received.bookmarkPage !== current.bookmarkPage ||
   received.currentPage !== current.currentPage ||
   !sameDrawings(received.drawings, current.drawings) ||
   received.drawingsHidden !== current.drawingsHidden ||
   received.frozenPage !== current.frozenPage ||
-  !samePointer(received.pointer, current.pointer) ||
   !sameZoom(received.zoom, current.zoom);
 
 export const createPresentationSync = (
@@ -186,18 +197,26 @@ export const createPresentationSync = (
     const deck = metadata();
     return deck && metadataIdentity(deck);
   });
-  let receivedState: SlideState | undefined;
+  const [receivedState, setReceivedState] = createSignal<SlideState>();
+  const [receivedTransientState, setReceivedTransientState] =
+    createSignal<TransientState>();
+  const [transientFrame, setTransientFrame] = createSignal<number>();
 
   const currentState = () => ({
-    activeDrawing: activeDrawing(),
     blankScreen: blankScreen(),
     bookmarkPage: bookmarkPage(),
     currentPage: currentPage(),
     drawings: drawings(),
     drawingsHidden: drawingsHidden(),
     frozenPage: frozenPage(),
-    pointer: pointer(),
     zoom: zoom(),
+  });
+  const currentTransientState = () => ({
+    activeDrawing: activeDrawing(),
+    pointer: pointer(),
+  });
+  const transientState = createMemo(currentTransientState, undefined, {
+    equals: sameTransientState,
   });
   const postState = () => {
     const id = deckId();
@@ -206,6 +225,15 @@ export const createPresentationSync = (
       deck: id,
       type: "state",
       state: currentState(),
+    });
+  };
+  const postTransientState = (state = currentTransientState()) => {
+    const id = deckId();
+    if (!id) return;
+    channel.postMessage({
+      deck: id,
+      state,
+      type: "transient-state",
     });
   };
   const savePersistentState = () => {
@@ -237,31 +265,44 @@ export const createPresentationSync = (
     if (!deck || message.output.deck !== deckId()) return;
     if (message.output.type === "request-state") {
       postState();
+      postTransientState();
+      return;
+    }
+
+    const pages = deck.pageCount;
+    if (message.output.type === "transient-state") {
+      const state = message.output.state;
+      if (
+        (state.activeDrawing !== null && state.activeDrawing.page > pages) ||
+        (state.pointer !== null && state.pointer.page > pages)
+      ) {
+        return;
+      }
+      setReceivedTransientState(state);
+      batch(() => {
+        setActiveDrawing(state.activeDrawing);
+        setPointer(state.pointer);
+      });
       return;
     }
 
     const state = message.output.state;
-    const pages = deck.pageCount;
     if (
       state.currentPage > pages ||
       !fitsDeck(state, pages) ||
-      (state.activeDrawing !== null && state.activeDrawing.page > pages) ||
-      (state.pointer !== null && state.pointer.page > pages) ||
       (state.zoom !== null && state.zoom.page > pages)
     ) {
       return;
     }
 
-    receivedState = state;
+    setReceivedState(state);
     batch(() => {
-      setActiveDrawing(state.activeDrawing);
       setCurrentPage(state.currentPage);
       setBlankScreen(state.blankScreen);
       setBookmarkPage(state.bookmarkPage);
       setDrawings(state.drawings);
       setDrawingsHidden(state.drawingsHidden);
       setFrozenPage(state.frozenPage);
-      setPointer(state.pointer);
       setZoom(state.zoom);
     });
   };
@@ -269,24 +310,43 @@ export const createPresentationSync = (
   createEffect(
     on(
       [
-        activeDrawing,
         currentPage,
         blankScreen,
         bookmarkPage,
         drawings,
         drawingsHidden,
         frozenPage,
-        pointer,
         zoom,
       ],
       () => {
         const state = currentState();
-        if (!shouldBroadcastState(receivedState, state)) {
-          receivedState = undefined;
+        const received = receivedState();
+        setReceivedState(undefined);
+        if (!shouldBroadcastState(received, state)) return;
+        postState();
+      },
+      { defer: true },
+    ),
+  );
+  createEffect(
+    on(
+      transientState,
+      (state) => {
+        const received = receivedTransientState();
+        setReceivedTransientState(undefined);
+        if (received !== undefined && sameTransientState(received, state)) {
+          const frame = transientFrame();
+          if (frame !== undefined) cancelAnimationFrame(frame);
+          setTransientFrame(undefined);
           return;
         }
-        receivedState = undefined;
-        postState();
+        if (transientFrame() !== undefined) return;
+        setTransientFrame(
+          requestAnimationFrame(() => {
+            setTransientFrame(undefined);
+            postTransientState(untrack(transientState));
+          }),
+        );
       },
       { defer: true },
     ),
@@ -331,7 +391,11 @@ export const createPresentationSync = (
       { defer: true },
     ),
   );
-  onCleanup(() => channel.close());
+  onCleanup(() => {
+    channel.close();
+    const frame = transientFrame();
+    if (frame !== undefined) cancelAnimationFrame(frame);
+  });
 
   return {
     activeDrawing,
