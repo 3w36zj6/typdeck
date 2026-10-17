@@ -1,7 +1,7 @@
 import { type PluginOption } from "vite";
 
-import { reportError } from "../../cliOutput";
-import { compileTypst } from "../compileTypst";
+import { reportError } from "../../cliOutput.ts";
+import { compileTypst } from "../compileTypst.ts";
 
 export const typstPlugin = (typstFile: string): PluginOption => {
   let activeCompile: AbortController | undefined;

@@ -3,10 +3,10 @@ import path from "node:path";
 import { log, spinner } from "@clack/prompts";
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 import * as v from "valibot";
-import { parseMetadata, type Metadata } from "../../client/types/metadata";
-import { queryPdfpcMetadata } from "./queryPdfpcMetadata";
-import { queryTypstHeadings } from "./queryTypstHeadings";
-import { runProcess } from "./runProcess";
+import { parseMetadata, type Metadata } from "../../client/types/metadata.ts";
+import { queryPdfpcMetadata } from "./queryPdfpcMetadata.ts";
+import { queryTypstHeadings } from "./queryTypstHeadings.ts";
+import { runProcess } from "./runProcess.ts";
 
 const CompilationInputsSchema = v.object({
   inputs: v.array(v.string()),

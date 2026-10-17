@@ -1,5 +1,5 @@
 import * as v from "valibot";
-import { runProcess } from "./runProcess";
+import { runProcess } from "./runProcess.ts";
 
 type PdfpcSlide = {
   page: number;
