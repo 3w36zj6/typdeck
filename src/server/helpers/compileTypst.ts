@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { log, spinner } from "@clack/prompts";
-import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
+import { getDocument } from "unpdf/pdfjs";
 import * as v from "valibot";
 import { parseMetadata, type Metadata } from "../../client/types/metadata.ts";
 import { queryPdfpcMetadata } from "./queryPdfpcMetadata.ts";

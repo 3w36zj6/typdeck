@@ -13,7 +13,6 @@ import {
 } from "@optique/core";
 import { path as pathValue, run } from "@optique/run";
 import { note } from "@clack/prompts";
-import { GlobalWorkerOptions } from "pdfjs-dist/legacy/build/pdf.mjs";
 import { clientAssets } from "./clientAssets";
 import {
   compileTypst,
@@ -41,13 +40,6 @@ const containsPath = (directory: string, target: string) => {
 };
 
 const compileDeck = async (typstFile: string) => {
-  const pdfWorker = [...clientAssets].find(
-    ([pathname]) =>
-      pathname.startsWith("/assets/pdf.worker") && pathname.endsWith(".mjs"),
-  )?.[1];
-  if (!pdfWorker) throw new Error("Missing embedded PDF worker");
-  GlobalWorkerOptions.workerSrc = `data:text/javascript;base64,${pdfWorker.body.toString("base64")}`;
-
   const dotDirectory = resolveOutputPath(".typdeck");
   const deckDirectory = path.join(dotDirectory, "deck");
   fs.mkdirSync(dotDirectory, { recursive: true });

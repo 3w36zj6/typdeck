@@ -25,6 +25,9 @@ importers:
       pdfjs-dist:
         specifier: 6.4.299
         version: 6.4.299
+      unpdf:
+        specifier: 1.9.0
+        version: 1.9.0
       valibot:
         specifier: ^1.5.0
         version: 1.5.0(typescript@6.0.3)
@@ -2343,6 +2346,18 @@ packages:
         integrity: sha512-KTDyRTYX8sWmKXAikPHHSyc63CRPETMctyjKFupcC6OBLXT3xsN0e9aF7m+mIXutFWpUXuedtowG7iLOzp0kQg==,
       }
 
+  unpdf@1.9.0:
+    resolution:
+      {
+        integrity: sha512-YIXl+jZUBneP22IkRUwFA1b71l+Ad2uX7o7dMfxLSLuCOtaKAQvak7Sz3MtdVsWTsocblznSIGidfXyhnBgBMA==,
+      }
+    engines: { node: ">=22" }
+    peerDependencies:
+      "@napi-rs/canvas": ^0.1.69 || ^1.0.0
+    peerDependenciesMeta:
+      "@napi-rs/canvas":
+        optional: true
+
   update-browserslist-db@1.1.2:
     resolution:
       {
@@ -3793,6 +3808,8 @@ snapshots:
   typescript@6.0.3: {}
 
   undici-types@8.9.0: {}
+
+  unpdf@1.9.0: {}
 
   update-browserslist-db@1.1.2(browserslist@4.24.4):
     dependencies:
