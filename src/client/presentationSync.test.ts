@@ -65,9 +65,12 @@ class MockBroadcastChannel {
   }
 }
 
-const createSync = (blankScreen: "none" | "black" = "none") =>
+const createSync = (
+  blankScreen: "none" | "black" = "none",
+  role: "stage" | "presenter" = "stage",
+) =>
   createRoot((dispose) => ({
-    sync: createPresentationSync(1, blankScreen, () => metadata),
+    sync: createPresentationSync(1, blankScreen, role, () => metadata),
     dispose,
   }));
 
@@ -87,6 +90,7 @@ describe("createPresentationSync", () => {
     expect(channel.name).toBe("typdeck:/talk");
     expect(channel.postMessage).toHaveBeenCalledWith({
       deck,
+      requester: "stage",
       type: "request-state",
     });
 
@@ -114,7 +118,10 @@ describe("createPresentationSync", () => {
     expect(sync.zoom()).toEqual(syncedState.zoom);
 
     channel.postMessage.mockClear();
-    channel.dispatch({ deck, type: "request-state" });
+    channel.dispatch({ deck, requester: "stage", type: "request-state" });
+    expect(channel.postMessage).not.toHaveBeenCalled();
+
+    channel.dispatch({ deck, requester: "presenter", type: "request-state" });
     expect(channel.postMessage).toHaveBeenCalledWith({
       deck,
       type: "state",

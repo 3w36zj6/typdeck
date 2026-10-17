@@ -275,6 +275,7 @@ const App = () => {
   } = createPresentationSync(
     pageFromHash(window.location.hash),
     blankScreenFromParam(urlParams.get("blank")),
+    isPresenterMode ? "presenter" : "stage",
     () => metadata(),
   );
   const [pointerMode, setPointerMode] = createSignal<

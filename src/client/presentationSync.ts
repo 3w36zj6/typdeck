@@ -86,8 +86,13 @@ const TransientStateSchema = v.object({
   activeDrawing: v.nullable(DrawingSchema),
   pointer: PointerSchema,
 });
+const PresentationRoleSchema = v.picklist(["stage", "presenter"]);
 const ChannelMessageSchema = v.variant("type", [
-  v.object({ deck: v.string(), type: v.literal("request-state") }),
+  v.object({
+    deck: v.string(),
+    requester: PresentationRoleSchema,
+    type: v.literal("request-state"),
+  }),
   v.object({
     deck: v.string(),
     state: TransientStateSchema,
@@ -144,6 +149,7 @@ const sameDrawings = (left: DrawingStroke[], right: DrawingStroke[]) =>
 type SlideState = v.InferOutput<typeof SlideStateSchema>;
 type PersistentState = v.InferOutput<typeof PersistentStateSchema>;
 type TransientState = v.InferOutput<typeof TransientStateSchema>;
+type PresentationRole = v.InferOutput<typeof PresentationRoleSchema>;
 
 const fitsDeck = (state: PersistentState, pageCount: number) =>
   (state.bookmarkPage === null || state.bookmarkPage <= pageCount) &&
@@ -170,6 +176,7 @@ export const shouldBroadcastState = (
 export const createPresentationSync = (
   initialPage: number,
   initialBlankScreen: BlankScreen,
+  role: PresentationRole,
   metadata: Accessor<Metadata | undefined>,
 ) => {
   const [currentPage, setCurrentPage] = createSignal(initialPage);
@@ -264,8 +271,10 @@ export const createPresentationSync = (
     const deck = metadata();
     if (!deck || message.output.deck !== deckId()) return;
     if (message.output.type === "request-state") {
-      postState();
-      postTransientState();
+      if (message.output.requester !== role) {
+        postState();
+        postTransientState();
+      }
       return;
     }
 
@@ -379,6 +388,7 @@ export const createPresentationSync = (
         }
         channel.postMessage({
           deck: deckId(),
+          requester: role,
           type: "request-state",
         });
       }
