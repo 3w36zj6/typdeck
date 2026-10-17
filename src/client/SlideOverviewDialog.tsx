@@ -1,5 +1,12 @@
 import type { PDFDocumentProxy } from "pdfjs-dist";
-import { createMemo, For } from "solid-js";
+import {
+  createEffect,
+  createMemo,
+  createSignal,
+  For,
+  onCleanup,
+  Show,
+} from "solid-js";
 import {
   headingForPage,
   logicalSlideStartPage,
@@ -82,6 +89,23 @@ export const SlideOverviewDialog = (props: {
           <For each={overviewPages(props.metadata)}>
             {(page) => {
               const label = pageLabel(props.metadata, page);
+              const [thumbnail, setThumbnail] = createSignal<HTMLSpanElement>();
+              const [visible, setVisible] = createSignal(false);
+              createEffect(() => {
+                const element = thumbnail();
+                if (!element) return;
+                const observer = new IntersectionObserver(
+                  (entries) =>
+                    setVisible(
+                      entries.some(
+                        ({ intersectionRatio }) => intersectionRatio > 0,
+                      ),
+                    ),
+                  { root: list, rootMargin: "200px 0px" },
+                );
+                observer.observe(element);
+                onCleanup(() => observer.disconnect());
+              });
               return (
                 <li aria-level={levelForPage(page)}>
                   <button
@@ -94,12 +118,14 @@ export const SlideOverviewDialog = (props: {
                     aria-label={label}
                     onClick={() => props.onConfirm(page)}
                   >
-                    <span class="overview-thumbnail" inert>
-                      <PdfSlide
-                        document={props.document}
-                        page={page}
-                        label={`Thumbnail: ${label}`}
-                      />
+                    <span ref={setThumbnail} class="overview-thumbnail" inert>
+                      <Show when={visible()}>
+                        <PdfSlide
+                          document={props.document}
+                          page={page}
+                          label={`Thumbnail: ${label}`}
+                        />
+                      </Show>
                     </span>
                     <span
                       class="overview-label"
