@@ -656,13 +656,11 @@ const App = () => {
   const syncFullscreen = () =>
     setIsFullscreen(document.fullscreenElement !== null);
 
-  const toggleFullScreen = async () => {
-    if (!document.fullscreenElement) {
-      await document.documentElement.requestFullscreen();
-    } else {
-      await document.exitFullscreen();
-    }
-  };
+  const toggleFullScreen = () =>
+    (document.fullscreenElement
+      ? document.exitFullscreen()
+      : document.documentElement.requestFullscreen()
+    ).catch(() => undefined);
 
   const previousPage = () => {
     const deck = metadata();
