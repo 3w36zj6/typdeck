@@ -53,6 +53,8 @@ describe("actionForKey", () => {
     ["KeyW", false, "whiteout"],
     ["KeyF", false, "fullscreen"],
     ["KeyF", true, "toggle-freeze"],
+    ["KeyH", false, "toggle-stage-controls"],
+    ["KeyH", true, undefined],
     ["KeyD", false, "toggle-drawings"],
     ["KeyD", true, undefined],
     ["KeyC", false, "clear-drawings"],

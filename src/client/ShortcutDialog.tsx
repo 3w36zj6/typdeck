@@ -18,6 +18,8 @@ const shortcuts = [
   ["O", "Open the slide overview"],
   ["/ / Ctrl/Cmd+K", "Search slide text"],
   ["F", "Enter / exit fullscreen"],
+  ["H", "Hide / restore the Stage control bar"],
+  ["Tab", "Restore controls and move keyboard focus (Stage)"],
   ["Shift+F", "Freeze / unfreeze the stage (Presenter View)"],
   ["S / P", "Start / pause or resume the timer (Presenter View)"],
   ["B", "Toggle blackout"],

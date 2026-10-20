@@ -265,6 +265,9 @@ const App = () => {
     setDrawings,
     drawingsHidden,
     setDrawingsHidden,
+    stageControlsHidden,
+    setStageControlsHidden,
+    requestStageControlsToggle,
     frozenPage,
     setFrozenPage,
     pointer,
@@ -277,6 +280,7 @@ const App = () => {
     blankScreenFromParam(urlParams.get("blank")),
     isPresenterMode ? "presenter" : "stage",
     () => metadata(),
+    (): void => toggleStageControls(),
   );
   const [pointerMode, setPointerMode] = createSignal<
     "none" | SlidePointer["kind"]
@@ -487,6 +491,14 @@ const App = () => {
     document.fullscreenElement !== null,
   );
   const [isCursorVisible, setIsCursorVisible] = createSignal(true);
+  const [isStageWindowActive, setIsStageWindowActive] = createSignal(true);
+  const [stageControlsHaveKeyboardFocus, setStageControlsHaveKeyboardFocus] =
+    createSignal(false);
+  const stageControlsAutoHidden = createMemo(
+    () =>
+      !isCursorVisible() &&
+      !(isStageWindowActive() && stageControlsHaveKeyboardFocus()),
+  );
   let cursorHideTimeout: number;
   let pointerHideTimeout: number;
   let wheelEndTimeout: number;
@@ -672,8 +684,37 @@ const App = () => {
     );
   };
 
-  const syncFullscreen = () =>
+  const toggleStageControls = (): void => {
+    if (isPresenterMode) {
+      requestStageControlsToggle();
+    } else if (!stageControlsHidden() && stageControlsAutoHidden()) {
+      showCursor();
+    } else {
+      setStageControlsHidden((hidden) => !hidden);
+    }
+  };
+
+  const activateStageWindow = () => setIsStageWindowActive(true);
+  const deactivateStageWindow = () => setIsStageWindowActive(false);
+
+  const handleStagePointerActivity = (event: PointerEvent) => {
+    activateStageWindow();
+    showCursor();
+    if (event.pointerType === "touch" || event.pointerType === "pen") {
+      setStageControlsHidden(false);
+    }
+  };
+
+  createEffect(
+    on(stageControlsHidden, (hidden) => {
+      if (!isPresenterMode && !hidden) showCursor();
+    }),
+  );
+
+  const syncFullscreen = () => {
     setIsFullscreen(document.fullscreenElement !== null);
+    showCursor();
+  };
 
   const toggleFullScreen = () =>
     (document.fullscreenElement
@@ -736,6 +777,7 @@ const App = () => {
   };
 
   const handleKeyDown = (event: KeyboardEvent) => {
+    if (!isPresenterMode) activateStageWindow();
     if (event.target instanceof Element) {
       if (
         event.target.closest("input, select, textarea, [contenteditable]") ||
@@ -746,6 +788,17 @@ const App = () => {
       }
     }
     if (document.querySelector("dialog:modal") || !metadata()) return;
+    if (
+      !isPresenterMode &&
+      event.code === "Tab" &&
+      !event.altKey &&
+      !event.ctrlKey &&
+      !event.metaKey &&
+      !event.isComposing
+    ) {
+      setStageControlsHidden(false);
+      showCursor();
+    }
     if (!characterShortcutsEnabled() && isCharacterShortcut(event)) return;
 
     const action = actionForKey(event);
@@ -832,6 +885,9 @@ const App = () => {
       case "fullscreen":
         void toggleFullScreen();
         break;
+      case "toggle-stage-controls":
+        toggleStageControls();
+        break;
       case "toggle-freeze":
         toggleFreeze();
         break;
@@ -892,6 +948,7 @@ const App = () => {
       case "reset-view":
         batch(() => {
           setBlankScreen("none");
+          setStageControlsHidden(false);
           setFrozenPage(null);
           setZoom(null);
           selectInputMode("normal");
@@ -1144,6 +1201,9 @@ const App = () => {
     document.addEventListener("visibilitychange", keepScreenAwake);
     if (!isPresenterMode) {
       window.addEventListener("mousemove", showCursor);
+      window.addEventListener("pointerdown", handleStagePointerActivity);
+      window.addEventListener("focus", activateStageWindow);
+      window.addEventListener("blur", deactivateStageWindow);
       showCursor();
     }
     createEffect(() => {
@@ -1168,6 +1228,9 @@ const App = () => {
       window.removeEventListener("hashchange", syncPageFromHash);
       if (!isPresenterMode) {
         window.removeEventListener("mousemove", showCursor);
+        window.removeEventListener("pointerdown", handleStagePointerActivity);
+        window.removeEventListener("focus", activateStageWindow);
+        window.removeEventListener("blur", deactivateStageWindow);
       }
       document.removeEventListener("fullscreenchange", syncFullscreen);
       document.removeEventListener("visibilitychange", keepScreenAwake);
@@ -1190,11 +1253,12 @@ const App = () => {
       url.searchParams.set("blank", blankScreen());
     }
     url.hash = hashForPage(currentPage(), metadata());
-    window.open(
+    const presenter = window.open(
       url.href,
       `typdeck-presenter:${url.origin}${url.pathname}`,
       "width=1024,height=768",
     );
+    if (presenter) deactivateStageWindow();
   };
 
   return (
@@ -1262,8 +1326,25 @@ const App = () => {
             </Show>
             <div
               class="menu"
+              classList={{
+                "menu-hidden":
+                  stageControlsHidden() || stageControlsAutoHidden(),
+              }}
+              inert={stageControlsHidden()}
               role="group"
               aria-label="Stage controls"
+              onFocusIn={(event) => {
+                setStageControlsHaveKeyboardFocus(
+                  event.target.matches(":focus-visible"),
+                );
+                showCursor();
+              }}
+              onFocusOut={() => {
+                setStageControlsHaveKeyboardFocus(false);
+                showCursor();
+              }}
+              onKeyDown={() => setStageControlsHaveKeyboardFocus(true)}
+              onPointerDown={() => setStageControlsHaveKeyboardFocus(false)}
               style={{
                 position: "fixed",
                 bottom: "20px",
@@ -1842,6 +1923,20 @@ const App = () => {
               <fieldset class="presenter-control-group">
                 <legend>Screen</legend>
                 <div class="presenter-control-row">
+                  <button
+                    class="icon-button"
+                    onClick={() => setStageControlsHidden((hidden) => !hidden)}
+                    aria-label="Hide stage controls"
+                    aria-pressed={stageControlsHidden()}
+                    data-tooltip={
+                      stageControlsHidden()
+                        ? "Restore stage controls"
+                        : "Hide stage controls"
+                    }
+                    style={{ height: "32px" }}
+                  >
+                    <MenuIcon icon={eyeOffIcon} />
+                  </button>
                   <BlankScreenButtons
                     blankScreen={blankScreen()}
                     height="32px"

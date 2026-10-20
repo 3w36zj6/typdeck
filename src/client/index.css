@@ -63,6 +63,11 @@ button {
   cursor: none !important;
 }
 
+.menu-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
 .icon-button {
   position: relative;
 }
@@ -449,6 +454,13 @@ button {
 
 .menu {
   background: rgba(0, 0, 0, 0.8);
+  transition: opacity 0.3s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .menu {
+    transition: none;
+  }
 }
 
 @media (forced-colors: active) {

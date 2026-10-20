@@ -68,6 +68,7 @@ const SlideStateSchema = v.object({
   currentPage: v.pipe(v.number(), v.integer(), v.minValue(1)),
   drawings: v.array(DrawingSchema),
   drawingsHidden: v.boolean(),
+  stageControlsHidden: v.boolean(),
   frozenPage: v.nullable(v.pipe(v.number(), v.integer(), v.minValue(1))),
   zoom: ZoomSchema,
 });
@@ -88,6 +89,10 @@ const TransientStateSchema = v.object({
 });
 const PresentationRoleSchema = v.picklist(["stage", "presenter"]);
 const ChannelMessageSchema = v.variant("type", [
+  v.object({
+    deck: v.string(),
+    type: v.literal("toggle-stage-controls"),
+  }),
   v.object({
     deck: v.string(),
     requester: PresentationRoleSchema,
@@ -170,6 +175,7 @@ export const shouldBroadcastState = (
   received.currentPage !== current.currentPage ||
   !sameDrawings(received.drawings, current.drawings) ||
   received.drawingsHidden !== current.drawingsHidden ||
+  received.stageControlsHidden !== current.stageControlsHidden ||
   received.frozenPage !== current.frozenPage ||
   !sameZoom(received.zoom, current.zoom);
 
@@ -178,6 +184,7 @@ export const createPresentationSync = (
   initialBlankScreen: BlankScreen,
   role: PresentationRole,
   metadata: Accessor<Metadata | undefined>,
+  onToggleStageControls: () => void,
 ) => {
   const [currentPage, setCurrentPage] = createSignal(initialPage);
   const [blankScreen, setBlankScreen] =
@@ -191,6 +198,7 @@ export const createPresentationSync = (
     equals: sameDrawings,
   });
   const [drawingsHidden, setDrawingsHidden] = createSignal(false);
+  const [stageControlsHidden, setStageControlsHidden] = createSignal(false);
   const [frozenPage, setFrozenPage] = createSignal<number | null>(null);
   const [pointer, setPointer] = createSignal<SlidePointer | null>(null, {
     equals: samePointer,
@@ -215,6 +223,7 @@ export const createPresentationSync = (
     currentPage: currentPage(),
     drawings: drawings(),
     drawingsHidden: drawingsHidden(),
+    stageControlsHidden: stageControlsHidden(),
     frozenPage: frozenPage(),
     zoom: zoom(),
   });
@@ -233,6 +242,11 @@ export const createPresentationSync = (
       type: "state",
       state: currentState(),
     });
+  };
+  const requestStageControlsToggle = () => {
+    const id = deckId();
+    if (!id) return;
+    channel.postMessage({ deck: id, type: "toggle-stage-controls" });
   };
   const postTransientState = (state = currentTransientState()) => {
     const id = deckId();
@@ -270,6 +284,10 @@ export const createPresentationSync = (
     if (!message.success) return;
     const deck = metadata();
     if (!deck || message.output.deck !== deckId()) return;
+    if (message.output.type === "toggle-stage-controls") {
+      if (role === "stage") onToggleStageControls();
+      return;
+    }
     if (message.output.type === "request-state") {
       if (message.output.requester !== role) {
         postState();
@@ -311,6 +329,7 @@ export const createPresentationSync = (
       setBookmarkPage(state.bookmarkPage);
       setDrawings(state.drawings);
       setDrawingsHidden(state.drawingsHidden);
+      setStageControlsHidden(state.stageControlsHidden);
       setFrozenPage(state.frozenPage);
       setZoom(state.zoom);
     });
@@ -324,6 +343,7 @@ export const createPresentationSync = (
         bookmarkPage,
         drawings,
         drawingsHidden,
+        stageControlsHidden,
         frozenPage,
         zoom,
       ],
@@ -420,6 +440,9 @@ export const createPresentationSync = (
     setDrawings,
     drawingsHidden,
     setDrawingsHidden,
+    stageControlsHidden,
+    setStageControlsHidden,
+    requestStageControlsToggle,
     frozenPage,
     setFrozenPage,
     pointer,
