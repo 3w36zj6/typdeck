@@ -17,6 +17,13 @@ export default defineConfig(async ({ command, isPreview }) => {
     build: {
       outDir: "public",
       emptyOutDir: true,
+      rolldownOptions: {
+        output: {
+          codeSplitting: {
+            groups: [{ name: "pdfjs", test: /\/pdfjs-dist\/build\/pdf\.mjs$/ }],
+          },
+        },
+      },
     },
   };
 });
