@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import { type Server } from "node:http";
+import { networkInterfaces } from "node:os";
 import path from "node:path";
 import {
   argument,
@@ -25,10 +26,22 @@ import { serveDirectory, servePresentation } from "./helpers/servePresentation";
 
 declare const __TYPDECK_VERSION__: string;
 
-const printUrl = (server: Server) => {
+const printUrls = (server: Server) => {
   const address = server.address();
   if (!address || typeof address === "string") return;
   note(`http://127.0.0.1:${address.port}/`, "Local");
+  const hosts = new Set(
+    Object.values(networkInterfaces())
+      .flatMap((entries) => entries ?? [])
+      .filter((entry) => entry.family === "IPv4" && !entry.internal)
+      .map((entry) => entry.address),
+  );
+  if (hosts.size) {
+    note(
+      [...hosts].map((host) => `http://${host}:${address.port}/`).join("\n"),
+      "Network",
+    );
+  }
 };
 
 const containsPath = (directory: string, target: string) => {
@@ -146,14 +159,14 @@ export const main = async () => {
         deckDirectory,
         compilationInputs,
       );
-      printUrl(server);
+      printUrls(server);
       break;
     }
     case "build":
       await buildPresentation(args.typstFile, args.outDir);
       break;
     case "preview":
-      printUrl(await serveDirectory(args.outDir));
+      printUrls(await serveDirectory(args.outDir));
       break;
   }
 };
