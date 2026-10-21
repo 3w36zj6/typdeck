@@ -1,6 +1,6 @@
 {
   "name": "typdeck",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Compile Typst slides into a web stage and presenter view",
   "keywords": [
     "typst",
