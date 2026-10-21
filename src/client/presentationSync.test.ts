@@ -28,6 +28,7 @@ const syncedState = {
     },
   ],
   drawingsHidden: true,
+  stageControlsHidden: true,
   frozenPage: 1,
   zoom: { page: 2, x: 0.2, y: 0.25, width: 0.5, height: 0.5 },
 } satisfies Parameters<typeof shouldBroadcastState>[1];
@@ -68,9 +69,16 @@ class MockBroadcastChannel {
 const createSync = (
   blankScreen: "none" | "black" = "none",
   role: "stage" | "presenter" = "stage",
+  onToggleStageControls = () => {},
 ) =>
   createRoot((dispose) => ({
-    sync: createPresentationSync(1, blankScreen, role, () => metadata),
+    sync: createPresentationSync(
+      1,
+      blankScreen,
+      role,
+      () => metadata,
+      onToggleStageControls,
+    ),
     dispose,
   }));
 
@@ -80,6 +88,33 @@ afterEach(() => {
 });
 
 describe("createPresentationSync", () => {
+  it("routes control toggles to the Stage for the current deck only", () => {
+    vi.stubGlobal("BroadcastChannel", MockBroadcastChannel);
+    stubStorage();
+    const toggle = vi.fn();
+    const stage = createSync("none", "stage", toggle);
+    const stageChannel = MockBroadcastChannel.latest!;
+    stageChannel.dispatch({
+      deck: "different deck",
+      type: "toggle-stage-controls",
+    });
+    expect(toggle).not.toHaveBeenCalled();
+    stageChannel.dispatch({ deck, type: "toggle-stage-controls" });
+    expect(toggle).toHaveBeenCalledOnce();
+
+    const presenter = createSync("none", "presenter", toggle);
+    const presenterChannel = MockBroadcastChannel.latest!;
+    presenter.sync.requestStageControlsToggle();
+    expect(presenterChannel.postMessage).toHaveBeenCalledWith({
+      deck,
+      type: "toggle-stage-controls",
+    });
+    presenterChannel.dispatch({ deck, type: "toggle-stage-controls" });
+    expect(toggle).toHaveBeenCalledOnce();
+    stage.dispose();
+    presenter.dispose();
+  });
+
   it("exchanges state only for the current deck", () => {
     vi.stubGlobal("BroadcastChannel", MockBroadcastChannel);
     stubStorage();
@@ -116,6 +151,7 @@ describe("createPresentationSync", () => {
     expect(sync.pointer()).toEqual(syncedPointer);
     expect(sync.drawings()).toEqual(syncedState.drawings);
     expect(sync.zoom()).toEqual(syncedState.zoom);
+    expect(sync.stageControlsHidden()).toBe(true);
 
     channel.postMessage.mockClear();
     channel.dispatch({ deck, requester: "stage", type: "request-state" });
@@ -159,6 +195,11 @@ describe("createPresentationSync", () => {
     });
     channel.dispatch({
       deck,
+      type: "state",
+      state: { ...syncedState, stageControlsHidden: "true" },
+    });
+    channel.dispatch({
+      deck,
       state: {
         activeDrawing: null,
         pointer: { ...syncedPointer, page: 3 },
@@ -168,6 +209,7 @@ describe("createPresentationSync", () => {
     expect(sync.currentPage()).toBe(1);
     expect(sync.blankScreen()).toBe("none");
     expect(sync.pointer()).toBeNull();
+    expect(sync.stageControlsHidden()).toBe(false);
     dispose();
   });
 
@@ -245,6 +287,7 @@ describe("createPresentationSync", () => {
     sync.setPointer(syncedPointer);
     sync.setZoom(syncedState.zoom);
     sync.setDrawings(syncedState.drawings);
+    sync.setStageControlsHidden(true);
     sync.savePersistentState();
 
     const stored = JSON.parse(
@@ -255,6 +298,7 @@ describe("createPresentationSync", () => {
     expect(stored.state).not.toHaveProperty("currentPage");
     expect(stored.state).not.toHaveProperty("pointer");
     expect(stored.state).not.toHaveProperty("zoom");
+    expect(stored.state).not.toHaveProperty("stageControlsHidden");
     dispose();
   });
 
@@ -285,6 +329,12 @@ describe("shouldBroadcastState", () => {
       shouldBroadcastState(syncedState, {
         ...syncedState,
         frozenPage: null,
+      }),
+    ).toBe(true);
+    expect(
+      shouldBroadcastState(syncedState, {
+        ...syncedState,
+        stageControlsHidden: false,
       }),
     ).toBe(true);
   });

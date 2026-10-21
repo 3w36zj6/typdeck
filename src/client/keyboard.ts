@@ -90,6 +90,8 @@ export const actionForKey = ({
       return "whiteout";
     case "KeyF":
       return shiftKey ? "toggle-freeze" : "fullscreen";
+    case "KeyH":
+      return shiftKey ? undefined : "toggle-stage-controls";
     case "KeyD":
       return shiftKey ? undefined : "toggle-drawings";
     case "KeyC":
