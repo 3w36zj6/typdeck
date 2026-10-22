@@ -57,6 +57,7 @@ const startServer = async (
     request: IncomingMessage,
     response: ServerResponse,
   ) => Promise<void>,
+  host: boolean,
 ): Promise<Server> => {
   const server = http.createServer((request, response) => {
     void handleRequest(request, response).catch((error: unknown) => {
@@ -67,12 +68,12 @@ const startServer = async (
   });
   await new Promise<void>((resolve, reject) => {
     server.once("error", reject);
-    server.listen(0, "0.0.0.0", resolve);
+    server.listen(0, host ? "0.0.0.0" : "127.0.0.1", resolve);
   });
   return server;
 };
 
-export const serveDirectory = async (directory: string) => {
+export const serveDirectory = async (directory: string, host: boolean) => {
   const root = path.resolve(directory);
   if (!fs.statSync(root, { throwIfNoEntry: false })?.isDirectory()) {
     throw new Error(`Invalid build output directory: ${root}`);
@@ -97,13 +98,14 @@ export const serveDirectory = async (directory: string) => {
       root,
       pathname === "/" ? "/index.html" : pathname,
     );
-  });
+  }, host);
 };
 
 export const servePresentation = async (
   typstFile: string,
   deckDirectory: string,
   compilationInputs: string[],
+  host: boolean,
 ) => {
   const reloadClients = new Set<ServerResponse>();
   const embeddedIndex = clientAssets.get("/index.html");
@@ -165,7 +167,7 @@ export const servePresentation = async (
     else sendStatus(response, 404);
   };
 
-  const server = await startServer(handleRequest);
+  const server = await startServer(handleRequest, host);
 
   let activeCompile: AbortController | undefined;
   const watchedInputs = new Set(compilationInputs);

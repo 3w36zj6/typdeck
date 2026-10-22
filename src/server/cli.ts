@@ -26,10 +26,14 @@ import { serveDirectory, servePresentation } from "./helpers/servePresentation";
 
 declare const __TYPDECK_VERSION__: string;
 
-const printUrls = (server: Server) => {
+const printUrls = (server: Server, host: boolean) => {
   const address = server.address();
   if (!address || typeof address === "string") return;
   note(`http://127.0.0.1:${address.port}/`, "Local");
+  if (!host) {
+    note("use --host to expose", "Network");
+    return;
+  }
   const hosts = new Set(
     Object.values(networkInterfaces())
       .flatMap((entries) => entries ?? [])
@@ -102,6 +106,10 @@ const outDir = withDefault(
   "dist",
 );
 
+const host = option("--host", {
+  description: message`expose the server to the network`,
+});
+
 const typstFile = pathValue({
   errors: {
     pathNotFound: (input) =>
@@ -118,6 +126,7 @@ const parser = or(
     object({
       command: constant("dev"),
       typstFile: argument(typstFile),
+      host,
     }),
     { description: message`start dev server` },
   ),
@@ -130,7 +139,7 @@ const parser = or(
     }),
     { description: message`build for production` },
   ),
-  command("preview", object({ command: constant("preview"), outDir }), {
+  command("preview", object({ command: constant("preview"), outDir, host }), {
     description: message`preview build output`,
   }),
 );
@@ -158,15 +167,16 @@ export const main = async () => {
         args.typstFile,
         deckDirectory,
         compilationInputs,
+        args.host,
       );
-      printUrls(server);
+      printUrls(server, args.host);
       break;
     }
     case "build":
       await buildPresentation(args.typstFile, args.outDir);
       break;
     case "preview":
-      printUrls(await serveDirectory(args.outDir));
+      printUrls(await serveDirectory(args.outDir, args.host), args.host);
       break;
   }
 };
