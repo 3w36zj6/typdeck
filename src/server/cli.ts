@@ -26,12 +26,12 @@ import { serveDirectory, servePresentation } from "./helpers/servePresentation";
 
 declare const __TYPDECK_VERSION__: string;
 
-const printUrls = (server: Server, host: boolean) => {
+const printUrls = (server: Server) => {
   const address = server.address();
   if (!address || typeof address === "string") return;
   note(`http://127.0.0.1:${address.port}/`, "Local");
-  if (!host) {
-    note("use --host to expose", "Network");
+  if (address.address === "127.0.0.1") {
+    note("use `--host` to expose the server to the network", "Network");
     return;
   }
   const hosts = new Set(
@@ -169,14 +169,14 @@ export const main = async () => {
         compilationInputs,
         args.host,
       );
-      printUrls(server, args.host);
+      printUrls(server);
       break;
     }
     case "build":
       await buildPresentation(args.typstFile, args.outDir);
       break;
     case "preview":
-      printUrls(await serveDirectory(args.outDir, args.host), args.host);
+      printUrls(await serveDirectory(args.outDir, args.host));
       break;
   }
 };
