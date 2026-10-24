@@ -31,7 +31,7 @@ const printUrls = (server: Server) => {
   if (!address || typeof address === "string") return;
   note(`http://127.0.0.1:${address.port}/`, "Local");
   if (address.address === "127.0.0.1") {
-    note("use `--host` to expose the server to the network", "Network");
+    note("use `--expose` to expose the server to the network", "Network");
     return;
   }
   const hosts = new Set(
@@ -106,7 +106,7 @@ const outDir = withDefault(
   "dist",
 );
 
-const host = option("--host", {
+const expose = option("--expose", {
   description: message`expose the server to the network`,
 });
 
@@ -126,7 +126,7 @@ const parser = or(
     object({
       command: constant("dev"),
       typstFile: argument(typstFile),
-      host,
+      expose,
     }),
     { description: message`start dev server` },
   ),
@@ -139,7 +139,7 @@ const parser = or(
     }),
     { description: message`build for production` },
   ),
-  command("preview", object({ command: constant("preview"), outDir, host }), {
+  command("preview", object({ command: constant("preview"), outDir, expose }), {
     description: message`preview build output`,
   }),
 );
@@ -167,7 +167,7 @@ export const main = async () => {
         args.typstFile,
         deckDirectory,
         compilationInputs,
-        args.host,
+        args.expose,
       );
       printUrls(server);
       break;
@@ -176,7 +176,7 @@ export const main = async () => {
       await buildPresentation(args.typstFile, args.outDir);
       break;
     case "preview":
-      printUrls(await serveDirectory(args.outDir, args.host));
+      printUrls(await serveDirectory(args.outDir, args.expose));
       break;
   }
 };
