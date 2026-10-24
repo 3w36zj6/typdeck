@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="src/client/assets/icon.svg" alt="typdeck icon" width="128" height="128" />
+</p>
+
 # typdeck
 
 [![NPM Version](https://img.shields.io/npm/v/typdeck)](https://www.npmjs.com/package/typdeck?activeTab=versions)
