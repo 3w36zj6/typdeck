@@ -30,6 +30,10 @@ const printUrls = (server: Server) => {
   const address = server.address();
   if (!address || typeof address === "string") return;
   note(`http://127.0.0.1:${address.port}/`, "Local");
+  if (address.address === "127.0.0.1") {
+    note("use `--expose` to expose the server to the network", "Network");
+    return;
+  }
   const hosts = new Set(
     Object.values(networkInterfaces())
       .flatMap((entries) => entries ?? [])
@@ -102,6 +106,10 @@ const outDir = withDefault(
   "dist",
 );
 
+const expose = option("--expose", {
+  description: message`expose the server to the network`,
+});
+
 const typstFile = pathValue({
   errors: {
     pathNotFound: (input) =>
@@ -118,6 +126,7 @@ const parser = or(
     object({
       command: constant("dev"),
       typstFile: argument(typstFile),
+      expose,
     }),
     { description: message`start dev server` },
   ),
@@ -130,7 +139,7 @@ const parser = or(
     }),
     { description: message`build for production` },
   ),
-  command("preview", object({ command: constant("preview"), outDir }), {
+  command("preview", object({ command: constant("preview"), outDir, expose }), {
     description: message`preview build output`,
   }),
 );
@@ -158,6 +167,7 @@ export const main = async () => {
         args.typstFile,
         deckDirectory,
         compilationInputs,
+        args.expose,
       );
       printUrls(server);
       break;
@@ -166,7 +176,7 @@ export const main = async () => {
       await buildPresentation(args.typstFile, args.outDir);
       break;
     case "preview":
-      printUrls(await serveDirectory(args.outDir));
+      printUrls(await serveDirectory(args.outDir, args.expose));
       break;
   }
 };
