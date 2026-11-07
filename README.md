@@ -79,6 +79,17 @@ typdeck build main.typ
 
 This command compiles your Typst slides and generates static assets in the output directory.
 
+#### Converting to Other Formats
+
+```sh
+typdeck convert main.typ --format pptx --output presentation.pptx
+typdeck convert main.typ --format odp --output presentation.odp
+```
+
+PPTX and ODP (ODF 1.4) exports preserve plain-text notes and hidden slides. Each page or overlay step becomes an image slide, so slide text cannot be edited and links cannot be opened. Conversion stops with an error if page sizes differ.
+
+`convert` requires `--format` and `--output`.
+
 #### Preview Build
 
 Serve the build output without recompiling or watching source files:
