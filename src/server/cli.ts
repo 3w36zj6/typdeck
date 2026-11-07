@@ -4,6 +4,7 @@ import { networkInterfaces } from "node:os";
 import path from "node:path";
 import {
   argument,
+  choice,
   command,
   commandLine,
   constant,
@@ -22,6 +23,7 @@ import {
   replaceDirectory,
   resolveOutputPath,
 } from "./helpers/compileTypst";
+import { exportPresentation } from "./helpers/exportPresentation";
 import { serveDirectory, servePresentation } from "./helpers/servePresentation";
 
 declare const __TYPDECK_VERSION__: string;
@@ -110,6 +112,16 @@ const expose = option("--expose", {
   description: message`expose the server to the network`,
 });
 
+const exportOutput = option("--output", pathValue({ metavar: "FILE" }), {
+  description: message`output file`,
+});
+
+const exportFormat = option(
+  "--format",
+  choice(["pptx", "odp"], { metavar: "FORMAT" }),
+  { description: message`output format (pptx or odp)` },
+);
+
 const typstFile = pathValue({
   errors: {
     pathNotFound: (input) =>
@@ -139,6 +151,16 @@ const parser = or(
     }),
     { description: message`build for production` },
   ),
+  command(
+    "convert",
+    object({
+      command: constant("convert"),
+      typstFile: argument(typstFile),
+      format: exportFormat,
+      output: exportOutput,
+    }),
+    { description: message`convert a Typst presentation to PPTX or ODP` },
+  ),
   command("preview", object({ command: constant("preview"), outDir, expose }), {
     description: message`preview build output`,
   }),
@@ -151,7 +173,7 @@ export const main = async () => {
     aboveError: "none",
     brief: message`Compile Typst slides into a web stage and presenter view.`,
     completion: "command",
-    examples: message`${commandLine("typdeck dev main.typ")}${lineBreak()}${commandLine("typdeck build main.typ")}${lineBreak()}${commandLine("typdeck preview")}`,
+    examples: message`${commandLine("typdeck dev main.typ")}${lineBreak()}${commandLine("typdeck build main.typ")}${lineBreak()}${commandLine("typdeck convert main.typ --format pptx --output main.pptx")}${lineBreak()}${commandLine("typdeck preview")}`,
     help: { option: { names: ["-h", "--help"] } },
     programName: "typdeck",
     showDefault: true,
@@ -175,6 +197,19 @@ export const main = async () => {
     case "build":
       await buildPresentation(args.typstFile, args.outDir);
       break;
+    case "convert": {
+      const { compilationInputs, deckDirectory } = await compileDeck(
+        args.typstFile,
+      );
+      await exportPresentation(
+        args.typstFile,
+        deckDirectory,
+        compilationInputs,
+        args.output,
+        args.format,
+      );
+      break;
+    }
     case "preview":
       printUrls(await serveDirectory(args.outDir, args.expose));
       break;
